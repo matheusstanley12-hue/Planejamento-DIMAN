@@ -107,6 +107,7 @@ async function initApp() {
 
   const session = Auth.getSession();
   if (session.mustChangePassword) {
+    renderShell(session);
     showChangePasswordPage(session);
     return;
   }
