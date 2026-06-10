@@ -18,10 +18,25 @@ const Router = (() => {
     if (destroyFn) { try { destroyFn(); } catch(e){} destroyFn = null; }
 
     current = name;
+    
+    const sidebar = document.getElementById('sidebar');
+    const header = document.querySelector('header');
+    if (name === 'qrview') {
+      if (sidebar) sidebar.style.display = 'none';
+      if (header) header.style.display = 'none';
+      document.body.style.background = '#0f172a'; // match dark premium theme
+    } else {
+      if (sidebar) sidebar.style.display = 'flex';
+      if (header) header.style.display = 'flex';
+      document.body.style.background = 'var(--bg-base)';
+    }
+
     const container = document.getElementById('page-content');
     if (!container) return;
 
-    // No sidebar to update in new equipment-centric design
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const activeNav = document.querySelector(`.nav-item[data-route="${name}"]`);
+    if (activeNav) activeNav.classList.add('active');
 
     // loading state
     container.innerHTML = `<div class="page-loader" style="position:relative;height:200px;background:transparent">
@@ -48,7 +63,7 @@ const Router = (() => {
   }
 
   function getCurrent() { return current; }
-  return { register, navigate, getCurrent };
+  return { register, navigate, getCurrent, get currentRoute() { return current; } };
 })();
 
 // ================================================================
@@ -56,8 +71,29 @@ const Router = (() => {
 // ================================================================
 
 async function initApp() {
-  // Init super admin
-  await Auth.init();
+  if (window.DB && DB.initSupabase) {
+    await DB.initSupabase();
+  }
+
+  // ---- PUBLIC QR VIEW (no login required) ----
+  const hash = window.location.hash;
+  if (hash.startsWith('#qrview')) {
+    const params = {};
+    hash.replace('#qrview', '').replace(/[?&]([^=&]+)=([^&]*)/g, (_, k, v) => { params[k] = decodeURIComponent(v); });
+    if (params.id) {
+      SeedData.seed(); // ensure data is seeded
+      renderPublicQrView(params.id);
+      return;
+    }
+  }
+
+  // Wipe local storage for production exactly once on load
+  if (!localStorage.getItem('diman_production_ready')) {
+    localStorage.removeItem('diman_db');
+    localStorage.setItem('diman_production_ready', 'true');
+  }
+
+  Auth.init();
 
   // Check session
   if (!Auth.isLoggedIn()) {
@@ -190,8 +226,18 @@ function showLoginPage() {
         page.remove();
         showChangePasswordPage(result.session);
       } else {
-        page.style.animation = 'fadeIn 0.3s ease reverse forwards';
-        setTimeout(() => { page.remove(); SeedData.seed(); renderShell(result.session); Router.navigate('home'); }, 300);
+        // Seed data desabilitado para Produção
+        // if (typeof SeedData !== 'undefined' && DB.equipment.list().length === 0) {
+        //   SeedData.seed();
+        // }
+        
+        // Wipe local storage for production exactly once
+        if (!localStorage.getItem('diman_production_ready')) {
+          localStorage.removeItem('diman_db');
+          localStorage.setItem('diman_production_ready', 'true');
+        }
+
+        setTimeout(() => { page.remove(); renderShell(result.session); Router.navigate('home'); }, 300);
       }
     } else {
       errMsg.textContent = result.error;
@@ -224,47 +270,56 @@ function showForgotPassword() {
 // ================================================================
 
 function showChangePasswordPage(session) {
-  document.body.innerHTML = '';
-  const page = document.createElement('div');
-  page.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-base);z-index:9999;';
-  page.innerHTML = `
-    <div style="width:100%;max-width:420px;padding:var(--space-4);animation:fadeInUp 0.4s ease forwards;">
-      <div class="card" style="padding:var(--space-8);">
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('topbar').style.display = 'none';
+  const main = document.getElementById('main');
+  main.style.background = '#0f172a';
+  
+  const container = document.getElementById('page-content');
+  container.innerHTML = `
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:var(--space-4);">
+      <div class="card" style="width:100%;max-width:400px;background:#1e293b;border:1px solid #334155;animation:slideUp 0.4s ease forwards;">
         <div style="text-align:center;margin-bottom:var(--space-6);">
-          <div style="width:64px;height:64px;background:var(--color-warning-bg);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:var(--space-4);">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="var(--color-warning)" style="width:32px;height:32px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+          <div style="width:64px;height:64px;background:var(--gradient-primary);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4);box-shadow:0 10px 25px -5px rgba(37,99,235,0.5);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" style="width:32px;height:32px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
           </div>
-          <h2>Alteração de Senha Obrigatória</h2>
-          <p style="font-size:var(--text-sm);margin-top:var(--space-2);">Por segurança, você deve definir uma nova senha no primeiro acesso.</p>
+          <h2 style="color:white;font-weight:900;margin-bottom:var(--space-2);">Primeiro Acesso</h2>
+          <p style="color:#94a3b8;font-size:var(--text-sm);">Por segurança, preencha seu nome e altere a senha provisória.</p>
         </div>
-        <form id="change-pw-form" style="display:flex;flex-direction:column;gap:var(--space-4);">
+        
+        <form id="change-pwd-form">
           <div class="form-group">
-            <label>Nova Senha</label>
-            <input type="password" id="new-senha" placeholder="Mínimo 6 caracteres" required minlength="6" />
+            <label style="color:#cbd5e1;">Nome Completo</label>
+            <input type="text" id="new-nome" class="form-control" required placeholder="Digite seu nome real" style="background:#0f172a;border-color:#334155;color:white;" autofocus>
           </div>
           <div class="form-group">
-            <label>Confirmar Nova Senha</label>
-            <input type="password" id="confirm-senha" placeholder="Repita a senha" required minlength="6" />
+            <label style="color:#cbd5e1;">Nova Senha</label>
+            <input type="password" id="new-pwd" class="form-control" required placeholder="Digite a nova senha" style="background:#0f172a;border-color:#334155;color:white;">
           </div>
-          <div id="pw-error" class="alert alert-danger" style="display:none;"></div>
-          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Definir Nova Senha</button>
+          <div class="form-group">
+            <label style="color:#cbd5e1;">Confirme a Senha</label>
+            <input type="password" id="confirm-pwd" class="form-control" required placeholder="Repita a nova senha" style="background:#0f172a;border-color:#334155;color:white;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:var(--space-2);">Salvar e Entrar</button>
         </form>
       </div>
-    </div>`;
-  document.body.appendChild(page);
-  document.getElementById('change-pw-form').addEventListener('submit', async (e) => {
+    </div>
+  `;
+
+  document.getElementById('change-pwd-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const nova = document.getElementById('new-senha').value;
-    const confirm = document.getElementById('confirm-senha').value;
-    const err = document.getElementById('pw-error');
-    if (nova !== confirm) { err.textContent = 'As senhas não conferem.'; err.style.display='flex'; return; }
-    if (nova.length < 6) { err.textContent = 'A senha deve ter pelo menos 6 caracteres.'; err.style.display='flex'; return; }
-    await Auth.changePassword(session.matricula, nova);
-    page.remove();
-    SeedData.seed();
-    renderShell(session);
-    Router.navigate('home');
-    Toast.success('Senha Alterada', 'Sua senha foi definida com sucesso!');
+    const nome = document.getElementById('new-nome').value.trim();
+    const p1 = document.getElementById('new-pwd').value;
+    const p2 = document.getElementById('confirm-pwd').value;
+    if (!nome) { Toast.error('Erro', 'Informe seu nome completo.'); return; }
+    if (p1 !== p2) { Toast.error('Erro', 'As senhas não conferem.'); return; }
+    if (p1.length < 6) { Toast.error('Erro', 'A senha deve ter pelo menos 6 caracteres.'); return; }
+
+    const success = await Auth.changePassword(session.matricula, p1, nome);
+    if (success) {
+      Toast.success('Sucesso', 'Configuração concluída!');
+      setTimeout(() => location.reload(), 1000);
+    }
   });
 }
 
@@ -278,10 +333,13 @@ function renderShell(session) {
   document.body.style.overflow = '';
 
   const navItems = [
+    { route:'home',       label:'Início',                icon:'home',           perm:'dashboard',   section:'MENU PRINCIPAL' },
     { route:'d-panel',    label:'D-1 | D | D+1',       icon:'calendar-days',  perm:'dashboard',   section:'OPERACIONAL' },
     { route:'dashboard',  label:'Dashboard',             icon:'squares-2x2',    perm:'dashboard',   section:'' },
     { route:'workshop',   label:'Controle de Oficina',  icon:'building-office', perm:'workshop',   section:'' },
+    { route:'waiting',    label:'Aguardando Manutenção', icon:'clock',          perm:'dashboard',   section:'' },
     { route:'equipment',  label:'Equipamentos',          icon:'wrench-screwdriver', perm:'equipment', section:'PLANEJAMENTO' },
+    { route:'released',   label:'Equip. Liberados',      icon:'check-circle',   perm:'dashboard',   section:'' },
     { route:'tasks',      label:'Tarefas',               icon:'clipboard-list', perm:'tasks',       section:'' },
     { route:'gantt',      label:'Cronograma Gantt',      icon:'chart-bar',      perm:'gantt',       section:'' },
     { route:'critical',   label:'Caminho Crítico',       icon:'exclamation-triangle', perm:'criticalPath', section:'' },
@@ -295,6 +353,7 @@ function renderShell(session) {
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
     { route:'impacts',    label:'Relatório de Impactos', icon:'document-report', perm:'impacts',    section:'' },
     { route:'simulator',  label:'Simulador',             icon:'variable',       perm:'simulator',   section:'' },
+    { route:'qr-generator', label:'Gerador QR Code',     icon:'qr-code',        perm:'dashboard',   section:'ADMINISTRAÇÃO' },
     { route:'ai',         label:'Assistente IA',         icon:'sparkles',       perm:'ai',          section:'INTELIGÊNCIA' },
     { route:'lessons',    label:'Lições Aprendidas',     icon:'light-bulb',     perm:'lessons',     section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'GESTÃO' },
@@ -303,6 +362,8 @@ function renderShell(session) {
   ];
 
   const svgIcons = {
+    'home': '<path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.592 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/>',
+    'check-circle': '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />',
     'calendar-days': '<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008zM12 15h.008v.008H12V15zm0 2.25h.008v.008H12v-.008zM9.75 15h.008v.008H9.75V15zm0 2.25h.008v.008H9.75v-.008zM7.5 15h.008v.008H7.5V15zm0 2.25h.008v.008H7.5v-.008zm6.75-4.5h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V15zm0 2.25h.008v.008h-.008v-.008zm2.25-4.5h.008v.008H16.5v-.008zm0 2.25h.008v.008H16.5V15z"/>',
     'squares-2x2': '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>',
     'building-office': '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/>',
@@ -356,13 +417,18 @@ function renderShell(session) {
       
       <!-- Sidebar -->
       <aside id="sidebar" class="collapsed">
-        <div class="sidebar-brand" style="justify-content:center;">
-          <div class="sidebar-logo">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75"/></svg>
+        <div class="sidebar-brand" style="justify-content:space-between;align-items:center;padding-right:var(--space-4);">
+          <div style="display:flex;align-items:center;">
+            <div class="sidebar-logo">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75"/></svg>
+            </div>
+            <div class="sidebar-brand-text" style="margin-left:12px;">
+              <div class="sidebar-brand-name">DIMAN-BHZ</div>
+              <div class="sidebar-brand-sub">Menu Principal</div>
+            </div>
           </div>
-          <div class="sidebar-brand-text">
-            <div class="sidebar-brand-name">DIMAN-BHZ</div>
-            <div class="sidebar-brand-sub">Menu Principal</div>
+          <div onclick="toggleSidebar()" style="cursor:pointer;color:rgba(255,255,255,0.4);display:flex;align-items:center;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.4)'" title="Recolher Menu Lateral">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
           </div>
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
@@ -378,6 +444,21 @@ function renderShell(session) {
             <div>
               <div style="font-weight:900;font-size:1.2rem;letter-spacing:-0.03em;line-height:1;">DIMAN-BHZ</div>
               <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Planejamento Operacional</div>
+            </div>
+            
+            <div style="width:1px;height:24px;background:var(--border-card);margin:0 var(--space-2);"></div>
+            
+            <button class="btn btn-primary btn-sm" onclick="Router.navigate('home')" title="Página Inicial" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+              Início
+            </button>
+
+            <!-- Global Equipment Filter -->
+            <div style="margin-left:var(--space-4); display:flex; align-items:center;">
+              <select id="global-eq-select" class="form-control" style="width:250px; border-radius:var(--radius-full); background:var(--bg-base); border:1px solid var(--border-card); font-size:var(--text-sm);" onchange="window.setGlobalEqFilter(this.value)">
+                <option value="">Filtro Global: Todos Equipamentos</option>
+                ${DB.equipment.list().filter(e => e.status !== 'Liberado').map(e => `<option value="${e.id}">${e.codigo} - ${e.nome.split(' ').slice(0,2).join(' ')}</option>`).join('')}
+              </select>
             </div>
           </div>
           
@@ -408,7 +489,34 @@ function renderShell(session) {
 
   // Register all routes
   Router.register('home', () => HomeModule.render());
+  Router.register('released', () => ReleasedModule.render());
+  if (typeof WaitingModule !== 'undefined') Router.register('waiting', () => WaitingModule.render());
   Router.register('equipment-panel', (p) => EquipmentPanel.render(p));
+  Router.register('checklists', ChecklistsModule.render);
+  
+  if (typeof DPanel !== 'undefined') Router.register('d-panel', () => DPanel.render());
+  if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
+  if (typeof Dashboard !== 'undefined') Router.register('dashboard', () => Dashboard.render());
+  if (typeof WorkshopModule !== 'undefined') Router.register('workshop', () => WorkshopModule.render());
+  if (typeof TasksModule !== 'undefined') Router.register('tasks', () => TasksModule.render());
+  if (typeof GanttModule !== 'undefined') Router.register('gantt', () => GanttModule.render());
+  if (typeof CriticalPath !== 'undefined') Router.register('critical', () => CriticalPath.render());
+  if (typeof PlanningModule !== 'undefined') Router.register('planning', () => PlanningModule.render());
+  if (typeof RestrictionsModule !== 'undefined') Router.register('restrictions', () => RestrictionsModule.render());
+  if (typeof PartsModule !== 'undefined') Router.register('parts', () => PartsModule.render());
+  if (typeof WorkforceModule !== 'undefined') Router.register('workforce', () => WorkforceModule.render());
+  if (typeof CostsModule !== 'undefined') Router.register('costs', () => CostsModule.render());
+  if (typeof KPIModule !== 'undefined') Router.register('kpi', () => KPIModule.render());
+  if (typeof TimelineModule !== 'undefined') Router.register('timeline', () => TimelineModule.render());
+  if (typeof ImpactsModule !== 'undefined') Router.register('impacts', () => ImpactsModule.render());
+  if (typeof SimulatorModule !== 'undefined') Router.register('simulator', () => SimulatorModule.render());
+  if (typeof QrGeneratorModule !== 'undefined') Router.register('qr-generator', () => QrGeneratorModule.render());
+  if (typeof QrViewModule !== 'undefined') Router.register('qrview', () => QrViewModule.render());
+  if (typeof AIAssistant !== 'undefined') Router.register('ai', () => AIAssistant.render());
+  if (typeof LessonsModule !== 'undefined') Router.register('lessons', () => LessonsModule.render());
+  if (typeof ReportsModule !== 'undefined') Router.register('reports', () => ReportsModule.render());
+  if (typeof AuditModule !== 'undefined') Router.register('audit', () => AuditModule.render());
+  if (typeof UsersModule !== 'undefined') Router.register('users', () => UsersModule.render());
 }
 
 // ================================================================
@@ -451,6 +559,26 @@ function showUserMenu() {
     () => { Auth.logout(); location.reload(); },
     false
   );
+}
+
+// ================================================================
+// PUBLIC QR VIEW (no login)
+// ================================================================
+function renderPublicQrView(eqId) {
+  document.body.innerHTML = '';
+  document.body.style.background = '#0f172a';
+  document.body.style.margin = '0';
+  document.body.style.padding = '0';
+  document.body.style.fontFamily = "'Inter', sans-serif";
+  const container = document.createElement('div');
+  container.id = 'page-content';
+  document.body.appendChild(container);
+  if (typeof QrViewModule !== 'undefined') {
+    const html = QrViewModule.render({ id: eqId });
+    container.innerHTML = html;
+  } else {
+    container.innerHTML = '<div style="color:red;padding:20px;text-align:center">Erro ao carregar módulo QR.</div>';
+  }
 }
 
 // ================================================================

@@ -21,6 +21,9 @@ const Auth = (() => {
 
   function saveUsers(users) {
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    if (window.DB && DB.syncToSupabase) {
+      DB.syncToSupabase(USERS_KEY, users);
+    }
   }
 
   async function initSuperAdmin() {
@@ -63,6 +66,8 @@ const Auth = (() => {
       case 'Administrador': return getAllPermissions();
       case 'Gerente': return { ...getAllPermissions(), users: false };
       case 'Planejador': return { ...getAllPermissions(), users: false, audit: false };
+      case 'Coordenador': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false };
+      case 'Encarregado': return { dashboard: true, equipment: false, tasks: true, gantt: false, parts: false, workforce: true, workshop: true, restrictions: false, timeline: false, kpi: false, ai: false, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: false, meetingMode: false, history: false, managerDashboard: false, simulator: false };
       case 'Supervisor': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false };
       case 'Executante': return { dashboard: true, equipment: false, tasks: true, gantt: false, parts: false, workforce: true, workshop: true, restrictions: false, timeline: false, kpi: false, ai: false, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: false, meetingMode: false, history: false, managerDashboard: false, simulator: false };
       case 'Cliente': return { dashboard: true, equipment: true, tasks: false, gantt: true, parts: false, workforce: false, workshop: true, restrictions: false, timeline: true, kpi: true, ai: false, reports: true, audit: false, users: false, planning: false, impacts: true, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: true, managerDashboard: false, simulator: false };
@@ -116,18 +121,20 @@ const Auth = (() => {
     return s.permissions?.[perm] === true;
   }
 
-  async function changePassword(matricula, novaSenha) {
+  async function changePassword(matricula, novaSenha, nome = null) {
     const users = getUsers();
     const idx = users.findIndex(u => u.matricula === matricula);
     if (idx === -1) return false;
     users[idx].senhaHash = await hashPassword(novaSenha);
     users[idx].senhaInicial = false;
+    if (nome) users[idx].nome = nome;
     saveUsers(users);
 
     // Update session
     const session = getSession();
     if (session) {
       session.mustChangePassword = false;
+      if (nome) session.nome = nome;
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     }
     addAuditLog('CHANGE_PASSWORD', `Usuário ${users[idx].nome} alterou a senha`, null);

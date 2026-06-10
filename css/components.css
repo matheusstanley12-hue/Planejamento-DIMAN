@@ -273,11 +273,17 @@ tbody td:first-child { color: var(--text-primary); font-weight: var(--font-mediu
   inset: 0;
   background: var(--bg-overlay);
   z-index: var(--z-modal);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
   backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.modal-overlay.open {
+  display: flex;
+  opacity: 1;
 }
 .modal {
   background: var(--bg-modal);
@@ -644,3 +650,9 @@ tbody td:first-child { color: var(--text-primary); font-weight: var(--font-mediu
   box-shadow: var(--shadow-md);
 }
 [data-tooltip]:hover::after { opacity: 1; }
+
+/* QR Live dot animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .4; transform: scale(.7); }
+}

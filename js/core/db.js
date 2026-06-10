@@ -3,6 +3,13 @@
    ============================================================ */
 
 const DB = (() => {
+  const SUPABASE_URL = 'https://umsozbjpfmxvhwycjjkr.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_NGJvPtMUdiDGCnK5qRroYg_7_wPqZiH';
+  let supabaseClient = null;
+  if (window.supabase) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+
   const KEYS = {
     equipment: 'diman_equipment',
     tasks: 'diman_tasks',
@@ -18,6 +25,15 @@ const DB = (() => {
     settings: 'diman_settings',
   };
 
+  window.GlobalEqFilter = '';
+  window.setGlobalEqFilter = function(id) {
+    window.GlobalEqFilter = id;
+    if (window.Router) {
+      const current = window.Router.getCurrent();
+      if (current) window.Router.navigate(current, { force: true });
+    }
+  };
+
   function get(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]'); }
     catch { return []; }
@@ -26,9 +42,36 @@ const DB = (() => {
     try { return JSON.parse(localStorage.getItem(key) || '{}'); }
     catch { return {}; }
   }
-  function set(key, data) { localStorage.setItem(key, JSON.stringify(data)); }
+  function syncToSupabase(collection, data) {
+    if (supabaseClient) {
+      supabaseClient.from('diman_store')
+        .upsert({ collection: collection, key: 'all', data: data }, { onConflict: 'collection,key' })
+        .catch(err => console.error('Supabase Sync Error:', err));
+    }
+  }
+  function set(key, data) { 
+    localStorage.setItem(key, JSON.stringify(data)); 
+    syncToSupabase(key, data);
+  }
   function uid(prefix = 'id') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
   function now() { return new Date().toISOString(); }
+
+  async function initSupabase() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient.from('diman_store').select('*');
+      if (error) { console.error('Supabase fetch error:', error); return; }
+      if (data && data.length > 0) {
+        data.forEach(row => {
+          if (row.key === 'all') {
+            localStorage.setItem(row.collection, JSON.stringify(row.data));
+          }
+        });
+      }
+    } catch(e) {
+      console.error('Failed to init Supabase:', e);
+    }
+  }
 
   // ==================== EQUIPMENT ====================
   const equipment = {
@@ -89,7 +132,10 @@ const DB = (() => {
 
   // ==================== TASKS ====================
   const tasks = {
-    list: (equipmentId) => get(KEYS.tasks).filter(t => !equipmentId || t.equipmentId === equipmentId),
+    list: (equipmentId) => {
+      const eqFilter = equipmentId || window.GlobalEqFilter;
+      return get(KEYS.tasks).filter(t => !eqFilter || t.equipmentId === eqFilter);
+    },
     get: id => get(KEYS.tasks).find(t => t.id === id),
     create(data) {
       const items = get(KEYS.tasks);
@@ -118,12 +164,18 @@ const DB = (() => {
       if (t) { Auth.addAuditLog('DELETE_TASK', `Tarefa ${t.descricao} removida`, null); events.emit('task:deleted', id); }
     },
     getByEquipment: (eqId) => get(KEYS.tasks).filter(t => t.equipmentId === eqId),
-    getAll: () => get(KEYS.tasks)
+    getAll: () => {
+      const eqFilter = window.GlobalEqFilter;
+      return get(KEYS.tasks).filter(t => !eqFilter || t.equipmentId === eqFilter);
+    }
   };
 
   // ==================== PARTS ====================
   const parts = {
-    list: (equipmentId) => get(KEYS.parts).filter(p => !equipmentId || p.equipmentId === equipmentId),
+    list: (equipmentId) => {
+      const eqFilter = equipmentId || window.GlobalEqFilter;
+      return get(KEYS.parts).filter(p => !eqFilter || p.equipmentId === eqFilter);
+    },
     get: id => get(KEYS.parts).find(p => p.id === id),
     create(data) {
       const items = get(KEYS.parts);
@@ -151,7 +203,10 @@ const DB = (() => {
       set(KEYS.parts, items.filter(x => x.id !== id));
       if (p) Auth.addAuditLog('DELETE_PART', `Peça ${p.descricao} removida`, null);
     },
-    getAll: () => get(KEYS.parts)
+    getAll: () => {
+      const eqFilter = window.GlobalEqFilter;
+      return get(KEYS.parts).filter(p => !eqFilter || p.equipmentId === eqFilter);
+    }
   };
 
   // ==================== WORKFORCE ====================
@@ -180,6 +235,10 @@ const DB = (() => {
   const timesheets = {
     list: (filters = {}) => {
       let items = get(KEYS.timesheets);
+      if (window.GlobalEqFilter) {
+        const eqTasks = get(KEYS.tasks).filter(t => t.equipmentId === window.GlobalEqFilter).map(t => t.id);
+        items = items.filter(ts => eqTasks.includes(ts.taskId));
+      }
       if (filters.equipmentId) items = items.filter(t => t.equipmentId === filters.equipmentId);
       if (filters.workerId)    items = items.filter(t => t.workerId === filters.workerId);
       if (filters.taskId)      items = items.filter(t => t.taskId === filters.taskId);
@@ -200,8 +259,14 @@ const DB = (() => {
 
   // ==================== RESTRICTIONS ====================
   const restrictions = {
-    list: (equipmentId) => get(KEYS.restrictions).filter(r => !equipmentId || r.equipmentId === equipmentId),
-    getAll: () => get(KEYS.restrictions),
+    list: (equipmentId) => {
+      const eqFilter = equipmentId || window.GlobalEqFilter;
+      return get(KEYS.restrictions).filter(r => !eqFilter || r.equipmentId === eqFilter);
+    },
+    getAll: () => {
+      const eqFilter = window.GlobalEqFilter;
+      return get(KEYS.restrictions).filter(r => !eqFilter || r.equipmentId === eqFilter);
+    },
     create(data) {
       const items = get(KEYS.restrictions);
       const item = { id: uid('rs'), ...data, status: 'Aberta', createdAt: now(), updatedAt: now() };
@@ -229,8 +294,14 @@ const DB = (() => {
 
   // ==================== COSTS ====================
   const costs = {
-    list: (equipmentId) => get(KEYS.costs).filter(c => !equipmentId || c.equipmentId === equipmentId),
-    getAll: () => get(KEYS.costs),
+    list: (equipmentId) => {
+      const eqFilter = equipmentId || window.GlobalEqFilter;
+      return get(KEYS.costs).filter(c => !eqFilter || c.equipmentId === eqFilter);
+    },
+    getAll: () => {
+      const eqFilter = window.GlobalEqFilter;
+      return get(KEYS.costs).filter(c => !eqFilter || c.equipmentId === eqFilter);
+    },
     create(data) {
       const items = get(KEYS.costs);
       const item = { id: uid('cs'), ...data, createdAt: now() };
@@ -253,7 +324,10 @@ const DB = (() => {
 
   // ==================== LESSONS LEARNED ====================
   const lessons = {
-    list: () => get(KEYS.lessons),
+    list: () => {
+      const eqFilter = window.GlobalEqFilter;
+      return get(KEYS.lessons).filter(l => !eqFilter || l.equipmentId === eqFilter);
+    },
     get: id => get(KEYS.lessons).find(l => l.id === id),
     create(data) {
       const items = get(KEYS.lessons);
@@ -385,5 +459,5 @@ const DB = (() => {
     }
   };
 
-  return { equipment, tasks, parts, workforce, timesheets, restrictions, costs, lessons, notifications, settings, kpi, uid, now };
+  return { equipment, tasks, parts, workforce, timesheets, restrictions, costs, lessons, notifications, settings, kpi, uid, now, initSupabase, syncToSupabase };
 })();

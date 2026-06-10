@@ -197,6 +197,7 @@ function statusBadge(status) {
     'Bloqueada':           'badge-danger',
     'Concluída':           'badge-success',
     'Em Manutenção':       'badge-primary',
+    'Aguardando Manutenção': 'badge-warning',
     'Liberado':            'badge-success',
     'Bloqueado':           'badge-danger',
     'Cancelado':           'badge-ghost',

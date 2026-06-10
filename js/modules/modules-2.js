@@ -6,7 +6,7 @@
 // ================================================================
 // GANTT MODULE
 // ================================================================
-const GanttModule = (() => {
+window.GanttModule = (() => {
   let eqFilter = '';
   let viewMode = 'week'; // 'day'|'week'|'month'
 
@@ -185,7 +185,7 @@ const GanttModule = (() => {
 // ================================================================
 // CRITICAL PATH MODULE
 // ================================================================
-const CriticalPath = (() => {
+window.CriticalPath = (() => {
   function calculate(tasks) {
     const taskMap = {};
     tasks.forEach(t => { taskMap[t.id] = { ...t, es: 0, ef: 0, ls: 0, lf: 0, float: 0 }; });
@@ -297,7 +297,7 @@ const CriticalPath = (() => {
 // ================================================================
 // PARTS MODULE
 // ================================================================
-const PartsModule = (() => {
+window.PartsModule = (() => {
   function render() {
     const parts = DB.parts.getAll();
     const eqs = DB.equipment.list();
@@ -436,7 +436,7 @@ const PartsModule = (() => {
 // ================================================================
 // WORKFORCE MODULE
 // ================================================================
-const WorkforceModule = (() => {
+window.WorkforceModule = (() => {
   let activeTab = 'team';
 
   function render() {
@@ -594,7 +594,7 @@ const WorkforceModule = (() => {
 // ================================================================
 // RESTRICTIONS MODULE
 // ================================================================
-const RestrictionsModule = (() => {
+window.RestrictionsModule = (() => {
   function render() {
     const restrictions = DB.restrictions.getAll();
     const open = restrictions.filter(r => r.status === 'Aberta');

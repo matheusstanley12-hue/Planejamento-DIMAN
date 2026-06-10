@@ -3,7 +3,7 @@
    D-1 | D | D+1 — Painel Operacional Diário (MÓDULO PRINCIPAL)
    ================================================================ */
 
-const DPanel = (() => {
+window.DPanel = (() => {
   let refreshInterval = null;
 
   function today() { return new Date().toISOString().slice(0, 10); }
@@ -244,7 +244,7 @@ const DPanel = (() => {
         ${tasks.length === 0 ? `<div class="empty-state" style="padding:var(--space-6)"><p>Nenhuma atividade programada para hoje</p></div>` : `
         <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:320px;overflow-y:auto;">
           ${tasks.map(t => {
-            const eq = equipNames[t.equipmentId] || t.equipmentId;
+            const eq = equipMap[t.equipmentId];
             const daysLeft = daysBetween(todayStr, t.dataPlanejadaTermino);
             let sem = 'success', semIcon = '🟢';
             if (t.status === 'Bloqueada' || t.status === 'Aguardando Peça') { sem='danger'; semIcon='🔴'; }
@@ -255,7 +255,7 @@ const DPanel = (() => {
                 <span style="font-size:1.1rem;flex-shrink:0">${semIcon}</span>
                 <div style="flex:1;min-width:0;">
                   <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${eq} · ${t.disciplina}</div>
+                  <div style="font-size:10px;color:var(--text-muted)">${eq ? eq.codigo : '—'} · ${t.disciplina}</div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
                   <div style="font-size:var(--text-xs);font-weight:700;color:var(--brand-primary-light);font-family:var(--font-mono)">${t.pctExecutado}%</div>

@@ -7,7 +7,7 @@
 // ================================================================
 // COSTS MODULE
 // ================================================================
-const CostsModule = (() => {
+window.CostsModule = (() => {
   function render() {
     const costs = DB.costs.list();
     const eqs = DB.equipment.list();
@@ -133,7 +133,7 @@ const CostsModule = (() => {
 // ================================================================
 // PLANNING MODULE (Curva de Avanço)
 // ================================================================
-const PlanningModule = (() => {
+window.PlanningModule = (() => {
   let planChart = null;
 
   function render() {
@@ -222,7 +222,7 @@ const PlanningModule = (() => {
 // ================================================================
 // KPI MODULE
 // ================================================================
-const KPIModule = (() => {
+window.KPIModule = (() => {
   function render() {
     const stats = DB.kpi.getEquipmentStats();
     const eqs = DB.equipment.list();
@@ -290,7 +290,7 @@ const KPIModule = (() => {
 // ================================================================
 // SIMULATOR MODULE
 // ================================================================
-const SimulatorModule = (() => {
+window.SimulatorModule = (() => {
   let eqId = '';
   let params = { mechanics: 3, electrics: 2, partsArrivalDays: 7, overtime: 0, weekends: false };
 
@@ -425,7 +425,7 @@ const SimulatorModule = (() => {
 // ================================================================
 // AI ASSISTANT MODULE
 // ================================================================
-const AIAssistant = (() => {
+window.AIAssistant = (() => {
   const messages = [{ role:'ai', content:'Olá! Sou o Assistente de IA do **PLANEJAMENTO DIMAN-BHZ**. Posso analisar dados em tempo real e responder perguntas sobre equipamentos, tarefas, restrições, peças, riscos e muito mais. Como posso ajudar?' }];
 
   function detectIntent(q) {
@@ -633,7 +633,7 @@ const AIAssistant = (() => {
 // ================================================================
 // MEETING MODE MODULE
 // ================================================================
-const MeetingMode = (() => {
+window.MeetingMode = (() => {
   let interval = null;
   let countdown = 30;
 
@@ -751,7 +751,7 @@ const MeetingMode = (() => {
 // ================================================================
 // TIMELINE MODULE
 // ================================================================
-const TimelineModule = (() => {
+window.TimelineModule = (() => {
   function render() {
     const eqs = DB.equipment.list();
     const allEvents = eqs.flatMap(e => (e.timeline||[]).map(tl => ({ ...tl, equipCode: e.codigo })));
@@ -782,7 +782,7 @@ const TimelineModule = (() => {
 // ================================================================
 // LESSONS MODULE
 // ================================================================
-const LessonsModule = (() => {
+window.LessonsModule = (() => {
   function render() {
     const lessons = DB.lessons.list();
     const eqs = DB.equipment.list();
@@ -852,7 +852,7 @@ const LessonsModule = (() => {
 // STUB MODULES (Placeholders with basic UI)
 // ================================================================
 
-const ImpactsModule = (() => {
+window.ImpactsModule = (() => {
   function render() {
     const allTasks = DB.tasks.getAll();
     const criticas = allTasks.filter(t => t.critico && t.status !== 'Concluída');
@@ -873,7 +873,7 @@ const ImpactsModule = (() => {
   return { render };
 })();
 
-const ReportsModule = (() => {
+window.ReportsModule = (() => {
   function render() {
     return `<div class="page-container">
       <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg></div>Relatórios</div>
@@ -899,7 +899,7 @@ const ReportsModule = (() => {
   return { render };
 })();
 
-const AuditModule = (() => {
+window.AuditModule = (() => {
   function render() {
     const logs = Auth.getAuditLogs().slice(-100).reverse();
     return `<div class="page-container">
@@ -924,28 +924,127 @@ const AuditModule = (() => {
   return { render };
 })();
 
-const UsersModule = (() => {
+window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
     const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
-    return `<div class="page-container">
-      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg></div>Gestão de Usuários</div></div>
+    
+    setTimeout(() => {
+      if(!document.getElementById('modal-user-form')) {
+        const perfis = ['Desenvolvedor', 'Administrador', 'Gerente', 'Planejador', 'Coordenador', 'Supervisor', 'Encarregado', 'Executante', 'Cliente'];
+        const modalHtml = `
+          <div class="modal-overlay" id="modal-user-form">
+            <div class="modal">
+              <div class="modal-header">
+                <div class="modal-title">Novo Usuário</div>
+                <button class="modal-close" onclick="closeModal('modal-user-form')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <div class="modal-body">
+                <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+                  <div class="form-group"><label>Matrícula *</label><input type="text" id="nu-mat" placeholder="Ex: 012345" /></div>
+                  <div class="form-group"><label>Nome *</label><input type="text" id="nu-nome" placeholder="Nome Completo" /></div>
+                  <div class="form-group"><label>Email</label><input type="email" id="nu-email" placeholder="email@exemplo.com" /></div>
+                  <div class="form-group"><label>Perfil de Acesso *</label><select id="nu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
+                  <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="123456" readonly style="background:var(--bg-base);color:var(--text-muted);"/></div>
+                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O usuário deverá alterar a senha no primeiro acesso.</div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-user-form')">Cancelar</button>
+                <button class="btn btn-primary" onclick="UsersModule.saveUser()">Salvar</button>
+              </div>
+            </div>
+          </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+      }
+    }, 100);
+
+    return `<div class="page-container" style="animation: fadeIn 0.3s ease;">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg></div>
+          <div>Gestão de Usuários</div>
+        </div>
+        <div class="section-actions">
+          <button class="btn btn-primary" onclick="openModal('modal-user-form')">+ Novo Usuário</button>
+        </div>
+      </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Matrícula</th><th>Nome</th><th>Cargo</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
           ${users.map(u=>`<tr>
             <td style="font-family:var(--font-mono)">${u.matricula}</td>
             <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
-            <td style="font-size:var(--text-xs)">${u.cargo||'—'}</td>
             <td><span class="badge badge-primary">${u.perfil}</span></td>
             <td>${statusBadge(u.status||'Ativo')}</td>
-            <td><div class="table-actions"><button class="btn btn-secondary btn-sm" onclick="Toast.info('Editar usuário','Em desenvolvimento.')">Editar</button></div></td>
+            <td>
+              <div class="table-actions">
+                ${u.id !== 'u-superadmin' ? `<button class="btn btn-danger btn-sm" onclick="UsersModule.deleteUser('${u.id}')">Excluir</button>` : ''}
+              </div>
+            </td>
           </tr>`).join('')}
         </tbody>
       </table></div>
     </div>`;
   }
-  return { render };
+  
+  async function saveUser() {
+    const matricula = document.getElementById('nu-mat').value.trim();
+    const nome = document.getElementById('nu-nome').value.trim();
+    const email = document.getElementById('nu-email').value.trim();
+    const perfil = document.getElementById('nu-perfil').value;
+    
+    if(!matricula || !nome || !perfil) {
+      Toast && Toast.error('Erro', 'Preencha os campos obrigatórios (*).');
+      return;
+    }
+    
+    const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    if(users.find(u => u.matricula === matricula)) {
+      Toast && Toast.error('Erro', 'Matrícula já existe.');
+      return;
+    }
+
+    // Hash the default password '123456'
+    const msgBuffer = new TextEncoder().encode('123456');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const senhaHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const newUser = {
+      id: DB.uid('u'),
+      matricula,
+      nome,
+      email,
+      perfil,
+      senhaHash,
+      senhaInicial: true,
+      status: 'Ativo',
+      createdAt: new Date().toISOString()
+    };
+    
+    users.push(newUser);
+    localStorage.setItem('diman_users', JSON.stringify(users));
+    if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+    
+    closeModal('modal-user-form');
+    Toast && Toast.success('Usuário Criado', 'Senha temporária: 123456');
+    Router.navigate('users', { force: true });
+  }
+
+  function deleteUser(id) {
+    if(confirm('Tem certeza que deseja excluir este usuário?')) {
+      let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      users = users.filter(u => u.id !== id);
+      localStorage.setItem('diman_users', JSON.stringify(users));
+      if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+      Toast && Toast.success('Sucesso', 'Usuário excluído.');
+      Router.navigate('users', { force: true });
+    }
+  }
+
+  return { render, saveUser, deleteUser };
 })();
 
 // ================================================================

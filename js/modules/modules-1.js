@@ -9,7 +9,7 @@
 // ================================================================
 // DASHBOARD MODULE
 // ================================================================
-const Dashboard = (() => {
+window.Dashboard = (() => {
   let charts = {};
 
   function destroyCharts() { Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} }); charts = {}; }
@@ -240,7 +240,7 @@ const Dashboard = (() => {
 // ================================================================
 // WORKSHOP MODULE (Controle de Oficina)
 // ================================================================
-const WorkshopModule = (() => {
+window.WorkshopModule = (() => {
   function render() {
     const eqs = DB.equipment.list().filter(e => e.status !== 'Liberado');
     const parts = DB.parts.getAll();
@@ -295,7 +295,7 @@ const WorkshopModule = (() => {
 // ================================================================
 // EQUIPMENT MODULE
 // ================================================================
-const EquipmentModule = (() => {
+window.EquipmentModule = (() => {
   function render() {
     const eqs = DB.equipment.list();
     const parts = DB.parts.getAll();
@@ -599,7 +599,7 @@ const EquipmentModule = (() => {
 // ================================================================
 // TASKS MODULE
 // ================================================================
-const TasksModule = (() => {
+window.TasksModule = (() => {
   let eqFilter = '';
 
   function render() {

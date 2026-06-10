@@ -3,7 +3,7 @@
    Seed Data — Dados de demonstração realistas
    ================================================================ */
 
-const SeedData = (() => {
+window.SeedData = (() => {
   const VERSION = 'v6';
 
   function isSeeded() {
