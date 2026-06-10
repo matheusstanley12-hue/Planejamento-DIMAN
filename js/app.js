@@ -4,6 +4,12 @@
    ================================================================ */
 
 // ---- Router ----
+// Global aliases to ensure resolution
+const DB = window.DB || {};
+const Auth = window.Auth || {};
+const events = window.events || {};
+const Toast = window.Toast || {};
+
 const Router = (() => {
   const routes = {};
   let current = null;
@@ -402,7 +408,7 @@ function renderShell(session) {
         lastSection = item.section;
       }
       const badge = item.route === 'restrictions' ?
-        `<span class="nav-badge" id="nav-badge-restrictions">${DB.restrictions.getAll().filter(r=>r.status==='Aberta').length || ''}</span>` : '';
+        `<span class="nav-badge" id="nav-badge-restrictions">${(window.DB.restrictions ? window.DB.restrictions.getAll().filter(r=>r.status==='Aberta').length : 0) || ''}</span>` : '';
       html += `<div class="nav-item" data-route="${item.route}" onclick="Router.navigate('${item.route}')">
         <span class="nav-icon">${icon(item.icon)}</span>
         <span class="nav-label">${item.label}</span>
