@@ -1,0 +1,960 @@
+/* ================================================================
+   PLANEJAMENTO DIMAN-BHZ — Modules Batch 3
+   Costs, Planning, KPI, Simulator, AI Assistant
+   Meeting Mode, Timeline, Lessons, Reports, Audit, Users, Impacts
+   ================================================================ */
+
+// ================================================================
+// COSTS MODULE
+// ================================================================
+const CostsModule = (() => {
+  function render() {
+    const costs = DB.costs.list();
+    const eqs = DB.equipment.list();
+    const equipMap = {};
+    eqs.forEach(e => { equipMap[e.id] = e.codigo; });
+
+    const totalPl = costs.reduce((s,c)=>s+(c.valorPlanejado||0),0);
+    const totalRl = costs.reduce((s,c)=>s+(c.valorRealizado||0),0);
+    const devTotal = totalPl ? Math.round((totalRl-totalPl)/totalPl*100) : 0;
+
+    // Per equipment
+    const byEq = {};
+    costs.forEach(c => {
+      if (!byEq[c.equipmentId]) byEq[c.equipmentId] = { pl:0, rl:0 };
+      byEq[c.equipmentId].pl += c.valorPlanejado||0;
+      byEq[c.equipmentId].rl += c.valorRealizado||0;
+    });
+
+    return `<div class="page-container">
+      <div class="section-header">
+        <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>Centro de Custos</div>
+        <button class="btn btn-primary" onclick="CostsModule.openCreate()">+ Novo Lançamento</button>
+      </div>
+
+      <!-- Top KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5);margin-bottom:var(--space-5);">
+        <div class="card" style="text-align:center;padding:var(--space-6);">
+          <div style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:.06em;margin-bottom:var(--space-2)">Custo Total Planejado</div>
+          <div style="font-size:var(--text-3xl);font-weight:800;color:var(--brand-primary-light)">${formatCurrency(totalPl)}</div>
+        </div>
+        <div class="card" style="text-align:center;padding:var(--space-6);">
+          <div style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:.06em;margin-bottom:var(--space-2)">Custo Total Realizado</div>
+          <div style="font-size:var(--text-3xl);font-weight:800;color:${totalRl>totalPl?'var(--color-danger)':'var(--color-success)'}">${formatCurrency(totalRl)}</div>
+        </div>
+        <div class="card" style="text-align:center;padding:var(--space-6);border-color:${devTotal>10?'rgba(244,67,54,.3)':devTotal>0?'rgba(255,179,0,.3)':'rgba(0,200,83,.3)'};">
+          <div style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:.06em;margin-bottom:var(--space-2)">Desvio Total</div>
+          <div style="font-size:var(--text-3xl);font-weight:800;color:${devTotal>10?'var(--color-danger)':devTotal>0?'var(--color-warning)':'var(--color-success)'}">${devTotal > 0 ? '+' : ''}${devTotal}%</div>
+        </div>
+      </div>
+
+      <!-- Per Equipment Table -->
+      <div class="card" style="margin-bottom:var(--space-5);">
+        <div class="card-header"><div class="card-title">Custos por Equipamento</div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Equipamento</th><th>Planejado</th><th>Realizado</th><th>Desvio</th><th>Semáforo</th></tr></thead>
+          <tbody>
+            ${Object.entries(byEq).map(([eqId, v]) => {
+              const dev = v.pl ? Math.round((v.rl-v.pl)/v.pl*100) : 0;
+              const cls = dev > 10 ? 'danger' : dev > 0 ? 'warning' : 'success';
+              const icon = dev > 10 ? '🔴' : dev > 0 ? '🟡' : '🟢';
+              return `<tr>
+                <td style="font-weight:700">${equipMap[eqId]||eqId}</td>
+                <td>${formatCurrency(v.pl)}</td>
+                <td style="color:${v.rl>v.pl?'var(--color-danger)':'var(--color-success)'};font-weight:700">${formatCurrency(v.rl)}</td>
+                <td><span class="badge badge-${cls}">${dev>0?'+':''}${dev}%</span></td>
+                <td style="font-size:1.2rem">${icon}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- Cost entries -->
+      <div class="table-wrap"><table>
+        <thead><tr><th>Equipamento</th><th>Categoria</th><th>Descrição</th><th>Planejado</th><th>Realizado</th><th>Data</th><th>Ações</th></tr></thead>
+        <tbody>
+          ${costs.map(c=>`<tr>
+            <td>${equipMap[c.equipmentId]||'—'}</td>
+            <td><span class="badge badge-ghost">${c.categoria}</span></td>
+            <td style="font-size:var(--text-xs)">${c.descricao}</td>
+            <td>${formatCurrency(c.valorPlanejado)}</td>
+            <td style="color:${c.valorRealizado>c.valorPlanejado?'var(--color-danger)':'var(--color-success)'};font-weight:700">${formatCurrency(c.valorRealizado)}</td>
+            <td>${formatDate(c.data)}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="CostsModule.delete('${c.id}')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397"/></svg></button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+
+      <!-- Modal -->
+      <div class="modal-overlay" id="modal-cost"><div class="modal"><div class="modal-header"><div class="modal-title">Lançamento de Custo</div><button class="modal-close" onclick="closeModal('modal-cost')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="cost-modal-body"></div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-cost')">Cancelar</button><button class="btn btn-primary" onclick="CostsModule.save()">Salvar</button></div></div></div>
+    </div>`;
+  }
+
+  function openCreate() {
+    const eqs = DB.equipment.list();
+    const cats = ['Mão de Obra','Peças','Serviços Terceiros','Frete','Custos Extras'];
+    const today = new Date().toISOString().slice(0,10);
+    document.getElementById('cost-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
+      <div class="form-row"><div class="form-group"><label>Equipamento *</label><select id="cs-eq">${eqs.map(e=>`<option value="${e.id}">${e.codigo}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Categoria *</label><select id="cs-cat">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div></div>
+      <div class="form-group"><label>Descrição</label><input id="cs-desc" /></div>
+      <div class="form-row"><div class="form-group"><label>Valor Planejado (R$)</label><input type="number" id="cs-pl" min="0" step="0.01" /></div>
+      <div class="form-group"><label>Valor Realizado (R$)</label><input type="number" id="cs-rl" min="0" step="0.01" /></div></div>
+      <div class="form-group"><label>Data</label><input type="date" id="cs-data" value="${today}" /></div>
+    </div>`;
+    openModal('modal-cost');
+  }
+
+  function save() {
+    const data = {
+      equipmentId: document.getElementById('cs-eq').value,
+      categoria: document.getElementById('cs-cat').value,
+      descricao: document.getElementById('cs-desc').value,
+      valorPlanejado: parseFloat(document.getElementById('cs-pl').value)||0,
+      valorRealizado: parseFloat(document.getElementById('cs-rl').value)||0,
+      data: document.getElementById('cs-data').value,
+    };
+    DB.costs.create(data);
+    closeModal('modal-cost');
+    Router.navigate('costs', { force: true });
+    Toast.success('Custo registrado!');
+  }
+
+  function _delete(id) {
+    confirmDialog('Excluir Lançamento', 'Tem certeza?', () => { DB.costs.delete(id); Router.navigate('costs', { force: true }); });
+  }
+
+  return { render, openCreate, save, delete: _delete };
+})();
+
+// ================================================================
+// PLANNING MODULE (Curva de Avanço)
+// ================================================================
+const PlanningModule = (() => {
+  let planChart = null;
+
+  function render() {
+    const eqs = DB.equipment.list();
+    const allTasks = DB.tasks.getAll();
+    const totalTasks = allTasks.length;
+    const doneTasks = allTasks.filter(t=>t.status==='Concluída').length;
+    const realizado = totalTasks ? Math.round(doneTasks/totalTasks*100) : 0;
+    const planejado = 78;
+    const desvio = realizado - planejado;
+    const devCls = desvio >= 0 ? 'success' : desvio >= -10 ? 'warning' : 'danger';
+
+    setTimeout(() => {
+      if (planChart) { try { planChart.destroy(); } catch(e){} }
+      const canvas = document.getElementById('plan-chart');
+      if (!canvas || !window.Chart) return;
+      const labels = [];
+      const plData = [];
+      const rlData = [];
+      for (let i = 20; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        labels.push(`${d.getDate()}/${d.getMonth()+1}`);
+        plData.push(Math.min(100, Math.round((20-i)/20*planejado + Math.random()*3)));
+        rlData.push(Math.min(100, Math.round((20-i)/20*realizado + Math.random()*2)));
+      }
+      planChart = new Chart(canvas, {
+        type:'line', data: {
+          labels,
+          datasets: [
+            { label:'Planejado', data:plData, borderColor:'rgba(30,136,229,1)', backgroundColor:'rgba(30,136,229,.1)', fill:true, tension:.4, borderWidth:2 },
+            { label:'Realizado', data:rlData, borderColor: desvio >= 0 ? 'rgba(0,200,83,1)' : 'rgba(244,67,54,1)', backgroundColor: desvio >= 0 ? 'rgba(0,200,83,.1)' : 'rgba(244,67,54,.1)', fill:true, tension:.4, borderWidth:2 }
+          ]
+        },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8EACC8',font:{family:'Inter',size:11}}}}, scales:{x:{ticks:{color:'#8EACC8',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{min:0,max:100,ticks:{color:'#8EACC8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.04)'}}} }
+      });
+    }, 100);
+
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25"/></svg></div>Planejamento & Replanejamento</div></div>
+
+      <!-- Curva de Avanço Real -->
+      <div class="card" style="margin-bottom:var(--space-5);">
+        <div class="card-header"><div class="card-title">📊 Curva de Avanço Real</div></div>
+        <div style="display:flex;gap:var(--space-8);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
+          <div style="text-align:center;"><div style="font-size:4rem;font-weight:900;color:var(--brand-primary-light);line-height:1">${planejado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase">PLANEJADO</div></div>
+          <div style="text-align:center;"><div style="font-size:4rem;font-weight:900;color:var(--color-${devCls});line-height:1">${realizado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase">REALIZADO</div></div>
+          <div style="text-align:center;"><div style="font-size:4rem;font-weight:900;color:var(--color-${devCls});line-height:1">${desvio > 0 ? '+' : ''}${desvio}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase">DESVIO</div></div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+            <div style="opacity:${desvio<-15?1:0.25};font-size:1.5rem">🔴 Crítico (&lt;-15%)</div>
+            <div style="opacity:${desvio>=-15&&desvio<-5?1:0.25};font-size:1.5rem">🟡 Atenção (-5% a -15%)</div>
+            <div style="opacity:${desvio>=-5?1:0.25};font-size:1.5rem">🟢 OK (&gt;-5%)</div>
+          </div>
+        </div>
+        <canvas id="plan-chart" height="240"></canvas>
+      </div>
+
+      <!-- Replanning by equipment -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Histórico de Replanejamentos</div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Equipamento</th><th>Cliente</th><th>Data Original 🔒</th><th>Replanejamentos</th><th>Dias Acumulados</th><th>Última Causa</th></tr></thead>
+          <tbody>
+            ${eqs.map(e => {
+              const repls = e.replanning || [];
+              const totalDays = repls.reduce((s,r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
+              return `<tr>
+                <td><strong>${e.codigo}</strong></td>
+                <td>${e.cliente}</td>
+                <td style="font-family:var(--font-mono);font-size:var(--text-xs)">${formatDate(e.dataLiberacaoPlanejada)} <span style="color:var(--color-warning)">🔒</span></td>
+                <td>${repls.length > 0 ? `<span class="badge badge-warning">${repls.length}× replanejado</span>` : '<span class="badge badge-success">Sem reprogramação</span>'}</td>
+                <td>${totalDays > 0 ? `<span style="color:var(--color-danger);font-weight:700">+${totalDays} dias</span>` : '—'}</td>
+                <td style="font-size:var(--text-xs);color:var(--text-muted)">${repls.length>0?repls[repls.length-1].motivo?.slice(0,60)+'...':'—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table></div>
+      </div>
+    </div>`;
+  }
+
+  function destroy() { if (planChart) { try { planChart.destroy(); } catch(e){} planChart = null; } }
+  return { render, destroy };
+})();
+
+// ================================================================
+// KPI MODULE
+// ================================================================
+const KPIModule = (() => {
+  function render() {
+    const stats = DB.kpi.getEquipmentStats();
+    const eqs = DB.equipment.list();
+    const allTasks = DB.tasks.getAll();
+    const ts = DB.timesheets.list();
+    const hPlan = allTasks.reduce((s,t)=>s+(t.horasPlanejadas||0),0);
+    const hReal = allTasks.reduce((s,t)=>s+(t.horasRealizadas||0),0);
+    const eficiencia = hPlan > 0 ? Math.min(100, Math.round(hPlan/hReal*100)) : 100;
+
+    const mtbf = DB.kpi.getMTBF();
+    const mttr = DB.kpi.getMTTR();
+    const disp = (mtbf && mttr) ? Math.round(parseFloat(mtbf)/(parseFloat(mtbf)+parseFloat(mttr))*100) : 0;
+
+    const kpis = [
+      {label:'Aderência ao Planejamento', value:`${stats.aderencia}%`, cls:stats.aderencia>=90?'success':stats.aderencia>=70?'warning':'danger'},
+      {label:'MTBF (Médio)', value:mtbf ? `${mtbf}d` : 'N/D', cls:'info'},
+      {label:'MTTR (Médio)', value:mttr ? `${mttr}d` : 'N/D', cls:'info'},
+      {label:'Disponibilidade', value:`${disp}%`, cls:disp>=90?'success':'warning'},
+      {label:'Produtividade', value:`${eficiencia}%`, cls:eficiencia>=80?'success':eficiencia>=60?'warning':'danger'},
+      {label:'Eficiência', value:`${eficiencia}%`, cls:eficiencia>=80?'success':'warning'},
+      {label:'Backlog de Tarefas', value:allTasks.filter(t=>t.status!=='Concluída').length, cls:'warning'},
+      {label:'% Conclusão', value:`${stats.pctAvancoGeral}%`, cls:'primary'},
+      {label:'Horas Planejadas', value:`${hPlan.toFixed(0)}h`, cls:'primary'},
+      {label:'Horas Realizadas', value:`${hReal.toFixed(0)}h`, cls:'info'},
+      {label:'Tarefas Críticas', value:stats.criticas, cls:'danger'},
+      {label:'Equipamentos no Prazo', value:`${eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada&&e.dataLiberacaoPlanejada>=new Date().toISOString().slice(0,10)).length}/${eqs.filter(e=>e.status==='Em Manutenção').length}`, cls:'success'},
+    ];
+
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg></div>Indicadores de Performance (KPI)</div></div>
+      <div class="kpi-grid stagger">
+        ${kpis.map(k=>`<div class="kpi-card ${k.cls}">
+          <div class="kpi-value">${k.value}</div>
+          <div class="kpi-label">${k.label}</div>
+        </div>`).join('')}
+      </div>
+
+      <!-- MTBF/MTTR per equipment -->
+      <div class="card" style="margin-top:var(--space-5);">
+        <div class="card-header"><div class="card-title">MTBF / MTTR por Equipamento</div></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Equipamento</th><th>Cliente</th><th>MTBF</th><th>MTTR</th><th>Disponibilidade</th><th>Status</th></tr></thead>
+          <tbody>
+            ${eqs.map(e=>{
+              const mtbf = DB.kpi.getMTBF(e.id);
+              const mttr = DB.kpi.getMTTR(e.id);
+              const disp = (mtbf && mttr) ? Math.round(parseFloat(mtbf)/(parseFloat(mtbf)+parseFloat(mttr))*100) : 0;
+              return `<tr>
+                <td><strong>${e.codigo}</strong></td>
+                <td>${e.cliente}</td>
+                <td><span class="badge badge-info">${mtbf}d</span></td>
+                <td><span class="badge badge-warning">${mttr}d</span></td>
+                <td><span class="badge badge-${disp>=90?'success':disp>=70?'warning':'danger'}">${disp}%</span></td>
+                <td>${statusBadge(e.status)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table></div>
+      </div>
+    </div>`;
+  }
+  return { render };
+})();
+
+// ================================================================
+// SIMULATOR MODULE
+// ================================================================
+const SimulatorModule = (() => {
+  let eqId = '';
+  let params = { mechanics: 3, electrics: 2, partsArrivalDays: 7, overtime: 0, weekends: false };
+
+  function calcImpact() {
+    const eq = DB.equipment.get(eqId);
+    if (!eq) return null;
+    const tasks = DB.tasks.getByEquipment(eqId).filter(t => t.status !== 'Concluída');
+    const wf = DB.workforce.list();
+    const currentMechanics = wf.filter(w => w.disciplina === 'Mecânica' && w.status === 'Ativo').length;
+
+    const totalRemainingHours = tasks.reduce((s,t) => s + ((t.horasPlanejadas||0) - (t.horasRealizadas||0)), 0);
+    const workDaysRemaining = daysBetween(new Date().toISOString().slice(0,10), eq.dataLiberacaoPlanejada || new Date().toISOString().slice(0,10));
+    const hoursPerDay = 8;
+
+    let gainMechanics = 0;
+    const extraMech = params.mechanics - currentMechanics;
+    if (extraMech > 0 && totalRemainingHours > 0) {
+      gainMechanics = Math.min(workDaysRemaining * 0.4, Math.round(extraMech * 2));
+    } else if (extraMech < 0) {
+      gainMechanics = Math.max(-workDaysRemaining * 0.3, extraMech);
+    }
+
+    const critParts = DB.parts.getAll().filter(p => p.equipmentId === eqId && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+    let gainParts = 0;
+    if (critParts.length > 0) {
+      const estimatedArrival = 7;
+      const actualArrival = params.partsArrivalDays;
+      gainParts = Math.max(0, estimatedArrival - actualArrival);
+    }
+
+    let gainOvertime = 0;
+    if (params.overtime > 0 && workDaysRemaining > 0) {
+      gainOvertime = Math.round(params.overtime / 8 * workDaysRemaining * 0.5);
+    }
+
+    let gainWeekends = 0;
+    if (params.weekends && workDaysRemaining > 0) {
+      gainWeekends = Math.round(workDaysRemaining / 5 * 2 * 0.3);
+    }
+
+    const totalGain = gainMechanics + gainParts + gainOvertime + gainWeekends;
+    const today = new Date().toISOString().slice(0,10);
+    const newDate = addDays(eq.dataLiberacaoPlanejada || today, -totalGain);
+
+    return { gainMechanics, gainParts, gainOvertime, gainWeekends, totalGain, newDate, workDaysRemaining, eq };
+  }
+
+  function render() {
+    const eqs = DB.equipment.list().filter(e => e.status === 'Em Manutenção');
+    const impact = eqId ? calcImpact() : null;
+
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M4.745 3A23.933 23.933 0 003 12c0 3.183.62 6.22 1.745 9M19.255 3A23.933 23.933 0 0121 12c0 3.183-.62 6.22-1.745 9M8.25 8.885l1.444-.89a.75.75 0 011.105.402l2.402 7.214a.75.75 0 001.104.401l1.445-.889m-8.25.75l.213.09a1.687 1.687 0 002.062-.617l4.45-6.676a1.688 1.688 0 012.062-.618l.213.09"/></svg></div>Simulador de Liberação</div></div>
+      <div style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:var(--space-5)">Simule o impacto de alterações de recursos na data de liberação do equipamento</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);">
+        <!-- Parameters panel -->
+        <div class="card">
+          <div class="card-header"><div class="card-title">⚙️ Parâmetros da Simulação</div></div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-5);">
+            <div class="form-group"><label>Equipamento *</label>
+              <select onchange="SimulatorModule.setEq(this.value)">
+                <option value="">Selecione um equipamento...</option>
+                ${eqs.map(e=>`<option value="${e.id}" ${eqId===e.id?'selected':''}>${e.codigo} — ${e.cliente}</option>`).join('')}
+              </select>
+            </div>
+            ${eqId ? `
+            <div>
+              <label>Mecânicos: <strong id="sim-mech-val">${params.mechanics}</strong></label>
+              <input type="range" min="0" max="12" value="${params.mechanics}" oninput="SimulatorModule.setParam('mechanics',+this.value);document.getElementById('sim-mech-val').textContent=this.value" style="width:100%;margin-top:var(--space-2);" />
+            </div>
+            <div>
+              <label>Eletricistas: <strong id="sim-elec-val">${params.electrics}</strong></label>
+              <input type="range" min="0" max="8" value="${params.electrics}" oninput="SimulatorModule.setParam('electrics',+this.value);document.getElementById('sim-elec-val').textContent=this.value" style="width:100%;margin-top:var(--space-2);" />
+            </div>
+            <div class="form-group"><label>Chegada das Peças Críticas (dias)</label>
+              <input type="number" min="1" max="60" value="${params.partsArrivalDays}" onchange="SimulatorModule.setParam('partsArrivalDays',+this.value)" /></div>
+            <div>
+              <label>Horas Extras por Dia: <strong id="sim-ot-val">${params.overtime}h</strong></label>
+              <input type="range" min="0" max="4" value="${params.overtime}" oninput="SimulatorModule.setParam('overtime',+this.value);document.getElementById('sim-ot-val').textContent=this.value+'h'" style="width:100%;margin-top:var(--space-2);" />
+            </div>
+            <div class="checkbox-wrap"><input type="checkbox" id="sim-wk" ${params.weekends?'checked':''} onchange="SimulatorModule.setParam('weekends',this.checked)" /><label for="sim-wk">Trabalhar nos Fins de Semana</label></div>
+            ` : '<div class="empty-state" style="padding:var(--space-8)"><p>Selecione um equipamento para começar</p></div>'}
+          </div>
+        </div>
+
+        <!-- Results panel -->
+        <div>
+          ${impact ? `
+          <div class="card" style="margin-bottom:var(--space-4);">
+            <div class="card-header"><div class="card-title">📋 Estado Atual</div></div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+              <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Data Original 🔒</span><strong style="color:var(--color-danger)">${formatDate(impact.eq.dataLiberacaoPlanejada)}</strong></div>
+              <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Dias Restantes</span><strong>${impact.workDaysRemaining} dias</strong></div>
+              <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Avanço Atual</span><strong style="color:var(--brand-primary-light)">${impact.eq.pctAvanco||0}%</strong></div>
+            </div>
+          </div>
+
+          <div class="card" style="border-color:${impact.totalGain>0?'rgba(0,200,83,.3)':'rgba(244,67,54,.3)'};background:${impact.totalGain>0?'rgba(0,200,83,.05)':'rgba(244,67,54,.05)'};">
+            <div class="card-header"><div class="card-title">🎯 Resultado da Simulação</div></div>
+            <div style="text-align:center;padding:var(--space-4);">
+              <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-2)">Nova Data de Liberação</div>
+              <div style="font-size:2.5rem;font-weight:900;color:${impact.totalGain>0?'var(--color-success)':'var(--color-danger)'}">${formatDate(impact.newDate)}</div>
+              <div style="font-size:var(--text-xl);font-weight:700;color:${impact.totalGain>0?'var(--color-success)':'var(--color-danger)'};margin-top:var(--space-2);">${impact.totalGain > 0 ? `⬆️ Antecipa ${impact.totalGain} dias` : impact.totalGain < 0 ? `⬇️ Atrasa ${Math.abs(impact.totalGain)} dias` : '= Sem alteração'}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-3);">
+              ${[
+                {label:'Impacto dos Mecânicos', gain: impact.gainMechanics},
+                {label:'Impacto das Peças', gain: impact.gainParts},
+                {label:'Impacto das Horas Extras', gain: impact.gainOvertime},
+                {label:'Impacto dos Fins de Semana', gain: impact.gainWeekends},
+              ].map(item=>`<div style="display:flex;justify-content:space-between;font-size:var(--text-sm);">
+                <span style="color:var(--text-muted)">${item.label}</span>
+                <strong style="color:${item.gain>0?'var(--color-success)':item.gain<0?'var(--color-danger)':'var(--text-muted)'}">${item.gain>0?'-'+item.gain+' dias':item.gain<0?'+'+Math.abs(item.gain)+' dias':'0'}</strong>
+              </div>`).join('')}
+            </div>
+          </div>
+          <div style="margin-top:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-muted);">
+            ⚠️ NOTA: A Data Planejada Original não pode ser alterada. A simulação mostra apenas uma estimativa.
+          </div>
+          ` : '<div class="card"><div class="empty-state" style="padding:var(--space-8)"><p>Selecione um equipamento e ajuste os parâmetros para ver a simulação</p></div></div>'}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function setEq(id) { eqId = id; Router.navigate('simulator', { force: true }); }
+  function setParam(key, val) { params[key] = val; if (eqId) { const r = calcImpact(); if (r) { /* update result panel in place */ } } }
+  return { render, setEq, setParam };
+})();
+
+// ================================================================
+// AI ASSISTANT MODULE
+// ================================================================
+const AIAssistant = (() => {
+  const messages = [{ role:'ai', content:'Olá! Sou o Assistente de IA do **PLANEJAMENTO DIMAN-BHZ**. Posso analisar dados em tempo real e responder perguntas sobre equipamentos, tarefas, restrições, peças, riscos e muito mais. Como posso ajudar?' }];
+
+  function detectIntent(q) {
+    q = q.toLowerCase();
+    if (/atrasa|demora|atrasad|motivo/.test(q)) return 'delay';
+    if (/liber|entrega|previs/.test(q)) return 'liberation';
+    if (/risco|risk/.test(q)) return 'risk';
+    if (/pe.a|pec|component|material/.test(q)) return 'parts';
+    if (/restri/.test(q)) return 'restrictions';
+    if (/caminho.cr.t|cr.tic/.test(q)) return 'critical';
+    if (/produt|efici|m.o.de.obra|equipe/.test(q)) return 'productivity';
+    if (/recomen|antecip|melhor/.test(q)) return 'recommendation';
+    if (/resum|geral|oficina|status/.test(q)) return 'summary';
+    if (/ol.|oi|ola|bem.vindo|o.que/.test(q)) return 'greeting';
+    return 'general';
+  }
+
+  function extractEquipment(q) {
+    const eqs = DB.equipment.list();
+    return eqs.find(e => q.toLowerCase().includes(e.codigo.toLowerCase()));
+  }
+
+  function processQuery(query) {
+    const intent = detectIntent(query);
+    const eq = extractEquipment(query);
+    const allTasks = DB.tasks.getAll();
+    const parts = DB.parts.getAll();
+    const restrictions = DB.restrictions.getAll().filter(r => r.status === 'Aberta');
+
+    if (intent === 'greeting') {
+      return `Olá! Estou pronto para ajudar. Posso:\n- Analisar motivos de atraso de equipamentos\n- Informar previsões de liberação\n- Identificar riscos e restrições\n- Analisar caminho crítico\n- Verificar peças pendentes\n- Avaliar produtividade da equipe\n\nO que gostaria de saber?`;
+    }
+
+    if (intent === 'delay') {
+      const target = eq || DB.equipment.list().find(e => e.status === 'Em Manutenção');
+      if (!target) return 'Não encontrei equipamentos em manutenção para analisar.';
+      const repls = target.replanning || [];
+      const openRestr = restrictions.filter(r => r.equipmentId === target.id);
+      const critParts = parts.filter(p => p.equipmentId === target.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+      const totalDelay = repls.reduce((s,r) => s+daysBetween(r.dataAnterior,r.novaData),0);
+      let resp = `📊 **Análise de Atraso — ${target.codigo}**\n\n`;
+      resp += `Status atual: ${target.status} | Avanço: ${target.pctAvanco||0}%\n`;
+      if (totalDelay > 0) resp += `\n⏱️ **Atraso acumulado: ${totalDelay} dias** (${repls.length} replanejamento${repls.length>1?'s':''})\n`;
+      if (repls.length > 0) { resp += `\n📅 Causas dos replanejamentos:\n`; repls.forEach((r,i) => resp += `  R${i+1}: ${r.motivo}\n`); }
+      if (openRestr.length > 0) { resp += `\n🚫 Restrições abertas (${openRestr.length}):\n`; openRestr.forEach(r => resp += `  • ${r.tipo}: ${r.descricao.slice(0,60)}...\n`); }
+      if (critParts.length > 0) { resp += `\n📦 Peças críticas pendentes:\n`; critParts.forEach(p => resp += `  • ${p.descricao} — ${p.status}\n`); }
+      resp += `\n💡 **Recomendação:** ${critParts.length > 0 ? 'Acionar fornecedor das peças críticas com urgência. ' : ''}${openRestr.some(r=>r.tipo==='Falta de Mão de Obra') ? 'Realocar recursos de outras frentes. ' : ''}Monitorar diariamente o caminho crítico.`;
+      return resp;
+    }
+
+    if (intent === 'parts') {
+      const critPend = parts.filter(p => p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+      const allPend = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+      let resp = `📦 **Situação das Peças**\n\n`;
+      resp += `Total pendentes: ${allPend.length} | Críticas: ${critPend.length}\n\n`;
+      if (critPend.length > 0) { resp += `⚠️ **Peças críticas bloqueando o caminho crítico:**\n`; critPend.forEach(p => { const eq2 = DB.equipment.get(p.equipmentId); resp += `  • ${p.descricao} (${eq2?.codigo||'—'}) — ${p.status} · Prazo: ${formatDate(p.prazoEntrega)}\n`; }); }
+      if (allPend.length > critPend.length) { resp += `\n📋 Demais peças pendentes: ${allPend.length - critPend.length}\n`; }
+      return resp;
+    }
+
+    if (intent === 'restrictions') {
+      if (!restrictions.length) return '✅ Nenhuma restrição aberta no momento!';
+      let resp = `🚫 **Restrições Abertas (${restrictions.length})**\n\n`;
+      const byType = {};
+      restrictions.forEach(r => { byType[r.tipo] = (byType[r.tipo]||0)+1; });
+      Object.entries(byType).forEach(([t,c]) => resp += `  • ${t}: ${c}\n`);
+      resp += `\n**Impactando o Caminho Crítico:** ${restrictions.filter(r=>r.impactoCaminhosCriticos).length}\n\n`;
+      restrictions.slice(0,3).forEach(r => { const eq2 = DB.equipment.get(r.equipmentId); resp += `📌 ${eq2?.codigo||'—'}: ${r.descricao.slice(0,80)}...\n`; });
+      return resp;
+    }
+
+    if (intent === 'summary') {
+      const stats = DB.kpi.getEquipmentStats();
+      const eqs = DB.equipment.list();
+      let resp = `🏭 **Resumo Geral da Oficina**\n\n`;
+      resp += `**Equipamentos:** ${stats.emManutencao} em manutenção | ${stats.liberados} liberados | ${stats.bloqueados} bloqueados\n`;
+      resp += `**Avanço geral:** ${stats.pctAvancoGeral}% concluído\n`;
+      resp += `**Tarefas:** ${stats.totalTarefas} total | ${stats.concluidas} concluídas | ${stats.criticas} críticas\n`;
+      resp += `**Restrições abertas:** ${stats.restricoesAbertas}\n\n`;
+      resp += `**Próximas liberações:**\n`;
+      eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada).sort((a,b)=>a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada)).slice(0,3).forEach(e => {
+        const days = daysBetween(new Date().toISOString().slice(0,10), e.dataLiberacaoPlanejada);
+        resp += `  • ${e.codigo} (${e.cliente}): ${formatDate(e.dataLiberacaoPlanejada)} ${days < 0 ? `— ${Math.abs(days)} dias ATRASADO ⚠️` : `— ${days} dias`}\n`;
+      });
+      return resp;
+    }
+
+    if (intent === 'risk') {
+      const today = new Date().toISOString().slice(0,10);
+      const atRisk = DB.equipment.list().filter(e => {
+        if (e.status !== 'Em Manutenção') return false;
+        const openRestr = restrictions.filter(r => r.equipmentId === e.id);
+        const critParts = parts.filter(p => p.equipmentId === e.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+        return openRestr.length > 0 || critParts.length > 0;
+      });
+      if (!atRisk.length) return '✅ Nenhum equipamento com risco elevado identificado no momento.';
+      let resp = `⚠️ **Equipamentos com Risco de Atraso (${atRisk.length})**\n\n`;
+      atRisk.forEach(e => {
+        const restr = restrictions.filter(r => r.equipmentId === e.id);
+        const cParts = parts.filter(p => p.equipmentId === e.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+        resp += `🔴 **${e.codigo}** (${e.cliente}):\n`;
+        if (restr.length) resp += `  • ${restr.length} restrição(ões) aberta(s)\n`;
+        if (cParts.length) resp += `  • ${cParts.length} peça(s) crítica(s) pendente(s)\n`;
+      });
+      return resp;
+    }
+
+    return `Analisei sua pergunta e posso oferecer as seguintes informações:\n\n${(() => {
+      const stats = DB.kpi.getEquipmentStats();
+      return `📊 Situação atual: ${stats.emManutencao} equipamentos em manutenção, ${stats.restricoesAbertas} restrições abertas, avanço geral de ${stats.pctAvancoGeral}%.\n\nPara análises mais detalhadas, tente perguntas como:\n• "Por que a SSM-288 está atrasada?"\n• "Quais peças bloqueiam a liberação?"\n• "Resumo geral da oficina"`;
+    })()}`;
+  }
+
+  function addMessage(role, content) {
+    messages.push({ role, content });
+    const container = document.getElementById('ai-chat-messages');
+    if (container) {
+      const div = document.createElement('div');
+      div.className = `ai-message ${role}`;
+      div.innerHTML = `
+        <div class="ai-avatar">${role === 'ai' ? '🤖' : '👤'}</div>
+        <div class="ai-bubble">${content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;')}</div>
+      `;
+      div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);animation:fadeInUp .3s ease;';
+      if (role === 'user') div.style.flexDirection = 'reverse';
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  function sendQuery(query) {
+    if (!query?.trim()) return;
+    const input = document.getElementById('ai-input');
+    if (input) input.value = '';
+    addMessage('user', query);
+
+    // Typing indicator
+    const container = document.getElementById('ai-chat-messages');
+    const typing = document.createElement('div');
+    typing.id = 'ai-typing';
+    typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);';
+    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Analisando dados...</span>';
+    container?.appendChild(typing);
+
+    setTimeout(() => {
+      document.getElementById('ai-typing')?.remove();
+      const response = processQuery(query);
+      addMessage('ai', response);
+    }, 600);
+  }
+
+  const suggestions = [
+    'Por que a SSM-288 está atrasada?','Quais equipamentos têm risco de atraso?',
+    'Que peças estão bloqueando a liberação?','Restrições abertas no momento?',
+    'Quando a SSM-301 será liberada?','Como está o caminho crítico?',
+    'Resumo geral da oficina','Quais tarefas são críticas?',
+  ];
+
+  function render() {
+    setTimeout(() => {
+      const container = document.getElementById('ai-chat-messages');
+      if (!container) return;
+      messages.forEach(m => {
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);';
+        div.innerHTML = `<div style="font-size:1.3rem;flex-shrink:0">${m.role==='ai'?'🤖':'👤'}</div>
+          <div style="background:${m.role==='ai'?'var(--bg-base)':'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;max-width:80%;">${m.content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+        container.appendChild(div);
+      });
+    }, 50);
+
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>Assistente IA — Análise Inteligente</div></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--space-5);">
+        <!-- Chat -->
+        <div class="card" style="display:flex;flex-direction:column;height:70vh;">
+          <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
+          <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);">
+            <input id="ai-input" placeholder="Digite sua pergunta..." style="flex:1;" onkeydown="if(event.key==='Enter')AIAssistant.sendFromInput()" />
+            <button class="btn btn-primary" onclick="AIAssistant.sendFromInput()">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+            </button>
+          </div>
+        </div>
+        <!-- Suggestions -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+          <div class="card"><div class="card-header"><div class="card-title">💡 Perguntas Sugeridas</div></div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+              ${suggestions.map(s=>`<button onclick="AIAssistant.sendQuery('${s}')" style="text-align:left;background:var(--bg-base);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-xs);color:var(--text-secondary);cursor:pointer;transition:all .15s;line-height:1.4;" onmouseover="this.style.borderColor='var(--brand-primary-light)'" onmouseout="this.style.borderColor='var(--border-card)'">${s}</button>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function sendFromInput() {
+    const input = document.getElementById('ai-input');
+    if (input?.value?.trim()) sendQuery(input.value.trim());
+  }
+
+  return { render, sendQuery, sendFromInput };
+})();
+
+// ================================================================
+// MEETING MODE MODULE
+// ================================================================
+const MeetingMode = (() => {
+  let interval = null;
+  let countdown = 30;
+
+  function activate() {
+    const overlay = document.createElement('div');
+    overlay.id = 'meeting-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#050D1A;z-index:10000;display:flex;flex-direction:column;overflow:hidden;font-family:var(--font-primary);';
+
+    const eqs = DB.equipment.list();
+    const parts = DB.parts.getAll();
+    const restrictions = DB.restrictions.getAll().filter(r=>r.status==='Aberta');
+    const tasks = DB.tasks.getAll();
+    const today = new Date().toISOString().slice(0,10);
+    const nextReleases = eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada).sort((a,b)=>a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada));
+    const delayed = eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada&&e.dataLiberacaoPlanejada<today);
+    const critTasks = tasks.filter(t=>t.critico&&t.status!=='Concluída').slice(0,8);
+    const pendParts = parts.filter(p=>['Solicitada','Comprada','Em Transporte'].includes(p.status)).slice(0,6);
+
+    overlay.innerHTML = `
+      <!-- Header bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div style="width:40px;height:40px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">⚙️</div>
+          <div><div style="font-size:1.3rem;font-weight:900;color:white;letter-spacing:-.02em">PLANEJAMENTO DIMAN-BHZ</div><div style="font-size:.7rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em">Painel de Acompanhamento · Reunião Diária</div></div>
+        </div>
+        <div id="meeting-datetime" style="font-size:1.5rem;font-weight:800;color:#1E88E5;font-family:monospace;"></div>
+        <button onclick="MeetingMode.deactivate()" style="background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);color:#F44336;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;">✕ Sair</button>
+      </div>
+
+      <!-- 6-panel grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:12px;padding:12px;overflow:hidden;">
+
+        <!-- Panel 1: Delayed -->
+        <div style="background:#0A1929;border:1px solid rgba(244,67,54,.3);border-radius:12px;padding:16px;overflow:hidden;">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#F44336;margin-bottom:12px;">🔴 Equipamentos Atrasados</div>
+          ${delayed.length === 0 ? '<div style="color:#546E7A;font-size:.8rem;">Nenhum atraso registrado ✅</div>' :
+          delayed.map(e=>{const d=daysBetween(e.dataLiberacaoPlanejada,today);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(244,67,54,.1);border-radius:8px;margin-bottom:8px;border-left:3px solid #F44336;"><div><div style="font-weight:800;color:white;font-size:1rem">${e.codigo}</div><div style="font-size:.7rem;color:#8EACC8">${e.cliente}</div></div><div style="font-size:1.8rem;font-weight:900;color:#F44336">${d}d</div></div>`;}).join('')}
+        </div>
+
+        <!-- Panel 2: Critical Path -->
+        <div style="background:#0A1929;border:1px solid rgba(255,152,0,.3);border-radius:12px;padding:16px;overflow:hidden;">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#FF9800;margin-bottom:12px;">⚡ Caminho Crítico</div>
+          ${critTasks.map(t=>{const eq2=DB.equipment.get(t.equipmentId);const isBlocked=t.status==='Bloqueada';return`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,152,0,.07);">
+            <span style="font-size:.9rem">${isBlocked?'🔴':'🟡'}</span>
+            <div style="flex:1;min-width:0;"><div style="font-size:.75rem;font-weight:600;color:${isBlocked?'#F44336':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div><div style="font-size:.65rem;color:#8EACC8">${eq2?.codigo||'—'} · ${t.disciplina}</div></div>
+            <span style="font-size:.75rem;font-weight:700;color:#FF9800;font-family:monospace">${t.pctExecutado}%</span>
+          </div>`;}).join('')}
+        </div>
+
+        <!-- Panel 3: Pending Parts -->
+        <div style="background:#0A1929;border:1px solid rgba(255,179,0,.3);border-radius:12px;padding:16px;overflow:hidden;">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#FFB300;margin-bottom:12px;">📦 Peças Pendentes</div>
+          ${pendParts.map(p=>{const eq2=DB.equipment.get(p.equipmentId);return`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,179,0,.07);">
+            <span style="font-size:.8rem">${p.critica?'🔴':'📦'}</span>
+            <div style="flex:1;min-width:0;"><div style="font-size:.75rem;font-weight:600;color:${p.critica?'#F44336':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.descricao}</div><div style="font-size:.65rem;color:#8EACC8">${eq2?.codigo||'—'} · ${p.status}</div></div>
+          </div>`;}).join('')}
+        </div>
+
+        <!-- Panel 4: Next Releases -->
+        <div style="background:#0A1929;border:1px solid rgba(0,200,83,.3);border-radius:12px;padding:16px;overflow:hidden;">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#00C853;margin-bottom:12px;">🚀 Próximas Liberações</div>
+          ${nextReleases.slice(0,5).map(e=>{const d=daysBetween(today,e.dataLiberacaoPlanejada);const cls=d<0?'#F44336':d<=3?'#FF9800':'#00C853';return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(0,200,83,.07);border-radius:8px;margin-bottom:8px;">
+            <div><div style="font-weight:800;color:white;font-size:.95rem">${e.codigo} <span style="font-size:.7rem;color:#8EACC8">${e.cliente}</span></div>
+            <div style="margin-top:4px;background:rgba(255,255,255,.1);border-radius:4px;height:6px;width:100%;overflow:hidden;"><div style="height:100%;width:${e.pctAvanco||0}%;background:#00C853;border-radius:4px;"></div></div></div>
+            <div style="text-align:right;"><div style="font-size:.85rem;font-weight:700;color:${cls}">${formatDate(e.dataLiberacaoPlanejada)}</div><div style="font-size:.65rem;color:${cls}">${d<0?Math.abs(d)+'d atraso':d+'d'}</div></div>
+          </div>`;}).join('')}
+        </div>
+
+        <!-- Panel 5: Restrictions -->
+        <div style="background:#0A1929;border:1px solid rgba(156,39,176,.3);border-radius:12px;padding:16px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#CE93D8;">🚫 Restrições</div><div style="font-size:2rem;font-weight:900;color:#CE93D8">${restrictions.length}</div></div>
+          ${restrictions.slice(0,5).map(r=>{const eq2=DB.equipment.get(r.equipmentId);return`<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(156,39,176,.1);border-left:2px solid #9C27B0;">
+            <div style="font-size:.7rem;color:#CE93D8;font-weight:700">${r.tipo}</div>
+            <div style="font-size:.7rem;color:#8EACC8">${eq2?.codigo||'—'} · ${r.descricao.slice(0,50)}...</div>
+          </div>`;}).join('')}
+        </div>
+
+        <!-- Panel 6: System Alerts -->
+        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;padding:16px;overflow:hidden;">
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1E88E5;margin-bottom:12px;">🔔 Alertas do Sistema</div>
+          ${DB.notifications.list().slice(0,5).map(n=>`<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(30,136,229,.08);">
+            <div style="font-size:.75rem;font-weight:600;color:white">${n.title}</div>
+            <div style="font-size:.65rem;color:#8EACC8;margin-top:2px">${formatDateTime(n.createdAt)}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Bottom bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 24px;background:#0A1929;border-top:1px solid rgba(30,136,229,.2);font-size:.7rem;color:#546E7A;">
+        <span>PLANEJAMENTO DIMAN-BHZ — Gestão Industrial</span>
+        <span id="meeting-update-info"></span>
+        <span>F11 para tela cheia</span>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Clock
+    interval = setInterval(() => {
+      const dt = document.getElementById('meeting-datetime');
+      if (dt) dt.textContent = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+      const info = document.getElementById('meeting-update-info');
+      if (info) { countdown--; if (countdown <= 0) { countdown = 30; } info.textContent = `Atualizado · Próxima atualização em ${countdown}s`; }
+    }, 1000);
+  }
+
+  function deactivate() {
+    if (interval) { clearInterval(interval); interval = null; }
+    document.getElementById('meeting-overlay')?.remove();
+  }
+
+  return { activate, deactivate };
+})();
+
+// ================================================================
+// TIMELINE MODULE
+// ================================================================
+const TimelineModule = (() => {
+  function render() {
+    const eqs = DB.equipment.list();
+    const allEvents = eqs.flatMap(e => (e.timeline||[]).map(tl => ({ ...tl, equipCode: e.codigo })));
+    allEvents.sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+    const typeColor = { ENTRADA:'info', INICIO:'success', DEFEITO:'danger', PECA_SOLICITADA:'warning', REPLANEJAMENTO:'warning', LIBERACAO:'success' };
+
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>Timeline de Eventos</div></div>
+      <div class="timeline" style="padding:var(--space-4);">
+        ${allEvents.map(tl=>`<div class="timeline-item">
+          <div class="timeline-icon ${typeColor[tl.tipo]||'primary'}"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+          <div class="timeline-content">
+            <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-1);">
+              <div class="timeline-title">${tl.titulo}</div>
+              <span class="badge badge-ghost" style="font-size:10px">${tl.equipCode}</span>
+            </div>
+            <div class="timeline-desc">${tl.descricao}</div>
+            <div class="timeline-time">${formatDateTime(tl.timestamp)}</div>
+          </div>
+        </div>`).join('')}
+        ${allEvents.length===0?'<div class="empty-state"><p>Nenhum evento registrado</p></div>':''}
+      </div>
+    </div>`;
+  }
+  return { render };
+})();
+
+// ================================================================
+// LESSONS MODULE
+// ================================================================
+const LessonsModule = (() => {
+  function render() {
+    const lessons = DB.lessons.list();
+    const eqs = DB.equipment.list();
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/></svg></div>Lições Aprendidas</div>
+        <button class="btn btn-primary" onclick="LessonsModule.openCreate()">+ Nova Lição</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:var(--space-4);">
+        ${lessons.map(l=>`<div class="card hover-lift" style="border-left:3px solid var(--color-warning);">
+          <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-3);">
+            <span style="font-size:1.5rem">💡</span>
+            <div>
+              <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-warning)">${l.disciplina}</div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted)">${l.equipmentTipo} · ${formatDate(l.createdAt)}</div>
+            </div>
+          </div>
+          <div style="margin-bottom:var(--space-3);">
+            <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-danger);margin-bottom:4px">🔴 Problema:</div>
+            <div style="font-size:var(--text-sm);color:var(--text-secondary)">${l.problema}</div>
+          </div>
+          <div style="margin-bottom:var(--space-3);">
+            <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-success);margin-bottom:4px">✅ Solução:</div>
+            <div style="font-size:var(--text-sm);color:var(--text-secondary)">${l.solucao}</div>
+          </div>
+          <div style="padding:var(--space-2) var(--space-3);background:var(--color-warning-bg);border-radius:var(--radius-sm);font-size:var(--text-xs);color:var(--color-warning);">
+            📝 ${l.recomendacao}
+          </div>
+          <div style="margin-top:var(--space-2);font-size:var(--text-xs);color:var(--text-muted)">Tempo perdido: <strong>${l.tempoPerdido} dias</strong></div>
+        </div>`).join('')}
+        ${lessons.length===0?'<div class="empty-state" style="grid-column:1/-1"><p>Nenhuma lição aprendida registrada</p></div>':''}
+      </div>
+      <div class="modal-overlay" id="modal-lesson">
+        <div class="modal modal-lg"><div class="modal-header"><div class="modal-title">Nova Lição Aprendida</div><button class="modal-close" onclick="closeModal('modal-lesson')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <div class="modal-body" id="lesson-modal-body"></div>
+        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-lesson')">Cancelar</button><button class="btn btn-primary" onclick="LessonsModule.save()">Salvar</button></div></div>
+      </div>
+    </div>`;
+  }
+
+  function openCreate() {
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Instrumentação','Hidráulica'];
+    document.getElementById('lesson-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
+      <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="ll-disc">${discs.map(d=>`<option>${d}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Tipo de Equipamento</label><input id="ll-tipo" placeholder="Sonda, Perfuratriz..." /></div></div>
+      <div class="form-group"><label>Problema Encontrado *</label><textarea id="ll-prob" rows="3"></textarea></div>
+      <div class="form-group"><label>Solução Aplicada *</label><textarea id="ll-sol" rows="3"></textarea></div>
+      <div class="form-group"><label>Recomendação Futura *</label><textarea id="ll-rec" rows="3"></textarea></div>
+      <div class="form-group"><label>Tempo Perdido (dias)</label><input type="number" id="ll-tempo" min="0" value="0" /></div>
+    </div>`;
+    openModal('modal-lesson');
+  }
+
+  function save() {
+    const prob = document.getElementById('ll-prob').value.trim();
+    const sol = document.getElementById('ll-sol').value.trim();
+    if (!prob || !sol) { Toast.error('Erro', 'Preencha problema e solução'); return; }
+    DB.lessons.create({ disciplina: document.getElementById('ll-disc').value, equipmentTipo: document.getElementById('ll-tipo').value, problema: prob, solucao: sol, recomendacao: document.getElementById('ll-rec').value, tempoPerdido: parseInt(document.getElementById('ll-tempo').value)||0 });
+    closeModal('modal-lesson');
+    Router.navigate('lessons', { force: true });
+    Toast.success('Lição registrada!');
+  }
+
+  return { render, openCreate, save };
+})();
+
+// ================================================================
+// STUB MODULES (Placeholders with basic UI)
+// ================================================================
+
+const ImpactsModule = (() => {
+  function render() {
+    const allTasks = DB.tasks.getAll();
+    const criticas = allTasks.filter(t => t.critico && t.status !== 'Concluída');
+    const eqs = DB.equipment.list();
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div>Relatório de Impactos</div></div>
+      <div class="alert alert-info" style="margin-bottom:var(--space-4);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg><div class="alert-content"><div class="alert-title">Análise de impacto de atrasos na data de liberação dos equipamentos</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Equipamento</th><th>Cliente</th><th>% Avanço</th><th>Data Liberação</th><th>Tarefas Críticas</th><th>Restrições</th><th>Impacto Estimado</th></tr></thead>
+      <tbody>${eqs.map(e=>{const cr=allTasks.filter(t=>t.equipmentId===e.id&&t.critico&&t.status!=='Concluída').length;const rs=DB.restrictions.getAll().filter(r=>r.equipmentId===e.id&&r.status==='Aberta').length;const impact=cr*2+rs*3;return`<tr>
+        <td><strong>${e.codigo}</strong></td><td>${e.cliente}</td><td>${e.pctAvanco||0}%</td>
+        <td>${formatDate(e.dataLiberacaoPlanejada)}</td>
+        <td><span class="badge badge-${cr>0?'danger':'success'}">${cr}</span></td>
+        <td><span class="badge badge-${rs>0?'warning':'success'}">${rs}</span></td>
+        <td><span class="badge badge-${impact>5?'danger':impact>0?'warning':'success'}">${impact > 0 ? `~${impact} dias de risco` : 'OK'}</span></td>
+      </tr>`;}).join('')}</tbody></table></div>
+    </div>`;
+  }
+  return { render };
+})();
+
+const ReportsModule = (() => {
+  function render() {
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg></div>Relatórios</div>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-4);">
+        ${[
+          {title:'Relatório de Aderência',icon:'📊',desc:'Aderência ao planejamento por período'},
+          {title:'Relatório de Equipamentos',icon:'⚙️',desc:'Status e avanço de todos os equipamentos'},
+          {title:'Relatório de Peças',icon:'📦',desc:'Peças pendentes e criticidade'},
+          {title:'Relatório de Custos',icon:'💰',desc:'Custos planejados vs realizados'},
+          {title:'Relatório de Restrições',icon:'🚫',desc:'Restrições abertas e fechadas'},
+          {title:'Relatório de MO',icon:'👥',desc:'Horas de mão de obra por período'},
+        ].map(r=>`<div class="card card-clickable hover-lift" onclick="Toast.info('${r.title}','Módulo de exportação de relatórios em desenvolvimento.')">
+          <div style="font-size:2rem;margin-bottom:var(--space-3)">${r.icon}</div>
+          <div style="font-weight:700;font-size:var(--text-sm);margin-bottom:var(--space-2)">${r.title}</div>
+          <div style="font-size:var(--text-xs);color:var(--text-muted)">${r.desc}</div>
+          <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-4)">Gerar PDF</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  return { render };
+})();
+
+const AuditModule = (() => {
+  function render() {
+    const logs = Auth.getAuditLogs().slice(-100).reverse();
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg></div>Log de Auditoria</div>
+        <span style="font-size:var(--text-sm);color:var(--text-muted)">${logs.length} registros</span>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Entidade</th><th>Detalhes</th></tr></thead>
+        <tbody>
+          ${logs.map(l=>`<tr>
+            <td style="font-family:var(--font-mono);font-size:var(--text-xs)">${formatDateTime(l.timestamp)}</td>
+            <td>${l.userNome||l.userId||'Sistema'}</td>
+            <td><span class="badge badge-${l.action==='DELETE'?'danger':l.action==='CREATE'?'success':'primary'}">${l.action}</span></td>
+            <td><span class="badge badge-ghost">${l.entity}</span></td>
+            <td style="font-size:var(--text-xs);color:var(--text-muted)">${JSON.stringify(l.changes||{}).slice(0,60)}...</td>
+          </tr>`).join('')}
+          ${logs.length===0?'<tr><td colspan="5" style="text-align:center;padding:var(--space-8);color:var(--text-muted)">Nenhum registro de auditoria</td></tr>':''}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+  return { render };
+})();
+
+const UsersModule = (() => {
+  function render() {
+    if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
+    const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    return `<div class="page-container">
+      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg></div>Gestão de Usuários</div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Matrícula</th><th>Nome</th><th>Cargo</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody>
+          ${users.map(u=>`<tr>
+            <td style="font-family:var(--font-mono)">${u.matricula}</td>
+            <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
+            <td style="font-size:var(--text-xs)">${u.cargo||'—'}</td>
+            <td><span class="badge badge-primary">${u.perfil}</span></td>
+            <td>${statusBadge(u.status||'Ativo')}</td>
+            <td><div class="table-actions"><button class="btn btn-secondary btn-sm" onclick="Toast.info('Editar usuário','Em desenvolvimento.')">Editar</button></div></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  }
+  return { render };
+})();
+
+// ================================================================
+// HELPER: Tab switcher
+// ================================================================
+function switchTab(btn, panelId) {
+  const container = btn.closest('.tabs');
+  container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  container.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId)?.classList.add('active');
+}
