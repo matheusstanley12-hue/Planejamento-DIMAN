@@ -197,7 +197,7 @@ window.EquipmentPanel = (() => {
               </div>
             </div>
 
-            <div class="form-row cols-2" style="margin-bottom:var(--space-4);">
+            <div class="form-row cols-2" style="margin-bottom:var(--space-3);">
               <div class="form-group">
                 <label>Planejado Início</label>
                 <input type="date" id="new-task-ini" />
@@ -206,6 +206,22 @@ window.EquipmentPanel = (() => {
                 <label>Planejado Fim</label>
                 <input type="date" id="new-task-fim" />
               </div>
+            </div>
+
+            <div class="form-row cols-2" style="margin-bottom:var(--space-3);">
+              <div class="form-group">
+                <label>Real Início</label>
+                <input type="date" id="new-task-real-ini" />
+              </div>
+              <div class="form-group">
+                <label>Real Fim</label>
+                <input type="date" id="new-task-real-fim" />
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-4);">
+              <label>Data Replanejada</label>
+              <input type="date" id="new-task-replan" style="width:100%;" />
             </div>
 
             <div class="checkbox-wrap" style="margin-bottom:var(--space-3);">
@@ -380,7 +396,7 @@ window.EquipmentPanel = (() => {
                 <tr style="${isChecked?'opacity:0.6;':''} ${t.critico?'background:rgba(244,67,54,0.05);':''}">
                   <td><input type="checkbox" ${isChecked?'checked':''} disabled /></td>
                   <td>
-                    <input type="text" value="${t.descricao||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'descricao', this.value)" style="width:100%;font-weight:600;padding:2px 4px;font-size:12px;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}" onmouseover="this.style.borderColor='var(--border-default)'" onmouseout="this.style.borderColor='transparent'" onfocus="this.style.borderColor='var(--border-hover)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" title="Clique para editar a descrição da atividade" />
+                    <div onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" style="font-weight:600;cursor:pointer;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}" onmouseover="this.style.color='var(--brand-primary-light)'" onmouseout="this.style.color='var(--text-primary)'" title="Clique para abrir e editar a atividade">${t.descricao}</div>
                     ${t.critico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;margin-top:4px;">CRÍTICO</span>':''}
                     ${t.predecessoras && t.predecessoras.length > 0 ? `
                       <div style="margin-top:4px;font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
@@ -665,6 +681,9 @@ window.EquipmentPanel = (() => {
       document.getElementById('new-task-horas').value = t.horasPlanejadas || 0;
       document.getElementById('new-task-ini').value = t.dataPlanejadaInicio || '';
       document.getElementById('new-task-fim').value = t.dataPlanejadaTermino || '';
+      document.getElementById('new-task-real-ini').value = t.dataRealInicio || '';
+      document.getElementById('new-task-real-fim').value = t.dataRealTermino || '';
+      document.getElementById('new-task-replan').value = t.dataReplanejada || '';
       document.getElementById('new-task-critico').checked = !!t.critico;
       document.getElementById('new-task-obs').value = t.observacoes || '';
       
@@ -681,6 +700,9 @@ window.EquipmentPanel = (() => {
       document.getElementById('new-task-horas').value = 0;
       document.getElementById('new-task-ini').value = today;
       document.getElementById('new-task-fim').value = today;
+      document.getElementById('new-task-real-ini').value = '';
+      document.getElementById('new-task-real-fim').value = '';
+      document.getElementById('new-task-replan').value = '';
       document.getElementById('new-task-critico').checked = false;
       document.getElementById('new-task-obs').value = '';
       Array.from(predsSelect.options).forEach(opt => opt.selected = false);
@@ -702,11 +724,21 @@ window.EquipmentPanel = (() => {
       horasPlanejadas: parseInt(document.getElementById('new-task-horas').value) || 0,
       dataPlanejadaInicio: document.getElementById('new-task-ini').value,
       dataPlanejadaTermino: document.getElementById('new-task-fim').value,
+      dataRealInicio: document.getElementById('new-task-real-ini').value || null,
+      dataRealTermino: document.getElementById('new-task-real-fim').value || null,
+      dataReplanejada: document.getElementById('new-task-replan').value || null,
       prioridade: document.getElementById('new-task-critico').checked ? 'Crítica' : 'Média',
       critico: document.getElementById('new-task-critico').checked,
       observacoes: document.getElementById('new-task-obs').value.trim(),
       predecessoras: selectedPreds
     };
+
+    if (taskData.dataRealTermino) {
+      taskData.status = 'Concluída';
+      taskData.pctExecutado = 100;
+    } else if (taskData.dataRealInicio && (!editingTaskId || DB.tasks.get(editingTaskId)?.status === 'Não Iniciada')) {
+      taskData.status = 'Em Andamento';
+    }
 
     if (editingTaskId) {
       const t = DB.tasks.get(editingTaskId);
@@ -718,8 +750,8 @@ window.EquipmentPanel = (() => {
         ...taskData,
         codigo: 'ATV-' + Math.floor(Math.random() * 10000),
         horasRealizadas: 0,
-        pctExecutado: 0,
-        status: 'Não Iniciada'
+        pctExecutado: taskData.pctExecutado || 0,
+        status: taskData.status || 'Não Iniciada'
       };
       DB.tasks.create(newTask);
       Toast.success('Atividade Adicionada', `A atividade "${desc}" foi criada com sucesso.`);
