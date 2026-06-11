@@ -207,9 +207,14 @@ window.EquipmentPanel = (() => {
               </div>
             </div>
 
-            <div class="checkbox-wrap" style="margin-bottom:var(--space-5);">
+            <div class="checkbox-wrap" style="margin-bottom:var(--space-3);">
               <input type="checkbox" id="new-task-critico" />
               <label for="new-task-critico" style="font-weight:bold;color:var(--color-danger);">Marcar como atividade CRÍTICA no caminho</label>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-5);">
+              <label>Observações</label>
+              <textarea id="new-task-obs" placeholder="Alguma observação relevante..." style="width:100%;height:60px;padding:var(--space-2);background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);resize:vertical;"></textarea>
             </div>
 
             <div style="display:flex;gap:var(--space-3);justify-content:flex-end;">
@@ -366,8 +371,12 @@ window.EquipmentPanel = (() => {
                 <tr style="${isChecked?'opacity:0.6;':''} ${t.critico?'background:rgba(244,67,54,0.05);':''}">
                   <td><input type="checkbox" ${isChecked?'checked':''} disabled /></td>
                   <td>
-                    <div style="font-weight:600;${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
-                    ${t.critico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;">CRÍTICO</span>':''}
+                    <input type="text" value="${t.descricao||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'descricao', this.value)" style="width:100%;font-weight:600;padding:2px 4px;font-size:12px;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}" onmouseover="this.style.borderColor='var(--border-default)'" onmouseout="this.style.borderColor='transparent'" onfocus="this.style.borderColor='var(--border-hover)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" title="Clique para editar a descrição da atividade" />
+                    ${t.critico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;margin-top:4px;">CRÍTICO</span>':''}
+                    <div style="margin-top:6px;display:flex;align-items:center;gap:4px;">
+                      <span style="font-size:9px;color:var(--text-muted);font-weight:bold;text-transform:uppercase;flex-shrink:0;">Obs:</span>
+                      <input type="text" value="${t.observacoes||''}" placeholder="Adicionar observação..." onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'observacoes', this.value)" style="width:100%;padding:2px 4px;font-size:10px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-secondary);" />
+                    </div>
                   </td>
                   <td>${t.responsavel || '—'}</td>
                   <td>
@@ -620,6 +629,7 @@ window.EquipmentPanel = (() => {
     document.getElementById('new-task-ini').value = today;
     document.getElementById('new-task-fim').value = today;
     document.getElementById('new-task-critico').checked = false;
+    document.getElementById('new-task-obs').value = '';
   }
 
   function saveTask(eqId) {
@@ -639,7 +649,8 @@ window.EquipmentPanel = (() => {
       pctExecutado: 0,
       status: 'Não Iniciada',
       prioridade: document.getElementById('new-task-critico').checked ? 'Crítica' : 'Média',
-      critico: document.getElementById('new-task-critico').checked
+      critico: document.getElementById('new-task-critico').checked,
+      observacoes: document.getElementById('new-task-obs').value.trim()
     };
 
     DB.tasks.create(newTask);
@@ -716,6 +727,13 @@ window.EquipmentPanel = (() => {
   function updateTaskField(eqId, id, field, value) {
     const t = window.DB.tasks.get(id);
     if (!t) return;
+
+    if (field === 'descricao' && !value.trim()) {
+      window.Toast.error('Erro', 'Descrição da atividade não pode ser vazia.');
+      window.Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
+      return;
+    }
+
     const data = { updatedAt: new Date().toISOString() };
     
     if (field === 'pctExecutado') {
@@ -735,7 +753,7 @@ window.EquipmentPanel = (() => {
     
     window.DB.tasks.update(id, data);
     window.Toast.success('Salvo', 'Atividade atualizada com sucesso.');
-    if (field === 'pctExecutado') {
+    if (field === 'pctExecutado' || field === 'descricao') {
       window.Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
     }
   }
