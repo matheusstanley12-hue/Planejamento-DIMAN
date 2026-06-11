@@ -67,11 +67,15 @@ window.DB = (() => {
     try { return JSON.parse(localStorage.getItem(key) || '{}'); }
     catch { return {}; }
   }
-  function syncToSupabase(collection, data) {
+  async function syncToSupabase(collection, data) {
     if (supabaseClient) {
-      supabaseClient.from('diman_store')
-        .upsert({ collection: collection, key: 'all', data: data }, { onConflict: 'collection,key' })
-        .catch(err => console.error('Supabase Sync Error:', err));
+      try {
+        const { error } = await supabaseClient.from('diman_store')
+          .upsert({ collection: collection, key: 'all', data: data }, { onConflict: 'collection,key' });
+        if (error) console.error('Supabase Sync Error:', error);
+      } catch (err) {
+        console.error('Supabase Sync Exception:', err);
+      }
     }
   }
   function set(key, data) { 
