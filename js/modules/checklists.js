@@ -22,24 +22,34 @@ window.ChecklistsModule = (() => {
   }
 
   function mockUpload() {
-    const fileName = prompt('Nome do arquivo para anexar:', 'check-list.pdf');
-    if (!fileName) return;
-    
-    const today = new Date();
-    const dateStr = String(today.getDate()).padStart(2, '0') + '/' + 
-                    String(today.getMonth() + 1).padStart(2, '0') + '/' + 
-                    today.getFullYear();
-
-    attachments[currentTab].push({
-      id: Date.now(),
-      name: fileName,
-      date: dateStr,
-      size: (Math.random() * 4 + 0.5).toFixed(1) + ' MB',
-      user: window.Auth && Auth.getCurrentUser() ? Auth.getCurrentUser().nome : 'Usuário'
-    });
-    
-    window.Toast && Toast.success('Arquivo anexado com sucesso!');
-    Router.navigate('checklists', { force: true });
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.onchange = e => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      
+      const today = new Date();
+      const dateStr = String(today.getDate()).padStart(2, '0') + '/' + 
+                      String(today.getMonth() + 1).padStart(2, '0') + '/' + 
+                      today.getFullYear();
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+        attachments[currentTab].push({
+          id: Date.now() + i,
+          name: file.name,
+          date: dateStr,
+          size: sizeMb,
+          user: window.Auth && Auth.getCurrentUser() ? Auth.getCurrentUser().nome : 'Usuário'
+        });
+      }
+      
+      window.Toast && Toast.success(files.length > 1 ? `${files.length} arquivos anexados!` : 'Arquivo anexado com sucesso!');
+      Router.navigate('checklists', { force: true });
+    };
+    input.click();
   }
 
   function deleteFile(id) {
