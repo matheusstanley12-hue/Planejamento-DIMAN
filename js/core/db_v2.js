@@ -107,6 +107,7 @@ window.DB = (() => {
   async function initSupabase() {
     if (!supabaseClient) return;
     try {
+      // 1. Initial fetch
       const { data, error } = await supabaseClient.from('diman_store').select('*');
       if (error) { console.error('Supabase fetch error:', error); return; }
       if (data && data.length > 0) {
@@ -116,6 +117,22 @@ window.DB = (() => {
           }
         });
       }
+
+      // 2. Real-time subscription
+      supabaseClient
+        .channel('diman-sync')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'diman_store' }, payload => {
+          if (payload.new && payload.new.key === 'all') {
+            localStorage.setItem(payload.new.collection, JSON.stringify(payload.new.data));
+            // Force re-render of current view
+            if (window.Router) {
+              const current = window.Router.getCurrent();
+              if (current) window.Router.navigate(current, { force: true });
+            }
+          }
+        })
+        .subscribe();
+
     } catch(e) {
       console.error('Failed to init Supabase:', e);
     }

@@ -92,16 +92,7 @@ async function initApp() {
     }
   }
 
-  // Wipe local storage for production exactly once on load
-  if (!localStorage.getItem('diman_production_v2_ready')) {
-    const keysToWipe = ['diman_equipment', 'diman_tasks', 'diman_parts', 'diman_workforce', 'diman_timesheets', 'diman_replannings', 'diman_restrictions', 'diman_costs', 'diman_lessons', 'diman_notifications', 'diman_kpi_cache'];
-    keysToWipe.forEach(k => localStorage.removeItem(k));
-    localStorage.setItem('diman_production_v2_ready', 'true');
-    // Force sync the empty state to Supabase to clear it too
-    if (window.DB && DB.forceSyncAll) {
-      DB.forceSyncAll();
-    }
-  }
+  // LocalStorage wipe removed to prevent erasing Supabase on new devices
 
   Auth.init();
 }
@@ -236,13 +227,7 @@ function showLoginPage() {
 
     const result = await Auth.login(matricula, senha);
     if (result.success) {
-      // Wipe local storage for production exactly once
-      if (!localStorage.getItem('diman_production_v2_ready')) {
-        const keysToWipe = ['diman_equipment', 'diman_tasks', 'diman_parts', 'diman_workforce', 'diman_timesheets', 'diman_replannings', 'diman_restrictions', 'diman_costs', 'diman_lessons', 'diman_notifications', 'diman_kpi_cache'];
-        keysToWipe.forEach(k => localStorage.removeItem(k));
-        localStorage.setItem('diman_production_v2_ready', 'true');
-        if (window.DB && DB.forceSyncAll) DB.forceSyncAll();
-      }
+      // (wipe logic removed here as well)
 
       setTimeout(() => { page.remove(); renderShell(result.session); Router.navigate('home'); }, 300);
     } else {
@@ -464,10 +449,7 @@ function renderShell(session) {
               Início
             </button>
 
-            <button class="btn btn-outline btn-sm" onclick="window.DB.forceSyncAll()" title="Forçar envio de dados locais para a nuvem" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);color:var(--brand-primary-light);border-color:var(--brand-primary-light);margin-left:var(--space-2);">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
-              Sincronizar Nuvem
-            </button>
+
 
             <!-- Global Equipment Filter -->
             <div style="margin-left:var(--space-4); display:flex; align-items:center;">
