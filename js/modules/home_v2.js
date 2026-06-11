@@ -19,27 +19,34 @@ window.HomeModule = (() => {
     const restrAbertas = restrictions.filter(r => r.status === 'Aberta').length;
     const partsPendentes = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
 
+    // Wait a tick to re-apply filter if needed
+    setTimeout(() => {
+      if (activeCategory) {
+        filterByCategory(activeCategory, true);
+      }
+    }, 50);
+
     return `
       <div style="max-width:1200px;margin:0 auto;padding:var(--space-6);">
         <!-- Top Indicators -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-4);margin-bottom:var(--space-6);">
-          <div class="card" style="padding:var(--space-4);text-align:center;">
+          <div id="summary-card-manutencao" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('manutencao')" title="Clique para filtrar">
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--brand-primary-light);">${emManutencao}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Em Manutenção</div>
           </div>
-          <div class="card" style="padding:var(--space-4);text-align:center;">
+          <div id="summary-card-atrasado" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('atrasado')" title="Clique para filtrar">
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-danger);">${atrasados}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Atrasados</div>
           </div>
-          <div class="card" style="padding:var(--space-4);text-align:center;">
+          <div id="summary-card-lib7" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('lib7')" title="Clique para filtrar">
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-success);">${libsThisWeek}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Liberações (7 dias)</div>
           </div>
-          <div class="card" style="padding:var(--space-4);text-align:center;">
+          <div id="summary-card-restr" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('restr')" title="Clique para filtrar">
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-warning);">${restrAbertas}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Restrições Abertas</div>
           </div>
-          <div class="card" style="padding:var(--space-4);text-align:center;">
+          <div id="summary-card-pecas" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('pecas')" title="Clique para filtrar">
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-orange);">${partsPendentes}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Peças Pendentes</div>
           </div>
@@ -65,8 +72,14 @@ window.HomeModule = (() => {
               desvio = daysBetween(dtPlan, dtPrev);
             }
             
+            const isManutencao = e.status !== 'Liberado' ? '1' : '0';
+            const isAtrasado = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) < 0) ? '1' : '0';
+            const isLib7 = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) >= 0 && daysBetween(today, e.dataLiberacaoAtual) <= 7) ? '1' : '0';
+            const hasRestr = restrictions.some(r => r.equipmentId === e.id && r.status === 'Aberta') ? '1' : '0';
+            const hasPecas = parts.some(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status)) ? '1' : '0';
+            
             return `
-            <div class="card hover-lift home-eq-card" data-search="${e.codigo.toLowerCase()} ${e.nome.toLowerCase()}" onclick="window.Router.navigate('equipment-panel', {id: '${e.id}'})" style="cursor:pointer;display:flex;flex-direction:column;padding:var(--space-5);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'};">
+            <div class="card hover-lift home-eq-card" data-search="${e.codigo.toLowerCase()} ${e.nome.toLowerCase()}" data-manutencao="${isManutencao}" data-atrasado="${isAtrasado}" data-lib7="${isLib7}" data-restr="${hasRestr}" data-pecas="${hasPecas}" onclick="window.Router.navigate('equipment-panel', {id: '${e.id}'})" style="cursor:pointer;display:flex;flex-direction:column;padding:var(--space-5);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'};">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-3);">
                 <div>
                   <div style="font-size:1.4rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;">${e.codigo}</div>
@@ -192,5 +205,30 @@ window.HomeModule = (() => {
     });
   }
 
-  return { render, filter, openCreateModal, saveEquipment };
+  let activeCategory = null;
+
+  function filterByCategory(category, force = false) {
+    if (activeCategory === category && !force) {
+      // Toggle off
+      activeCategory = null;
+      document.querySelectorAll('.home-eq-card').forEach(c => c.style.display = 'flex');
+      document.querySelectorAll('.home-summary-card').forEach(c => c.style.border = 'none');
+    } else {
+      activeCategory = category;
+      document.querySelectorAll('.home-eq-card').forEach(card => {
+        if (card.getAttribute('data-' + category) === '1') {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      document.querySelectorAll('.home-summary-card').forEach(c => c.style.border = 'none');
+      const activeCard = document.getElementById('summary-card-' + category);
+      if (activeCard) activeCard.style.border = '2px solid var(--brand-primary)';
+    }
+    const searchInput = document.getElementById('home-search');
+    if (searchInput) searchInput.value = '';
+  }
+
+  return { render, filter, filterByCategory, openCreateModal, saveEquipment };
 })();
