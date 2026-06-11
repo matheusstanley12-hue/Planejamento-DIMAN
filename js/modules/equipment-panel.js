@@ -897,10 +897,8 @@ window.EquipmentPanel = (() => {
   }
 
   return { 
-    render, exportTasksCSV, exportEquipmentReport, updateTaskStatus, updateTaskField, deleteTask,
-    openPartModal, closePartModal, savePart,
-    openTaskModal, closeTaskModal, saveTask,
-    openRestrModal, closeRestrModal, saveRestr, closeRestr,
-    deleteEquipment 
+    render, toggleAccordion, addFollowUp, openTaskModal, saveTask, deleteTask, 
+    updateTaskStatus, updateTaskField, openPartModal, savePart, deletePart, 
+    exportTasksCSV, deleteEquipment 
   };
 })();
