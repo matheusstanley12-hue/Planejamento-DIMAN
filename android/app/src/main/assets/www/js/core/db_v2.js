@@ -29,6 +29,10 @@ window.DB = (() => {
   window.GlobalEqFilter = '';
   window.setGlobalEqFilter = function(id) {
     window.GlobalEqFilter = id;
+    const selectEl = document.getElementById('global-eq-select');
+    if (selectEl) {
+      selectEl.value = id;
+    }
     if (window.Router) {
       const current = window.Router.getCurrent();
       if (current) window.Router.navigate(current, { force: true });
@@ -39,19 +43,22 @@ window.DB = (() => {
 
   const INITIAL_DATA = {
     [KEYS.equipment]: [
-      { id: 'eq-test-1', nome: 'Caminhão Fora de Estrada 01', codigo: 'CAM-001', familia: 'Caminhões', status: 'Em Manutenção', area: 'Mina 1', timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-test-2', nome: 'Escavadeira Hidráulica 02', codigo: 'ESC-002', familia: 'Escavadeiras', status: 'Em Manutenção', area: 'Mina 2', timeline: [], replanning: [], createdAt: now(), updatedAt: now() }
+      { id: 'eq-ssm-288', nome: 'SSM-288', codigo: 'SSM-288', tipo: 'Sondas de Pesquisas', status: 'Em Manutenção', os: 'OS-88220', cliente: 'COMISA', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
+      { id: 'eq-bhz-001', nome: 'BHZ-001', codigo: 'BHZ-001', tipo: 'Sondas Poços', status: 'Em Manutenção', os: 'OS-99100', cliente: 'GEOSOL', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
+      { id: 'eq-bms-101', nome: 'BMS-101', codigo: 'BMS-101', tipo: 'Bomba de pesquisa', status: 'Liberado', os: 'OS-77110', cliente: 'VALE', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
+      { id: 'eq-bmp-202', nome: 'BMP-202', codigo: 'BMP-202', tipo: 'Bombas de poços', status: 'Em Manutenção', os: 'OS-66330', cliente: 'ANGLO', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
+      { id: 'eq-sub-501', nome: 'SUB-501', codigo: 'SUB-501', tipo: 'Subconjuntos', status: 'Em Manutenção', os: 'OS-55440', cliente: 'GEOSOL', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() }
     ],
     [KEYS.tasks]: [
-      { id: 'tk-test-1', equipmentId: 'eq-test-1', descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false, createdAt: now(), updatedAt: now() },
-      { id: 'tk-test-2', equipmentId: 'eq-test-1', descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true, createdAt: now(), updatedAt: now() },
-      { id: 'tk-test-3', equipmentId: 'eq-test-2', descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true, createdAt: now(), updatedAt: now() }
+      { id: 'tk-test-1', equipmentId: 'eq-ssm-288', descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false, createdAt: now(), updatedAt: now() },
+      { id: 'tk-test-2', equipmentId: 'eq-ssm-288', descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true, createdAt: now(), updatedAt: now() },
+      { id: 'tk-test-3', equipmentId: 'eq-bhz-001', descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true, createdAt: now(), updatedAt: now() }
     ],
     [KEYS.restrictions]: [
-      { id: 'rs-test-1', equipmentId: 'eq-test-1', descricao: 'Aguardando liberação de área', impacto: 'Alto', status: 'Aberta', createdAt: now(), updatedAt: now() }
+      { id: 'rs-test-1', equipmentId: 'eq-ssm-288', descricao: 'Aguardando liberação de área', impacto: 'Alto', status: 'Aberta', createdAt: now(), updatedAt: now() }
     ],
     [KEYS.parts]: [
-      { id: 'pt-test-1', equipmentId: 'eq-test-2', descricao: 'Mangueira de Alta Pressão', pn: 'PN-98765', qtd: 2, status: 'Solicitada', createdAt: now(), updatedAt: now() }
+      { id: 'pt-test-1', equipmentId: 'eq-bhz-001', descricao: 'Mangueira de Alta Pressão 3/4', pn: 'PN-98765', qtd: 2, status: 'Solicitada', createdAt: now(), updatedAt: now() }
     ]
   };
 
@@ -169,6 +176,22 @@ window.DB = (() => {
       const before = { ...items[idx] };
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.equipment, items);
+
+      if (data.status === 'Liberado') {
+        const wItems = get(KEYS.workforce);
+        let changed = false;
+        wItems.forEach(w => {
+          if (w.equipmentId === id) {
+            w.equipmentId = '';
+            w.justificativa = '';
+            changed = true;
+          }
+        });
+        if (changed) {
+          set(KEYS.workforce, wItems);
+        }
+      }
+
       if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('UPDATE_EQUIPMENT', `Equipamento ${items[idx].nome} atualizado`, { before, after: items[idx] });
       if (window.events && window.events.emit) window.events.emit('equipment:updated', items[idx]);
       return items[idx];
@@ -306,17 +329,25 @@ window.DB = (() => {
       const item = { id: uid('wf'), ...data, createdAt: now() };
       items.push(item);
       set(KEYS.workforce, items);
+      Auth.addAuditLog('CREATE_WORKER', `Trabalhador ${data.nome} criado`, data);
       return item;
     },
     update(id, data) {
       const items = get(KEYS.workforce);
       const idx = items.findIndex(w => w.id === id);
       if (idx === -1) return null;
+      const before = { ...items[idx] };
       items[idx] = { ...items[idx], ...data };
       set(KEYS.workforce, items);
+      Auth.addAuditLog('UPDATE_WORKER', `Trabalhador ${items[idx].nome} atualizado`, { before, after: items[idx] });
       return items[idx];
     },
-    delete(id) { set(KEYS.workforce, get(KEYS.workforce).filter(w => w.id !== id)); }
+    delete(id) {
+      const items = get(KEYS.workforce);
+      const w = items.find(x => x.id === id);
+      set(KEYS.workforce, items.filter(x => x.id !== id));
+      if (w) Auth.addAuditLog('DELETE_WORKER', `Trabalhador ${w.nome} removido`, null);
+    }
   };
 
   // ==================== TIMESHEETS ====================

@@ -352,10 +352,10 @@ window.WorkerPanel = (() => {
             </div>
           </div>
         </div>
-
-        <!-- Dynamic Modals Container -->
-        <div id="worker-panel-modals"></div>
       </div>
+
+      <!-- Dynamic Modals Container -->
+      <div id="worker-panel-modals"></div>
     `;
   }
 
@@ -422,7 +422,29 @@ window.WorkerPanel = (() => {
       const session = Auth.getSession();
       const dateStr = new Date().toLocaleString('pt-BR');
       const logText = `\n[Atualizado em ${dateStr} por ${session.nome}]: Adicionado +${parsed}h de trabalho via timer.`;
-      const newObs = (t.observacoes ? t.observacoes : '') + logText;
+      
+      let newObs = '';
+      let isJson = false;
+      let comments = [];
+      if (t.observacoes) {
+        try {
+          comments = JSON.parse(t.observacoes);
+          if (Array.isArray(comments)) isJson = true;
+        } catch(e) {}
+      }
+      
+      if (isJson) {
+        comments.push({
+          id: 'c-sys-' + Date.now(),
+          text: `[Timer]: Adicionado +${parsed}h de trabalho via timer.`,
+          user: 'Sistema',
+          userId: 'system',
+          createdAt: new Date().toISOString()
+        });
+        newObs = JSON.stringify(comments);
+      } else {
+        newObs = (t.observacoes ? t.observacoes : '') + logText;
+      }
 
       DB.tasks.update(taskId, { 
         horasRealizadas: totalHrs,
@@ -446,7 +468,29 @@ window.WorkerPanel = (() => {
     const dateStr = new Date().toLocaleString('pt-BR');
     
     const logMsg = `\n[Atualizado em ${dateStr} por ${session.nome}]: Concluído (OK).`;
-    const newObs = (t.observacoes ? t.observacoes : '') + logMsg;
+    
+    let newObs = '';
+    let isJson = false;
+    let comments = [];
+    if (t.observacoes) {
+      try {
+        comments = JSON.parse(t.observacoes);
+        if (Array.isArray(comments)) isJson = true;
+      } catch(e) {}
+    }
+    
+    if (isJson) {
+      comments.push({
+        id: 'c-sys-' + Date.now(),
+        text: `[Status]: Concluído (OK).`,
+        user: 'Sistema',
+        userId: 'system',
+        createdAt: new Date().toISOString()
+      });
+      newObs = JSON.stringify(comments);
+    } else {
+      newObs = (t.observacoes ? t.observacoes : '') + logMsg;
+    }
 
     DB.tasks.update(taskId, {
       status: 'Concluída',
@@ -616,7 +660,13 @@ window.WorkerPanel = (() => {
       horasRealizadas: parseFloat(document.getElementById('w-new-hr').value) || 0,
       pctExecutado: parseInt(document.getElementById('w-new-pct').value) || 0,
       critico: document.getElementById('w-new-critico').checked,
-      observacoes: document.getElementById('w-new-obs').value.trim(),
+      observacoes: document.getElementById('w-new-obs').value.trim() ? JSON.stringify([{
+        id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        text: document.getElementById('w-new-obs').value.trim(),
+        user: session.nome,
+        userId: session.userId,
+        createdAt: new Date().toISOString()
+      }]) : '[]',
       predecessoras: []
     };
 
@@ -634,6 +684,30 @@ window.WorkerPanel = (() => {
   function openEditTask(id) {
     const t = DB.tasks.get(id);
     if (!t) return;
+
+    let obsHistoryHtml = '';
+    let obsTextValue = '';
+    if (t.observacoes) {
+      let isJson = false;
+      try {
+        const comments = JSON.parse(t.observacoes);
+        if (Array.isArray(comments)) {
+          isJson = true;
+          obsHistoryHtml = `<div style="max-height: 80px; overflow-y: auto; font-size: 11px; margin-bottom: 8px; border: 1px solid var(--border-default); padding: 4px; border-radius: 4px; background: var(--bg-base);">
+            ${comments.map(c => `
+              <div style="margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.02);">
+                <span style="font-weight:bold;color:var(--brand-primary-light);">${c.user}:</span> ${c.text}
+                <span style="font-size:9px;color:var(--text-muted);display:block;">${new Date(c.createdAt).toLocaleString('pt-BR')}</span>
+              </div>
+            `).join('')}
+          </div>`;
+        }
+      } catch (e) {}
+      
+      if (!isJson) {
+        obsTextValue = t.observacoes;
+      }
+    }
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-task">
@@ -689,7 +763,8 @@ window.WorkerPanel = (() => {
 
               <div class="form-group">
                 <label>Observações</label>
-                <textarea id="w-tk-obs" rows="4">${t.observacoes||''}</textarea>
+                ${obsHistoryHtml}
+                <textarea id="w-tk-obs" rows="2" placeholder="${obsHistoryHtml ? 'Adicionar nova observação...' : 'Observações...'}">${obsTextValue}</textarea>
               </div>
             </div>
           </div>
@@ -749,13 +824,49 @@ window.WorkerPanel = (() => {
     if (hrChanged) changesLog.push(`Horas Trab: ${t.horasRealizadas}h -> ${hr}h`);
     if (dateChanged) changesLog.push(`Reprogramado para: ${formatDate(ip)} a ${formatDate(tp)}`);
 
-    let finalObs = obs;
-    if (changesLog.length > 0) {
-      let logText = `\n[Atualizado em ${dateStr} por ${session.nome}]: ${changesLog.join(' | ')}`;
-      if (dateChanged && justification) {
-        logText += ` (Motivo: ${justification})`;
+    let finalObs = '';
+    let comments = [];
+    let isJson = false;
+    if (t.observacoes) {
+      try {
+        comments = JSON.parse(t.observacoes);
+        if (Array.isArray(comments)) isJson = true;
+      } catch (e) {}
+    }
+
+    if (isJson) {
+      if (obs) {
+        comments.push({
+          id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          text: obs,
+          user: session.nome,
+          userId: session.userId,
+          createdAt: new Date().toISOString()
+        });
       }
-      finalObs = (obs ? obs : '') + logText;
+      if (changesLog.length > 0) {
+        let logMsg = `[Mapeamento Atualizado]: ${changesLog.join(' | ')}`;
+        if (dateChanged && justification) {
+          logMsg += ` (Motivo: ${justification})`;
+        }
+        comments.push({
+          id: 'c-sys-' + Date.now(),
+          text: logMsg,
+          user: 'Sistema',
+          userId: 'system',
+          createdAt: new Date().toISOString()
+        });
+      }
+      finalObs = JSON.stringify(comments);
+    } else {
+      let logText = '';
+      if (changesLog.length > 0) {
+        logText = `\n[Atualizado em ${dateStr} por ${session.nome}]: ${changesLog.join(' | ')}`;
+        if (dateChanged && justification) {
+          logText += ` (Motivo: ${justification})`;
+        }
+      }
+      finalObs = (obs || t.observacoes || '') + logText;
     }
 
     const data = {

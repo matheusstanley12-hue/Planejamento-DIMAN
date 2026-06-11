@@ -64,7 +64,7 @@ window.ChecklistsModule = (() => {
     const currentFiles = attachments[currentTab] || [];
     
     let html = `
-      <div class="page-container" style="max-width:1200px;margin:0 auto;padding:var(--space-6);">
+      <div class="page-container" style="max-width:100%;padding:var(--space-6);">
         <div class="section-header">
           <div class="section-title">
             <div class="section-title-icon">

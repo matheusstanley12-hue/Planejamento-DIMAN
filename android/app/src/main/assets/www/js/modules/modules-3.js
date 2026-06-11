@@ -85,12 +85,12 @@ window.CostsModule = (() => {
           </tr>`).join('')}
         </tbody>
       </table></div>
+    </div>
 
-      <!-- Modal -->
-      <div class="modal-overlay" id="modal-cost"><div class="modal"><div class="modal-header"><div class="modal-title">Lançamento de Custo</div><button class="modal-close" onclick="closeModal('modal-cost')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-      <div class="modal-body" id="cost-modal-body"></div>
-      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-cost')">Cancelar</button><button class="btn btn-primary" onclick="CostsModule.save()">Salvar</button></div></div></div>
-    </div>`;
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-cost"><div class="modal"><div class="modal-header"><div class="modal-title">Lançamento de Custo</div><button class="modal-close" onclick="closeModal('modal-cost')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+    <div class="modal-body" id="cost-modal-body"></div>
+    <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-cost')">Cancelar</button><button class="btn btn-primary" onclick="CostsModule.save()">Salvar</button></div></div></div>`;
   }
 
   function openCreate() {
@@ -291,10 +291,10 @@ window.KPIModule = (() => {
 // SIMULATOR MODULE
 // ================================================================
 window.SimulatorModule = (() => {
-  let eqId = '';
   let params = { mechanics: 3, electrics: 2, partsArrivalDays: 7, overtime: 0, weekends: false };
 
   function calcImpact() {
+    const eqId = window.GlobalEqFilter;
     const eq = DB.equipment.get(eqId);
     if (!eq) return null;
     const tasks = DB.tasks.getByEquipment(eqId).filter(t => t.status !== 'Concluída');
@@ -339,6 +339,7 @@ window.SimulatorModule = (() => {
   }
 
   function render() {
+    const eqId = window.GlobalEqFilter;
     const eqs = DB.equipment.list().filter(e => e.status === 'Em Manutenção');
     const impact = eqId ? calcImpact() : null;
 
@@ -417,8 +418,8 @@ window.SimulatorModule = (() => {
     </div>`;
   }
 
-  function setEq(id) { eqId = id; Router.navigate('simulator', { force: true }); }
-  function setParam(key, val) { params[key] = val; if (eqId) { const r = calcImpact(); if (r) { /* update result panel in place */ } } }
+  function setEq(id) { window.setGlobalEqFilter(id); }
+  function setParam(key, val) { params[key] = val; const eqId = window.GlobalEqFilter; if (eqId) { const r = calcImpact(); if (r) { /* update result panel in place */ } } }
   return { render, setEq, setParam };
 })();
 
@@ -814,11 +815,11 @@ window.LessonsModule = (() => {
         </div>`).join('')}
         ${lessons.length===0?'<div class="empty-state" style="grid-column:1/-1"><p>Nenhuma lição aprendida registrada</p></div>':''}
       </div>
-      <div class="modal-overlay" id="modal-lesson">
-        <div class="modal modal-lg"><div class="modal-header"><div class="modal-title">Nova Lição Aprendida</div><button class="modal-close" onclick="closeModal('modal-lesson')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div class="modal-body" id="lesson-modal-body"></div>
-        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-lesson')">Cancelar</button><button class="btn btn-primary" onclick="LessonsModule.save()">Salvar</button></div></div>
-      </div>
+    </div>
+    <div class="modal-overlay" id="modal-lesson">
+      <div class="modal modal-lg"><div class="modal-header"><div class="modal-title">Nova Lição Aprendida</div><button class="modal-close" onclick="closeModal('modal-lesson')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="lesson-modal-body"></div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-lesson')">Cancelar</button><button class="btn btn-primary" onclick="LessonsModule.save()">Salvar</button></div></div>
     </div>`;
   }
 
@@ -881,13 +882,13 @@ window.ReportsModule = (() => {
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-4);">
         ${[
-          {title:'Relatório de Aderência',icon:'📊',desc:'Aderência ao planejamento por período'},
-          {title:'Relatório de Equipamentos',icon:'⚙️',desc:'Status e avanço de todos os equipamentos'},
-          {title:'Relatório de Peças',icon:'📦',desc:'Peças pendentes e criticidade'},
-          {title:'Relatório de Custos',icon:'💰',desc:'Custos planejados vs realizados'},
-          {title:'Relatório de Restrições',icon:'🚫',desc:'Restrições abertas e fechadas'},
-          {title:'Relatório de MO',icon:'👥',desc:'Horas de mão de obra por período'},
-        ].map(r=>`<div class="card card-clickable hover-lift" onclick="Toast.info('${r.title}','Módulo de exportação de relatórios em desenvolvimento.')">
+          {id:'aderencia', title:'Relatório de Aderência',icon:'📊',desc:'Aderência ao planejamento por período'},
+          {id:'equipamentos', title:'Relatório de Equipamentos',icon:'⚙️',desc:'Status e avanço de todos os equipamentos'},
+          {id:'pecas', title:'Relatório de Peças',icon:'📦',desc:'Peças pendentes e criticidade'},
+          {id:'custos', title:'Relatório de Custos',icon:'💰',desc:'Custos planejados vs realizados'},
+          {id:'restricoes', title:'Relatório de Restrições',icon:'🚫',desc:'Restrições abertas e fechadas'},
+          {id:'mo', title:'Relatório de MO',icon:'👥',desc:'Horas de mão de obra por período'},
+        ].map(r=>`<div class="card card-clickable hover-lift" onclick="ReportsModule.generatePDF('${r.id}')">
           <div style="font-size:2rem;margin-bottom:var(--space-3)">${r.icon}</div>
           <div style="font-weight:700;font-size:var(--text-sm);margin-bottom:var(--space-2)">${r.title}</div>
           <div style="font-size:var(--text-xs);color:var(--text-muted)">${r.desc}</div>
@@ -896,7 +897,482 @@ window.ReportsModule = (() => {
       </div>
     </div>`;
   }
-  return { render };
+
+  function generatePDF(type) {
+    if (!window.jspdf) {
+      Toast.error('Erro', 'Biblioteca jsPDF não encontrada.');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // Get current global filter if any
+    const globalFilterEqId = window.GlobalEqFilter;
+    const globalFilterEq = globalFilterEqId ? DB.equipment.get(globalFilterEqId) : null;
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Common PDF styling helper
+    const addHeader = (title) => {
+      // Background band for header
+      doc.setFillColor(13, 27, 42); // Navy
+      doc.rect(0, 0, 210, 30, 'F');
+      
+      // Title text
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(255, 255, 255);
+      doc.text("DIMAN-BHZ | PLANEJAMENTO OPERACIONAL", 15, 13);
+      
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(180, 200, 220);
+      let filterText = globalFilterEq ? ` | Equipamento: ${globalFilterEq.codigo}` : "";
+      doc.text(`${title}${filterText}`, 15, 22);
+
+      // Date of generation
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Gerado em: ${formatDateTime(new Date().toISOString())}`, 145, 13);
+    };
+
+    const addFooter = (data) => {
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Página ${doc.internal.getNumberOfPages()}`, 15, doc.internal.pageSize.height - 10);
+      doc.text("CONFIDENCIAL — APENAS PARA USO INTERNO", 120, doc.internal.pageSize.height - 10);
+    };
+
+    if (type === 'aderencia') {
+      const allTasks = DB.tasks.getAll();
+      const filteredTasks = globalFilterEqId ? allTasks.filter(t => t.equipmentId === globalFilterEqId) : allTasks;
+      const eqs = DB.equipment.list();
+      const equipMap = {};
+      eqs.forEach(e => { equipMap[e.id] = e; });
+
+      const total = filteredTasks.length;
+      const concluded = filteredTasks.filter(t => t.status === 'Concluída').length;
+      const inProgress = filteredTasks.filter(t => t.status === 'Em Andamento').length;
+      const delayed = filteredTasks.filter(t => t.dataPlanejadaTermino && t.dataPlanejadaTermino < today && t.status !== 'Concluída').length;
+      const adherenceRate = total > 0 ? Math.round((concluded / total) * 100) : 0;
+
+      addHeader("Relatório de Aderência ao Planejamento");
+
+      // Draw KPI boxes
+      doc.setFillColor(240, 244, 249);
+      doc.roundedRect(15, 35, 180, 25, 3, 3, 'F');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Total Atividades", 20, 43);
+      doc.text("Concluídas", 55, 43);
+      doc.text("Em Andamento", 90, 43);
+      doc.text("Atrasadas", 125, 43);
+      doc.text("Taxa de Aderência", 160, 43);
+
+      doc.setFontSize(14);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${total}`, 20, 52);
+      doc.setTextColor(40, 167, 69); // Green
+      doc.text(`${concluded}`, 55, 52);
+      doc.setTextColor(0, 123, 255); // Blue
+      doc.text(`${inProgress}`, 90, 52);
+      doc.setTextColor(220, 53, 69); // Red
+      doc.text(`${delayed}`, 125, 52);
+      doc.setTextColor(21, 101, 192); // Brand Blue
+      doc.text(`${adherenceRate}%`, 160, 52);
+
+      // Tasks Table
+      const columns = ['Equipamento', 'Cód. Tarefa', 'Descrição', 'Disciplina', 'Início Plan.', 'Término Plan.', 'Avanço', 'Status'];
+      const rows = filteredTasks.map(t => [
+        equipMap[t.equipmentId]?.codigo || '—',
+        t.codigo || '—',
+        t.critico ? `[CRÍTICA] ${t.descricao}` : t.descricao,
+        t.disciplina || '—',
+        formatDate(t.dataPlanejadaInicio),
+        formatDate(t.dataPlanejadaTermino),
+        `${t.pctExecutado || 0}%`,
+        t.status
+      ]);
+
+      doc.autoTable({
+        startY: 68,
+        head: [columns],
+        body: rows,
+        theme: 'striped',
+        headStyles: { fillColor: [13, 27, 42] },
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: {
+          2: { cellWidth: 50 }, // Description column wider
+        },
+        didDrawPage: addFooter
+      });
+
+      doc.save(`Relatorio_Aderencia_${today}.pdf`);
+      Toast.success('PDF Gerado', 'Relatório de Aderência baixado com sucesso!');
+    }
+    else if (type === 'equipamentos') {
+      const eqs = DB.equipment.list();
+      const filteredEqs = globalFilterEqId ? eqs.filter(e => e.id === globalFilterEqId) : eqs;
+      const allTasks = DB.tasks.getAll();
+      const restrictions = DB.restrictions.getAll();
+      
+      const total = filteredEqs.length;
+      const emManutencao = filteredEqs.filter(e => e.status === 'Em Manutenção').length;
+      const liberados = filteredEqs.filter(e => e.status === 'Liberado').length;
+      const bloqueados = filteredEqs.filter(e => e.status === 'Bloqueado').length;
+      const avgProgress = total > 0 ? Math.round(filteredEqs.reduce((s, e) => s + (e.pctAvanco || 0), 0) / total) : 0;
+
+      addHeader("Relatório de Equipamentos em Manutenção");
+
+      // Draw KPI boxes
+      doc.setFillColor(240, 244, 249);
+      doc.roundedRect(15, 35, 180, 25, 3, 3, 'F');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Total Equip.", 20, 43);
+      doc.text("Em Manutenção", 55, 43);
+      doc.text("Liberados", 90, 43);
+      doc.text("Bloqueados", 125, 43);
+      doc.text("Média Progresso", 160, 43);
+
+      doc.setFontSize(14);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${total}`, 20, 52);
+      doc.setTextColor(21, 101, 192); 
+      doc.text(`${emManutencao}`, 55, 52);
+      doc.setTextColor(40, 167, 69); 
+      doc.text(`${liberados}`, 90, 52);
+      doc.setTextColor(220, 53, 69); 
+      doc.text(`${bloqueados}`, 125, 52);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${avgProgress}%`, 160, 52);
+
+      // Equipments Table
+      const columns = ['Código', 'Nome / Descrição', 'Cliente', 'Avanço', 'Status', 'Previsão Lib.', 'Atividades', 'Restr. Abertas'];
+      const rows = filteredEqs.map(e => {
+        const eqTasks = allTasks.filter(t => t.equipmentId === e.id);
+        const eqRestr = restrictions.filter(r => r.equipmentId === e.id && r.status === 'Aberta').length;
+        return [
+          e.codigo,
+          e.nome || '—',
+          e.cliente || '—',
+          `${e.pctAvanco || 0}%`,
+          e.status,
+          formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada),
+          `${eqTasks.filter(t=>t.status==='Concluída').length}/${eqTasks.length}`,
+          `${eqRestr}`
+        ];
+      });
+
+      doc.autoTable({
+        startY: 68,
+        head: [columns],
+        body: rows,
+        theme: 'striped',
+        headStyles: { fillColor: [13, 27, 42] },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: {
+          1: { cellWidth: 50 }, // Name column wider
+        },
+        didDrawPage: addFooter
+      });
+
+      doc.save(`Relatorio_Equipamentos_${today}.pdf`);
+      Toast.success('PDF Gerado', 'Relatório de Equipamentos baixado com sucesso!');
+    }
+    else if (type === 'pecas') {
+      const parts = DB.parts.getAll();
+      const filteredParts = globalFilterEqId ? parts.filter(p => p.equipmentId === globalFilterEqId) : parts;
+      const eqs = DB.equipment.list();
+      const equipMap = {};
+      eqs.forEach(e => { equipMap[e.id] = e; });
+
+      const total = filteredParts.length;
+      const pendentes = filteredParts.filter(p => ['Solicitada', 'Comprada', 'Em Transporte'].includes(p.status)).length;
+      const criticas = filteredParts.filter(p => p.critica).length;
+      const recebidas = filteredParts.filter(p => ['Recebida', 'Instalada'].includes(p.status)).length;
+
+      addHeader("Relatório de Peças e Criticidade");
+
+      // Draw KPI boxes
+      doc.setFillColor(240, 244, 249);
+      doc.roundedRect(15, 35, 180, 25, 3, 3, 'F');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Total Peças", 25, 43);
+      doc.text("Pendentes", 65, 43);
+      doc.text("Críticas", 105, 43);
+      doc.text("Recebidas / Instaladas", 145, 43);
+
+      doc.setFontSize(14);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${total}`, 25, 52);
+      doc.setTextColor(255, 107, 0); // Orange
+      doc.text(`${pendentes}`, 65, 52);
+      doc.setTextColor(220, 53, 69); // Red
+      doc.text(`${criticas}`, 105, 52);
+      doc.setTextColor(40, 167, 69); // Green
+      doc.text(`${recebidas}`, 145, 52);
+
+      // Parts Table
+      const columns = ['Código', 'Descrição', 'Equipamento', 'Qtd', 'Status', 'Fornecedor', 'Prazo Entrega', 'Crítica'];
+      const rows = filteredParts.map(p => [
+        p.codigo || '—',
+        p.descricao || '—',
+        equipMap[p.equipmentId]?.codigo || '—',
+        `${p.qtd || 1}`,
+        p.status || '—',
+        p.fornecedor || '—',
+        formatDate(p.prazoEntrega),
+        p.critica ? 'SIM' : 'Não'
+      ]);
+
+      doc.autoTable({
+        startY: 68,
+        head: [columns],
+        body: rows,
+        theme: 'striped',
+        headStyles: { fillColor: [13, 27, 42] },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: {
+          1: { cellWidth: 50 }, 
+        },
+        didDrawPage: addFooter
+      });
+
+      doc.save(`Relatorio_Pecas_${today}.pdf`);
+      Toast.success('PDF Gerado', 'Relatório de Peças baixado com sucesso!');
+    }
+    else if (type === 'custos') {
+      const costs = DB.costs.getAll();
+      const filteredCosts = globalFilterEqId ? costs.filter(c => c.equipmentId === globalFilterEqId) : costs;
+      const eqs = DB.equipment.list();
+      const equipMap = {};
+      eqs.forEach(e => { equipMap[e.id] = e; });
+
+      const totalPlanejado = filteredCosts.reduce((s, c) => s + (c.valorPlanejado || 0), 0);
+      const totalRealizado = filteredCosts.reduce((s, c) => s + (c.valorRealizado || 0), 0);
+      const desvioValor = totalRealizado - totalPlanejado;
+      const desvioPct = totalPlanejado > 0 ? Math.round((desvioValor / totalPlanejado) * 100) : 0;
+
+      addHeader("Relatório de Custos de Manutenção");
+
+      // Draw KPI boxes
+      doc.setFillColor(240, 244, 249);
+      doc.roundedRect(15, 35, 180, 25, 3, 3, 'F');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Total Custos", 20, 43);
+      doc.text("Total Planejado", 55, 43);
+      doc.text("Total Realizado", 100, 43);
+      doc.text("Desvio (BRL)", 145, 43);
+      doc.text("Desvio %", 175, 43);
+
+      doc.setFontSize(14);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${filteredCosts.length}`, 20, 52);
+      doc.setTextColor(13, 27, 42);
+      doc.text(formatCurrency(totalPlanejado), 55, 52);
+      doc.text(formatCurrency(totalRealizado), 100, 52);
+      doc.setTextColor(desvioValor > 0 ? 220 : 40, desvioValor > 0 ? 53 : 167, desvioValor > 0 ? 69 : 69);
+      doc.text(`${desvioValor > 0 ? '+' : ''}${formatCurrency(desvioValor)}`, 145, 52);
+      doc.text(`${desvioValor > 0 ? '+' : ''}${desvioPct}%`, 175, 52);
+
+      // Costs Table
+      const columns = ['Equipamento', 'Categoria', 'Descrição', 'Valor Planejado', 'Valor Realizado', 'Desvio BRL', 'Data'];
+      const rows = filteredCosts.map(c => {
+        const diff = (c.valorRealizado || 0) - (c.valorPlanejado || 0);
+        return [
+          equipMap[c.equipmentId]?.codigo || '—',
+          c.categoria || '—',
+          c.descricao || '—',
+          formatCurrency(c.valorPlanejado),
+          formatCurrency(c.valorRealizado),
+          `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
+          formatDate(c.data)
+        ];
+      });
+
+      doc.autoTable({
+        startY: 68,
+        head: [columns],
+        body: rows,
+        theme: 'striped',
+        headStyles: { fillColor: [13, 27, 42] },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: {
+          2: { cellWidth: 50 },
+        },
+        didDrawPage: addFooter
+      });
+
+      doc.save(`Relatorio_Custos_${today}.pdf`);
+      Toast.success('PDF Gerado', 'Relatório de Custos baixado com sucesso!');
+    }
+    else if (type === 'restricoes') {
+      const restrictions = DB.restrictions.getAll();
+      const filteredRestr = globalFilterEqId ? restrictions.filter(r => r.equipmentId === globalFilterEqId) : restrictions;
+      const eqs = DB.equipment.list();
+      const equipMap = {};
+      eqs.forEach(e => { equipMap[e.id] = e; });
+
+      const total = filteredRestr.length;
+      const abertas = filteredRestr.filter(r => r.status === 'Aberta').length;
+      const fechadas = filteredRestr.filter(r => r.status === 'Fechada').length;
+
+      addHeader("Relatório de Restrições Operacionais");
+
+      // Draw KPI boxes
+      doc.setFillColor(240, 244, 249);
+      doc.roundedRect(15, 35, 180, 25, 3, 3, 'F');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Total Restrições", 30, 43);
+      doc.text("Abertas", 85, 43);
+      doc.text("Fechadas", 140, 43);
+
+      doc.setFontSize(14);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${total}`, 30, 52);
+      doc.setTextColor(220, 53, 69); // Red
+      doc.text(`${abertas}`, 85, 52);
+      doc.setTextColor(40, 167, 69); // Green
+      doc.text(`${fechadas}`, 140, 52);
+
+      // Restrictions Table
+      const columns = ['Equipamento', 'Tipo de Restrição', 'Descrição', 'Status', 'Abertura', 'Fechamento / Resolução'];
+      const rows = filteredRestr.map(r => [
+        equipMap[r.equipmentId]?.codigo || '—',
+        r.tipo || '—',
+        r.descricao || '—',
+        r.status || '—',
+        formatDate(r.createdAt),
+        r.status === 'Fechada' ? `FECHADA em ${formatDate(r.closedAt || r.updatedAt)}\nResolução: ${r.resolution || '—'}` : 'PENDENTE'
+      ]);
+
+      doc.autoTable({
+        startY: 68,
+        head: [columns],
+        body: rows,
+        theme: 'striped',
+        headStyles: { fillColor: [13, 27, 42] },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: {
+          2: { cellWidth: 50 },
+          5: { cellWidth: 50 }
+        },
+        didDrawPage: addFooter
+      });
+
+      doc.save(`Relatorio_Restricoes_${today}.pdf`);
+      Toast.success('PDF Gerado', 'Relatório de Restrições baixado com sucesso!');
+    }
+    else if (type === 'mo') {
+      const workers = DB.workforce.list();
+      const timesheets = DB.timesheets.list();
+      const filteredTimesheets = globalFilterEqId ? timesheets.filter(t => t.equipmentId === globalFilterEqId) : timesheets;
+
+      const totalWorkers = workers.length;
+      const activeWorkers = workers.filter(w => w.status === 'Ativo').length;
+      const totalHours = filteredTimesheets.reduce((s, t) => s + (t.horasTrabalhadas || 0), 0);
+
+      addHeader("Relatório de Mão de Obra e Apontamentos");
+
+      // Draw KPI boxes
+      doc.setFillColor(240, 244, 249);
+      doc.roundedRect(15, 35, 180, 25, 3, 3, 'F');
+      
+      doc.setFontSize(9);
+      doc.setTextColor(100, 110, 120);
+      doc.text("Total Colaboradores", 25, 43);
+      doc.text("Profissionais Ativos", 85, 43);
+      doc.text("Total Horas Apontadas", 145, 43);
+
+      doc.setFontSize(14);
+      doc.setTextColor(13, 27, 42);
+      doc.text(`${totalWorkers}`, 25, 52);
+      doc.setTextColor(40, 167, 69); 
+      doc.text(`${activeWorkers}`, 85, 52);
+      doc.setTextColor(21, 101, 192); 
+      doc.text(`${totalHours.toFixed(1)}h`, 145, 52);
+
+      // Section 1: Workforce summary
+      doc.setFontSize(11);
+      doc.setTextColor(13, 27, 42);
+      doc.text("Quadro de Colaboradores", 15, 68);
+
+      const columnsW = ['Matrícula', 'Colaborador', 'Função', 'Disciplina', 'Status', 'Horas Apontadas'];
+      const rowsW = workers.map(w => {
+        const wHours = timesheets.filter(t => t.workerId === w.id).reduce((s, t) => s + (t.horasTrabalhadas || 0), 0);
+        return [
+          w.matricula || '—',
+          w.nome,
+          w.funcao || '—',
+          w.disciplina || '—',
+          w.status || 'Ativo',
+          `${wHours.toFixed(1)}h`
+        ];
+      });
+
+      doc.autoTable({
+        startY: 72,
+        head: [columnsW],
+        body: rowsW,
+        theme: 'striped',
+        headStyles: { fillColor: [13, 27, 42] },
+        styles: { fontSize: 8, cellPadding: 2 },
+        didDrawPage: addFooter
+      });
+
+      // Section 2: Recent Timesheets
+      const startY2 = doc.lastAutoTable.finalY + 12;
+      if (startY2 < doc.internal.pageSize.height - 40) {
+        doc.setFontSize(11);
+        doc.setTextColor(13, 27, 42);
+        doc.text("Histórico Recente de Apontamentos de Horas", 15, startY2);
+
+        const eqs = DB.equipment.list();
+        const equipMap = {};
+        eqs.forEach(e => { equipMap[e.id] = e; });
+
+        const columnsT = ['Data', 'Colaborador', 'Equipamento', 'Início', 'Término', 'Horas', 'Observação'];
+        const rowsT = filteredTimesheets.slice(-40).reverse().map(t => {
+          const w = workers.find(w => w.id === t.workerId);
+          return [
+            formatDate(t.data),
+            w?.nome || t.workerNome || '—',
+            equipMap[t.equipmentId]?.codigo || '—',
+            t.horaInicio || '—',
+            t.horaFim || '—',
+            `${(t.horasTrabalhadas || 0).toFixed(1)}h`,
+            t.observacao || '—'
+          ];
+        });
+
+        doc.autoTable({
+          startY: startY2 + 4,
+          head: [columnsT],
+          body: rowsT,
+          theme: 'striped',
+          headStyles: { fillColor: [13, 27, 42] },
+          styles: { fontSize: 8, cellPadding: 2 },
+          columnStyles: {
+            6: { cellWidth: 50 }
+          },
+          didDrawPage: addFooter
+        });
+      }
+
+      doc.save(`Relatorio_MaoDeObra_${today}.pdf`);
+      Toast.success('PDF Gerado', 'Relatório de Mão de Obra baixado com sucesso!');
+    }
+  }
+
+  return { render, generatePDF };
 })();
 
 window.AuditModule = (() => {

@@ -7,12 +7,12 @@
 // GANTT MODULE
 // ================================================================
 window.GanttModule = (() => {
-  let eqFilter = '';
   let viewMode = 'week'; // 'day'|'week'|'month'
 
   const colWidths = { day: 36, week: 80, month: 150 };
 
   function render() {
+    const eqFilter = window.GlobalEqFilter;
     const eqs = DB.equipment.list();
     return `<div class="page-container">
       <div class="section-header">
@@ -32,6 +32,7 @@ window.GanttModule = (() => {
   }
 
   function buildGantt() {
+    const eqFilter = window.GlobalEqFilter;
     const tasks = DB.tasks.getAll().filter(t => !eqFilter || t.equipmentId === eqFilter);
     if (!tasks.length) return '<div class="empty-state"><p>Nenhuma tarefa para exibir</p></div>';
 
@@ -177,7 +178,7 @@ window.GanttModule = (() => {
     `;
   }
 
-  function setEq(id) { eqFilter = id; Router.navigate('gantt', { force: true }); }
+  function setEq(id) { window.setGlobalEqFilter(id); }
   function setView(m) { viewMode = m; Router.navigate('gantt', { force: true }); }
   return { render, setEq, setView };
 })();
@@ -316,8 +317,8 @@ window.PartsModule = (() => {
 
     return `<div class="page-container">
       <div class="section-header">
-        <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg></div>Gestão de Peças</div>
-        <button class="btn btn-primary" onclick="PartsModule.openCreate()">+ Nova Peça</button>
+        <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg></div>Solicitação de Peças</div>
+        <button class="btn btn-primary" onclick="PartsModule.openCreate()">+ Nova Solicitação</button>
       </div>
 
       <!-- KPI row -->
@@ -344,58 +345,145 @@ window.PartsModule = (() => {
       <!-- Table -->
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Código</th><th>Descrição</th><th>Equipamento</th><th>Fornecedor</th><th>Prazo Entrega</th><th>Status</th><th>Crítica</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Equipamento</th><th>S.A.</th><th>Código / Peça</th><th>Qtd</th><th>Data Solicitação</th><th>Data Prevista</th><th>Data Real</th><th>Entregue?</th><th>Status</th><th>Crítica</th><th>Ações</th></tr></thead>
           <tbody>
-            ${parts.map(p => `<tr>
-              <td><code>${p.codigo}</code></td>
-              <td style="font-weight:600">${p.descricao}</td>
-              <td>${equipMap[p.equipmentId]||'—'}</td>
-              <td style="font-size:var(--text-xs)">${p.fornecedor||'—'}</td>
-              <td>${p.prazoEntrega ? formatDate(p.prazoEntrega) : '—'}</td>
-              <td>${statusBadge(p.status)}</td>
-              <td>${p.critica ? '<span class="badge badge-danger">Crítica</span>' : '<span class="badge badge-ghost">Não</span>'}</td>
-              <td><div class="table-actions">
-                <select style="font-size:var(--text-xs);padding:var(--space-1) var(--space-2);background:var(--bg-base);border:1px solid var(--border-card);border-radius:var(--radius-sm);color:var(--text-primary);" onchange="PartsModule.updateStatus('${p.id}',this.value)">
-                  ${['Solicitada','Comprada','Em Transporte','Recebida','Instalada'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
-                </select>
-                <button class="btn btn-danger btn-sm" onclick="PartsModule.deletePart('${p.id}')">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397"/></svg>
-                </button>
-              </div></td>
-            </tr>`).join('')}
+            ${parts.map(p => {
+              const isEntregue = p.entregue || p.status === 'Recebida' || p.status === 'Instalada';
+              return `<tr>
+                <td><strong>${equipMap[p.equipmentId]||'—'}</strong></td>
+                <td><code>${p.sa||'—'}</code></td>
+                <td>
+                  <strong>${p.descricao}</strong>
+                  <br><small style="color:var(--text-muted)">${p.codigo||'—'}</small>
+                </td>
+                <td>${p.quantidade||1}</td>
+                <td>${p.dataSolicitacao ? formatDate(p.dataSolicitacao) : '—'}</td>
+                <td>${p.dataPrevista || p.prazoEntrega ? formatDate(p.dataPrevista || p.prazoEntrega) : '—'}</td>
+                <td>${p.dataReal ? formatDate(p.dataReal) : '—'}</td>
+                <td style="text-align:center;">
+                  <input type="checkbox" ${isEntregue?'checked':''} onclick="PartsModule.toggleEntregue('${p.id}', this.checked)" style="cursor:pointer;" />
+                </td>
+                <td>${statusBadge(p.status)}</td>
+                <td>${p.critica ? '<span class="badge badge-danger">Impacta Liberação</span>' : '<span class="badge badge-ghost">Não</span>'}</td>
+                <td><div class="table-actions">
+                  <select style="font-size:var(--text-xs);padding:var(--space-1) var(--space-2);background:var(--bg-base);border:1px solid var(--border-card);border-radius:var(--radius-sm);color:var(--text-primary);" onchange="PartsModule.updateStatus('${p.id}',this.value)">
+                    ${['Solicitada','Comprada','Em Transporte','Recebida','Instalada'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
+                  </select>
+                  <button class="btn btn-secondary btn-sm" onclick="PartsModule.openEdit('${p.id}')" title="Editar Solicitação">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                  </button>
+                  <button class="btn btn-danger btn-sm" onclick="PartsModule.deletePart('${p.id}')" title="Excluir Solicitação">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397"/></svg>
+                  </button>
+                </div></td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>
-      <!-- Modal -->
-      <div class="modal-overlay" id="modal-part">
-        <div class="modal"><div class="modal-header"><div class="modal-title" id="part-modal-title">Peça</div><button class="modal-close" onclick="closeModal('modal-part')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div class="modal-body" id="part-modal-body"></div>
-        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-part')">Cancelar</button><button class="btn btn-primary" onclick="PartsModule.save()">Salvar</button></div></div>
-      </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-part">
+      <div class="modal"><div class="modal-header"><div class="modal-title" id="part-modal-title">Peça</div><button class="modal-close" onclick="closeModal('modal-part')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="part-modal-body"></div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-part')">Cancelar</button><button class="btn btn-primary" onclick="PartsModule.save()">Salvar</button></div></div>
     </div>`;
   }
 
   function partForm(p) {
     const eqs = DB.equipment.list();
+    const today = new Date().toISOString().slice(0, 10);
+    const solDate = p?.dataSolicitacao || today;
+    const prevDate = p?.dataPrevista || p?.prazoEntrega || today;
+    const realDate = p?.dataReal || '';
+    const isEntregue = p?.entregue || p?.status === 'Recebida' || p?.status === 'Instalada';
+
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
-      <div class="form-row"><div class="form-group"><label>Código</label><input id="pt-cod" value="${p?.codigo||''}" /></div>
-      <div class="form-group"><label>Equipamento</label><select id="pt-eq">${eqs.map(e=>`<option value="${e.id}" ${p?.equipmentId===e.id?'selected':''}>${e.codigo}</option>`).join('')}</select></div></div>
-      <div class="form-group"><label>Descrição *</label><input id="pt-desc" value="${p?.descricao||''}" required /></div>
-      <div class="form-row"><div class="form-group"><label>Fornecedor</label><input id="pt-forn" value="${p?.fornecedor||''}" /></div>
-      <div class="form-group"><label>Fabricante</label><input id="pt-fab" value="${p?.fabricante||''}" /></div></div>
-      <div class="form-row"><div class="form-group"><label>Prazo de Entrega</label><input type="date" id="pt-prazo" value="${toDateInput(p?.prazoEntrega)}" /></div>
-      <div class="form-group"><label>Status</label><select id="pt-status">
-        ${['Solicitada','Comprada','Em Transporte','Recebida','Instalada'].map(s=>`<option ${p?.status===s?'selected':''}>${s}</option>`).join('')}
-      </select></div></div>
-      <div class="form-group"><label>N° do Pedido</label><input id="pt-pedido" value="${p?.pedido||''}" /></div>
-      <div class="checkbox-wrap"><input type="checkbox" id="pt-critica" ${p?.critica?'checked':''} /><label for="pt-critica">Peça Crítica (bloqueia caminho crítico)</label></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Equipamento *</label>
+          <select id="pt-eq">${eqs.map(e=>`<option value="${e.id}" ${p?.equipmentId===e.id?'selected':''}>${e.codigo}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>S.A. (Solicitação de Almoxarifado)</label>
+          <input id="pt-sa" value="${p?.sa||''}" placeholder="Ex: SA-2026-1234" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Código da Peça</label>
+          <input id="pt-cod" value="${p?.codigo||''}" placeholder="Ex: ROL-6308" />
+        </div>
+        <div class="form-group">
+          <label>Descrição *</label>
+          <input id="pt-desc" value="${p?.descricao||''}" required placeholder="Ex: Rolamento do Eixo" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quantidade</label>
+          <input type="number" id="pt-qtd" value="${p?.quantidade||1}" min="1" />
+        </div>
+        <div class="form-group">
+          <label>Fornecedor</label>
+          <input id="pt-forn" value="${p?.fornecedor||''}" placeholder="Ex: Rexroth" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Fabricante</label>
+          <input id="pt-fab" value="${p?.fabricante||''}" placeholder="Ex: NSK" />
+        </div>
+        <div class="form-group">
+          <label>N° do Pedido</label>
+          <input id="pt-pedido" value="${p?.pedido||''}" placeholder="Ex: PO-45000" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data Solicitação</label>
+          <input type="date" id="pt-sol" value="${toDateInput(solDate)}" />
+        </div>
+        <div class="form-group">
+          <label>Previsão Entrega</label>
+          <input type="date" id="pt-prazo" value="${toDateInput(prevDate)}" />
+        </div>
+        <div class="form-group">
+          <label>Entrega Real</label>
+          <input type="date" id="pt-real" value="${toDateInput(realDate)}" />
+        </div>
+      </div>
+      <div class="form-row" style="align-items:center;gap:var(--space-4);">
+        <div class="form-group" style="flex:1;">
+          <label>Status</label>
+          <select id="pt-status" onchange="PartsModule.onStatusFormChange(this.value)">
+            ${['Solicitada','Comprada','Em Transporte','Recebida','Instalada'].map(s=>`<option ${p?.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="checkbox-wrap" style="margin-top:18px;">
+          <input type="checkbox" id="pt-entregue" ${isEntregue?'checked':''} onchange="PartsModule.onEntregueFormChange(this.checked)" />
+          <label for="pt-entregue" style="font-weight:bold;">Entregue? (Sim/Não)</label>
+        </div>
+      </div>
+      <div class="checkbox-wrap">
+        <input type="checkbox" id="pt-critica" ${p?.critica?'checked':''} />
+        <label for="pt-critica" style="font-weight:bold;color:var(--color-danger);">Peça Crítica (bloqueia caminho crítico)</label>
+      </div>
       <input type="hidden" id="pt-editing-id" value="${p?.id||''}" />
     </div>`;
   }
 
   function openCreate() {
-    document.getElementById('part-modal-title').textContent = 'Nova Peça';
+    document.getElementById('part-modal-title').textContent = 'Nova Solicitação';
     document.getElementById('part-modal-body').innerHTML = partForm(null);
+    openModal('modal-part');
+  }
+
+  function openEdit(id) {
+    const p = DB.parts.get(id);
+    if (!p) return;
+    document.getElementById('part-modal-title').textContent = 'Editar Solicitação';
+    document.getElementById('part-modal-body').innerHTML = partForm(p);
     openModal('modal-part');
   }
 
@@ -403,34 +491,128 @@ window.PartsModule = (() => {
     const id = document.getElementById('pt-editing-id').value;
     const desc = document.getElementById('pt-desc').value.trim();
     if (!desc) { Toast.error('Erro', 'Descrição é obrigatória.'); return; }
+
+    const isEntregue = document.getElementById('pt-entregue').checked;
+    let status = document.getElementById('pt-status').value;
+    let dataReal = document.getElementById('pt-real').value;
+    const today = new Date().toISOString().slice(0, 10);
+
+    if (isEntregue) {
+      if (status !== 'Recebida' && status !== 'Instalada') status = 'Recebida';
+      if (!dataReal) dataReal = today;
+    } else {
+      if (status === 'Recebida' || status === 'Instalada') status = 'Solicitada';
+      dataReal = '';
+    }
+
     const data = {
       equipmentId: document.getElementById('pt-eq').value,
       codigo: document.getElementById('pt-cod').value.trim(),
       descricao: desc,
+      sa: document.getElementById('pt-sa').value.trim(),
+      quantidade: parseInt(document.getElementById('pt-qtd').value) || 1,
       fornecedor: document.getElementById('pt-forn').value.trim(),
       fabricante: document.getElementById('pt-fab').value.trim(),
-      prazoEntrega: document.getElementById('pt-prazo').value,
-      status: document.getElementById('pt-status').value,
+      dataSolicitacao: document.getElementById('pt-sol').value,
+      dataPrevista: document.getElementById('pt-prazo').value,
+      dataReal: dataReal,
+      status: status,
       pedido: document.getElementById('pt-pedido').value.trim(),
       critica: document.getElementById('pt-critica').checked,
+      entregue: isEntregue
     };
-    if (id) { DB.parts.update(id, data); Toast.success('Peça atualizada!'); }
-    else { DB.parts.create(data); Toast.success('Peça cadastrada!'); }
+
+    if (id) {
+      DB.parts.update(id, data);
+      Toast.success('Solicitação atualizada!');
+    } else {
+      DB.parts.create(data);
+      Toast.success('Solicitação cadastrada!');
+    }
     closeModal('modal-part');
     Router.navigate('parts', { force: true });
   }
 
   function updateStatus(id, status) {
-    DB.parts.update(id, { status });
+    const today = new Date().toISOString().slice(0, 10);
+    const isEntregue = ['Recebida', 'Instalada'].includes(status);
+    const dataReal = isEntregue ? today : '';
+
+    DB.parts.update(id, {
+      status,
+      entregue: isEntregue,
+      dataReal: dataReal
+    });
+
     if (status === 'Recebida') Toast.success('Peça recebida!', 'Verificar restrições relacionadas');
     Router.navigate('parts', { force: true });
+  }
+
+  function toggleEntregue(id, isChecked) {
+    const today = new Date().toISOString().slice(0, 10);
+    const status = isChecked ? 'Recebida' : 'Solicitada';
+    const dataReal = isChecked ? today : '';
+
+    DB.parts.update(id, {
+      entregue: isChecked,
+      status: status,
+      dataReal: dataReal
+    });
+
+    if (isChecked) {
+      Toast.success('Peça entregue!', 'Status atualizado para Recebida.');
+    } else {
+      Toast.success('Status da peça atualizado.');
+    }
+    Router.navigate('parts', { force: true });
+  }
+
+  function onStatusFormChange(status) {
+    const entregueCheckbox = document.getElementById('pt-entregue');
+    const realInput = document.getElementById('pt-real');
+    const today = new Date().toISOString().slice(0, 10);
+    if (entregueCheckbox && realInput) {
+      if (['Recebida', 'Instalada'].includes(status)) {
+        entregueCheckbox.checked = true;
+        if (!realInput.value) {
+          realInput.value = today;
+        }
+      } else {
+        entregueCheckbox.checked = false;
+        realInput.value = '';
+      }
+    }
+  }
+
+  function onEntregueFormChange(checked) {
+    const statusSelect = document.getElementById('pt-status');
+    const realInput = document.getElementById('pt-real');
+    const today = new Date().toISOString().slice(0, 10);
+    if (statusSelect && realInput) {
+      if (checked) {
+        if (statusSelect.value !== 'Recebida' && statusSelect.value !== 'Instalada') {
+          statusSelect.value = 'Recebida';
+        }
+        if (!realInput.value) {
+          realInput.value = today;
+        }
+      } else {
+        if (statusSelect.value === 'Recebida' || statusSelect.value === 'Instalada') {
+          statusSelect.value = 'Solicitada';
+        }
+        realInput.value = '';
+      }
+    }
   }
 
   function deletePart(id) {
     confirmDialog('Excluir Peça', 'Tem certeza?', () => { DB.parts.delete(id); Router.navigate('parts', { force: true }); Toast.success('Peça excluída'); });
   }
 
-  return { render, openCreate, save, updateStatus, deletePart };
+  return {
+    render, openCreate, openEdit, save, updateStatus, toggleEntregue,
+    onStatusFormChange, onEntregueFormChange, deletePart
+  };
 })();
 
 // ================================================================
@@ -438,6 +620,7 @@ window.PartsModule = (() => {
 // ================================================================
 window.WorkforceModule = (() => {
   let activeTab = 'team';
+  let editingWorkerId = null;
 
   function render() {
     const workers = DB.workforce.list();
@@ -462,13 +645,34 @@ window.WorkforceModule = (() => {
         <div class="tab-panel active" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--space-4);padding:var(--space-4);">
           ${workers.map(w => {
             const wHours = monthTs.filter(t=>t.workerId===w.id).reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
-            return `<div class="card" style="text-align:center;padding:var(--space-5);">
-              <div class="avatar" style="width:56px;height:56px;font-size:var(--text-lg);margin:0 auto var(--space-3);">${avatarInitials(w.nome)}</div>
-              <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-primary)">${w.nome}</div>
-              <div style="font-size:var(--text-xs);color:var(--text-muted)">${w.funcao}</div>
-              <div class="badge badge-ghost" style="margin:var(--space-2) 0">${w.disciplina}</div>
-              <div style="font-size:var(--text-xs);color:var(--text-muted)">Horas este mês: <strong style="color:var(--brand-primary-light)">${wHours.toFixed(0)}h</strong></div>
-              <div style="margin-top:var(--space-3);">${statusBadge(w.status)}</div>
+            
+            const eq = w.equipmentId ? DB.equipment.get(w.equipmentId) : null;
+            const isAllocated = eq && eq.status !== 'Liberado';
+            const allocationBadge = isAllocated
+              ? `<div style="margin:var(--space-1) 0"><span class="badge" style="background:rgba(255, 152, 0, 0.15);color:#ff9800;border:1px solid rgba(255,152,0,0.2);" title="${w.justificativa ? 'Justificativa: ' + w.justificativa : ''}">Alocado: ${eq.codigo}</span></div>
+                 ${w.justificativa ? `<div style="font-size:10px;color:var(--text-muted);font-style:italic;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px auto 0;" title="${w.justificativa}">${w.justificativa}</div>` : ''}`
+              : `<div style="margin:var(--space-1) 0"><span class="badge badge-success">Disponível</span></div>`;
+
+            return `<div class="card" style="text-align:center;padding:var(--space-4);display:flex;flex-direction:column;justify-content:space-between;min-height:280px;">
+              <div>
+                <div class="avatar" style="width:48px;height:48px;font-size:var(--text-base);margin:0 auto var(--space-2);">${avatarInitials(w.nome)}</div>
+                <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${w.nome}">${w.nome}</div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted)">${w.funcao || 'Sem Função'} · ${w.matricula || 'Sem Matrícula'}</div>
+                <div class="badge badge-ghost" style="margin:var(--space-2) 0">${w.disciplina}</div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted)">Horas este mês: <strong style="color:var(--brand-primary-light)">${wHours.toFixed(0)}h</strong></div>
+                <div style="margin-top:var(--space-2);">${statusBadge(w.status)}</div>
+                <div style="margin-top:var(--space-2);">${allocationBadge}</div>
+              </div>
+              <div style="display:flex;justify-content:center;gap:var(--space-2);margin-top:var(--space-3);border-top:1px solid var(--border-color);padding-top:var(--space-2);">
+                <button class="btn btn-ghost btn-sm" onclick="WorkforceModule.openEditWorker('${w.id}')" title="Editar Funcionário" style="display:flex;align-items:center;gap:4px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                  Editar
+                </button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);display:flex;align-items:center;gap:4px;" onclick="WorkforceModule.deleteWorker('${w.id}', '${w.nome.replace(/'/g, "\\'")}')" title="Excluir Funcionário">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397" /></svg>
+                  Excluir
+                </button>
+              </div>
             </div>`;
           }).join('')}
         </div>
@@ -505,8 +709,7 @@ window.WorkforceModule = (() => {
             <thead><tr><th>Funcionário</th><th>Disciplina</th><th>Horas no Mês</th><th>Apontamentos</th></tr></thead>
             <tbody>
               ${workers.map(w => {
-                const wTs = monthTs.filter(t=>t.workerId===w.id);
-                const wHours = wTs.reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
+                const wHours = monthTs.filter(t=>t.workerId===w.id).reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
                 return `<tr>
                   <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(w.nome)}</div><span>${w.nome}</span></div></td>
                   <td>${w.disciplina}</td>
@@ -519,44 +722,125 @@ window.WorkforceModule = (() => {
         </div>
       `}
       </div>
+    </div>
 
-      <!-- Worker modal -->
-      <div class="modal-overlay" id="modal-worker">
-        <div class="modal"><div class="modal-header"><div class="modal-title">Funcionário</div><button class="modal-close" onclick="closeModal('modal-worker')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div class="modal-body" id="worker-modal-body"></div>
-        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-worker')">Cancelar</button><button class="btn btn-primary" onclick="WorkforceModule.saveWorker()">Salvar</button></div></div>
-      </div>
-      <!-- Timesheet modal -->
-      <div class="modal-overlay" id="modal-timesheet">
-        <div class="modal"><div class="modal-header"><div class="modal-title">Apontamento de Horas</div><button class="modal-close" onclick="closeModal('modal-timesheet')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div class="modal-body" id="timesheet-modal-body"></div>
-        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-timesheet')">Cancelar</button><button class="btn btn-primary" onclick="WorkforceModule.saveTimesheet()">Salvar</button></div></div>
-      </div>
+    <!-- Worker modal -->
+    <div class="modal-overlay" id="modal-worker">
+      <div class="modal"><div class="modal-header"><div class="modal-title">Funcionário</div><button class="modal-close" onclick="closeModal('modal-worker')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="worker-modal-body"></div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-worker')">Cancelar</button><button class="btn btn-primary" onclick="WorkforceModule.saveWorker()">Salvar</button></div></div>
+    </div>
+    <!-- Timesheet modal -->
+    <div class="modal-overlay" id="modal-timesheet">
+      <div class="modal"><div class="modal-header"><div class="modal-title">Apontamento de Horas</div><button class="modal-close" onclick="closeModal('modal-timesheet')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="timesheet-modal-body"></div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-timesheet')">Cancelar</button><button class="btn btn-primary" onclick="WorkforceModule.saveTimesheet()">Salvar</button></div></div>
     </div>`;
   }
 
   function setTab(tab) { activeTab = tab; Router.navigate('workforce', { force: true }); }
 
   function openCreateWorker() {
+    editingWorkerId = null;
+    renderWorkerForm();
+  }
+
+  function openEditWorker(id) {
+    editingWorkerId = id;
+    renderWorkerForm(id);
+  }
+
+  function renderWorkerForm(id = null) {
+    const worker = id ? DB.workforce.get(id) : null;
+    const allEqs = DB.equipment.list();
+    const currentEqId = worker?.equipmentId || '';
+    const eqs = allEqs.filter(e => e.status !== 'Liberado' || e.id === currentEqId);
+    
+    const isLocked = worker && currentEqId && allEqs.find(e => e.id === currentEqId)?.status !== 'Liberado';
     const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Lavagem','Instrumentação','Hidráulica'];
+    
     document.getElementById('worker-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
-      <div class="form-row"><div class="form-group"><label>Nome *</label><input id="wk-nome" /></div>
-      <div class="form-group"><label>Matrícula</label><input id="wk-mat" /></div></div>
-      <div class="form-row"><div class="form-group"><label>Função</label><input id="wk-func" placeholder="Mecânico, Eletricista..." /></div>
-      <div class="form-group"><label>Disciplina</label><select id="wk-disc">${discs.map(d=>`<option>${d}</option>`).join('')}</select></div></div>
-      <div class="form-row"><div class="form-group"><label>Telefone</label><input id="wk-tel" /></div>
-      <div class="form-group"><label>Status</label><select id="wk-status"><option>Ativo</option><option>Inativo</option></select></div></div>
+      <div class="form-row">
+        <div class="form-group"><label>Nome *</label><input id="wk-nome" value="${worker?.nome || ''}" /></div>
+        <div class="form-group"><label>Matrícula</label><input id="wk-mat" value="${worker?.matricula || ''}" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Função</label><input id="wk-func" placeholder="Mecânico, Eletricista..." value="${worker?.funcao || ''}" /></div>
+        <div class="form-group"><label>Disciplina</label>
+          <select id="wk-disc">
+            ${discs.map(d => `<option ${worker?.disciplina === d ? 'selected' : ''}>${d}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Telefone</label><input id="wk-tel" value="${worker?.telefone || ''}" /></div>
+        <div class="form-group"><label>Status</label>
+          <select id="wk-status">
+            <option ${worker?.status === 'Ativo' ? 'selected' : ''}>Ativo</option>
+            <option ${worker?.status === 'Inativo' ? 'selected' : ''}>Inativo</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Equipamento Alocado</label>
+        <select id="wk-eq" ${isLocked ? 'disabled style="background:var(--bg-base);cursor:not-allowed;"' : ''}>
+          <option value="">Nenhum / Disponível</option>
+          ${eqs.map(e => `<option value="${e.id}" ${e.id === currentEqId ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('')}
+        </select>
+        ${isLocked ? `
+          <div style="font-size:var(--text-xs);color:var(--color-warning);margin-top:4px;display:flex;align-items:center;gap:4px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd" /></svg>
+            Mão de obra travada no equipamento. Só poderá ser alterada quando o equipamento for liberado.
+          </div>
+        ` : ''}
+      </div>
+      <div class="form-group">
+        <label>Justificativa de Alocação</label>
+        <textarea id="wk-just" rows="2" placeholder="Descreva o motivo desta alocação...">${worker?.justificativa || ''}</textarea>
+      </div>
     </div>`;
+    
+    document.querySelector('#modal-worker .modal-title').textContent = id ? 'Editar Funcionário' : 'Novo Funcionário';
     openModal('modal-worker');
   }
 
   function saveWorker() {
     const nome = document.getElementById('wk-nome').value.trim();
     if (!nome) { Toast.error('Erro', 'Nome é obrigatório'); return; }
-    DB.workforce.create({ nome, matricula: document.getElementById('wk-mat').value, funcao: document.getElementById('wk-func').value, disciplina: document.getElementById('wk-disc').value, telefone: document.getElementById('wk-tel').value, status: document.getElementById('wk-status').value });
+    
+    const eqEl = document.getElementById('wk-eq');
+    const equipmentId = eqEl ? eqEl.value : '';
+    const justificativa = document.getElementById('wk-just').value.trim();
+    
+    const data = {
+      nome,
+      matricula: document.getElementById('wk-mat').value.trim(),
+      funcao: document.getElementById('wk-func').value.trim(),
+      disciplina: document.getElementById('wk-disc').value,
+      telefone: document.getElementById('wk-tel').value.trim(),
+      status: document.getElementById('wk-status').value,
+      equipmentId,
+      justificativa
+    };
+    
+    if (editingWorkerId) {
+      DB.workforce.update(editingWorkerId, data);
+      Toast.success('Funcionário atualizado!', nome);
+    } else {
+      DB.workforce.create(data);
+      Toast.success('Funcionário cadastrado!', nome);
+    }
+    
     closeModal('modal-worker');
     Router.navigate('workforce', { force: true });
-    Toast.success('Funcionário cadastrado!', nome);
+  }
+
+  function deleteWorker(id, nome) {
+    confirmDialog('Excluir Funcionário', `Deseja realmente excluir ${nome}?`, () => {
+      DB.workforce.delete(id);
+      Router.navigate('workforce', { force: true });
+      Toast.success('Funcionário excluído!', nome);
+    });
   }
 
   function openCreateTimesheet() {
@@ -588,7 +872,7 @@ window.WorkforceModule = (() => {
     Toast.success('Apontamento registrado!', `${hours.toFixed(1)} horas`);
   }
 
-  return { render, setTab, openCreateWorker, saveWorker, openCreateTimesheet, saveTimesheet };
+  return { render, setTab, openCreateWorker, openEditWorker, saveWorker, deleteWorker, openCreateTimesheet, saveTimesheet };
 })();
 
 // ================================================================
@@ -665,12 +949,12 @@ window.RestrictionsModule = (() => {
         }).join('')}
         ${restrictions.length===0?'<div class="empty-state"><p>Nenhuma restrição registrada</p></div>':''}
       </div>
-      <!-- Modal -->
-      <div class="modal-overlay" id="modal-restriction">
-        <div class="modal modal-lg"><div class="modal-header"><div class="modal-title">Nova Restrição</div><button class="modal-close" onclick="closeModal('modal-restriction')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div class="modal-body" id="restriction-modal-body"></div>
-        <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-restriction')">Cancelar</button><button class="btn btn-primary" onclick="RestrictionsModule.save()">Salvar</button></div></div>
-      </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-restriction">
+      <div class="modal modal-lg"><div class="modal-header"><div class="modal-title">Nova Restrição</div><button class="modal-close" onclick="closeModal('modal-restriction')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body" id="restriction-modal-body"></div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-restriction')">Cancelar</button><button class="btn btn-primary" onclick="RestrictionsModule.save()">Salvar</button></div></div>
     </div>`;
   }
 

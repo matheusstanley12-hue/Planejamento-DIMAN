@@ -340,6 +340,7 @@ try {
 
 // Initial rendering function
 function renderShell(session) {
+  window.GlobalEqFilter = '';
   const perms = session.permissions || {};
   document.body.innerHTML = '';
   document.body.style.overflow = '';
@@ -357,9 +358,9 @@ function renderShell(session) {
     { route:'gantt',      label:'Cronograma Gantt',      icon:'chart-bar',      perm:'gantt',       section:'' },
     { route:'critical',   label:'Caminho Crítico',       icon:'exclamation-triangle', perm:'criticalPath', section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
+    { route:'parts',      label:'Solicitação de Peças',   icon:'cube',           perm:'parts',       section:'' },
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO' },
     { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
-    { route:'parts',      label:'Peças',                 icon:'cube',           perm:'parts',       section:'' },
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
     { route:'costs',      label:'Centro de Custos',      icon:'currency-dollar', perm:'costs',      section:'' },
     { route:'kpi',        label:'Indicadores KPI',       icon:'chart-pie',      perm:'kpi',         section:'ANÁLISE' },
@@ -433,6 +434,17 @@ function renderShell(session) {
   }
 
   document.body.innerHTML = `
+    <style>
+      #topbar {
+        transition: transform 0.3s ease, margin-top 0.3s ease, opacity 0.3s ease;
+      }
+      #topbar.hidden {
+        transform: translateY(-100%);
+        margin-top: -73px !important;
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
     <div id="app" style="display:flex;height:100vh;overflow:hidden;">
       
       <!-- Sidebar -->
@@ -463,8 +475,15 @@ function renderShell(session) {
 
       <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
         <!-- Topbar -->
-        <header id="topbar" style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-6);background:var(--bg-card);border-bottom:1px solid var(--border-card);">
-          <div style="display:flex;align-items:center;gap:var(--space-4);">
+        <header id="topbar" style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-6);background:var(--bg-card);border-bottom:1px solid var(--border-card);position:sticky;top:0;z-index:100;">
+          <div style="display:flex;align-items:center;gap:var(--space-3);">
+            <div id="sidebar-toggle-topbar" onclick="toggleSidebar()" style="cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;transition:background 0.2s;color:var(--text-primary);margin-right:2px;" onmouseover="this.style.background='var(--bg-base)'" onmouseout="this.style.background='transparent'" title="Menu Lateral">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
+                <circle cx="12" cy="5" r="2"/>
+                <circle cx="12" cy="12" r="2"/>
+                <circle cx="12" cy="19" r="2"/>
+              </svg>
+            </div>
             <div style="width:40px;height:40px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform 0.2s;padding:4px;" onclick="toggleSidebar()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Abrir/Fechar Menu Lateral">
               <img src="logo.png" style="width:100%;height:100%;object-fit:contain;" alt="GEOSOL Logo" />
             </div>
@@ -479,17 +498,14 @@ function renderShell(session) {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
               Início
             </button>
-            <button class="btn btn-outline btn-sm" onclick="window.DB.forceSyncAll()" title="Forçar envio de dados locais para a nuvem" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);color:var(--brand-primary-light);border-color:var(--brand-primary-light);margin-left:var(--space-2);">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
-              Sincronizar Nuvem
-            </button>
+
 
             <!-- Global Equipment Filter -->
             ${session.perfil !== 'Executante' ? `
             <div style="margin-left:var(--space-4); display:flex; align-items:center;">
               <select id="global-eq-select" class="form-control" style="width:250px; border-radius:var(--radius-full); background:var(--bg-base); border:1px solid var(--border-card); font-size:var(--text-sm);" onchange="window.setGlobalEqFilter(this.value)">
-                <option value="">Filtro Global: Todos Equipamentos</option>
-                ${DB.equipment.list().filter(e => e.status !== 'Liberado').map(e => `<option value="${e.id}">${e.codigo} - ${(e.nome || 'Sem Nome').split(' ').slice(0,2).join(' ')}</option>`).join('')}
+                <option value="" ${window.GlobalEqFilter === "" ? 'selected' : ''}>Filtro Global: Todos Equipamentos</option>
+                ${DB.equipment.list().filter(e => e.status !== 'Liberado').map(e => `<option value="${e.id}" ${e.id === window.GlobalEqFilter ? 'selected' : ''}>${e.codigo} - ${(e.nome || 'Sem Nome').split(' ').slice(0,2).join(' ')}</option>`).join('')}
               </select>
             </div>
             ` : ''}
@@ -519,6 +535,22 @@ function renderShell(session) {
     <!-- Toast container -->
     <div id="toast-container"></div>
   `;
+
+  // Bind scroll hide/show topbar listener
+  const mainEl = document.getElementById('main');
+  const topbarEl = document.getElementById('topbar');
+  if (mainEl && topbarEl) {
+    let lastScrollTop = 0;
+    mainEl.addEventListener('scroll', () => {
+      const scrollTop = mainEl.scrollTop;
+      if (scrollTop > lastScrollTop && scrollTop > 80) {
+        topbarEl.classList.add('hidden');
+      } else {
+        topbarEl.classList.remove('hidden');
+      }
+      lastScrollTop = scrollTop;
+    });
+  }
 
   // Register all routes
   Router.register('home', () => HomeModule.render());
@@ -621,16 +653,90 @@ function renderPublicQrView(eqId) {
 
 window.gerarDadosDeTeste = function() {
   if (!window.DB) return alert('DB não carregado');
-  const eq1 = window.DB.equipment.create({ nome: 'Caminhão Fora de Estrada 01', codigo: 'CAM-001', familia: 'Caminhões', status: 'Em Manutenção', area: 'Mina 1' });
-  const eq2 = window.DB.equipment.create({ nome: 'Escavadeira Hidráulica 02', codigo: 'ESC-002', familia: 'Escavadeiras', status: 'Em Manutenção', area: 'Mina 2' });
+  
+  // Limpar dados anteriores para evitar duplicação mantendo a sessão do usuário ativa
+  const keysToReset = ['diman_equipment', 'diman_tasks', 'diman_parts', 'diman_restrictions', 'diman_workforce', 'diman_timesheets', 'diman_replannings', 'diman_costs', 'diman_lessons', 'diman_notifications', 'diman_kpi_cache'];
+  keysToReset.forEach(k => localStorage.removeItem(k));
+  
+  const now = new Date().toISOString().slice(0,10);
+  
+  const eq1 = window.DB.equipment.create({ 
+    nome: 'SSM-288', 
+    codigo: 'SSM-288', 
+    tipo: 'Sondas de Pesquisas', 
+    status: 'Em Manutenção', 
+    os: 'OS-88220', 
+    cliente: 'COMISA', 
+    dataEntrada: now, 
+    dataLiberacaoPlanejada: now 
+  });
+  
+  const eq2 = window.DB.equipment.create({ 
+    nome: 'BHZ-001', 
+    codigo: 'BHZ-001', 
+    tipo: 'Sondas Poços', 
+    status: 'Em Manutenção', 
+    os: 'OS-99100', 
+    cliente: 'GEOSOL', 
+    dataEntrada: now, 
+    dataLiberacaoPlanejada: now 
+  });
+
+  const eq3 = window.DB.equipment.create({ 
+    nome: 'BMS-101', 
+    codigo: 'BMS-101', 
+    tipo: 'Bomba de pesquisa', 
+    status: 'Liberado', 
+    os: 'OS-77110', 
+    cliente: 'VALE', 
+    dataEntrada: now, 
+    dataLiberacaoPlanejada: now 
+  });
+
+  const eq4 = window.DB.equipment.create({ 
+    nome: 'BMP-202', 
+    codigo: 'BMP-202', 
+    tipo: 'Bombas de poços', 
+    status: 'Em Manutenção', 
+    os: 'OS-66330', 
+    cliente: 'ANGLO', 
+    dataEntrada: now, 
+    dataLiberacaoPlanejada: now 
+  });
+
+  const eq5 = window.DB.equipment.create({ 
+    nome: 'SUB-501', 
+    codigo: 'SUB-501', 
+    tipo: 'Subconjuntos', 
+    status: 'Em Manutenção', 
+    os: 'OS-55440', 
+    cliente: 'GEOSOL', 
+    dataEntrada: now, 
+    dataLiberacaoPlanejada: now 
+  });
+
+  const eq6 = window.DB.equipment.create({ 
+    nome: 'OUT-999', 
+    codigo: 'OUT-999', 
+    tipo: 'Outros', 
+    status: 'Em Manutenção', 
+    os: 'OS-44330', 
+    cliente: 'GEOSOL', 
+    dataEntrada: now, 
+    dataLiberacaoPlanejada: now 
+  });
   
   window.DB.tasks.create({ equipmentId: eq1.id, descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false });
   window.DB.tasks.create({ equipmentId: eq1.id, descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true });
   window.DB.tasks.create({ equipmentId: eq2.id, descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true });
+  window.DB.tasks.create({ equipmentId: eq4.id, descricao: 'Alinhamento do Eixo', disciplina: 'Mecânica', horasPlanejadas: 3, status: 'Não Iniciada', pctExecutado: 0, critico: false });
+  window.DB.tasks.create({ equipmentId: eq5.id, descricao: 'Recuperação de Mancal', disciplina: 'Caldeiraria', horasPlanejadas: 8, status: 'Em Andamento', pctExecutado: 30, critico: true });
   
   window.DB.restrictions.create({ equipmentId: eq1.id, descricao: 'Aguardando liberação de área', impacto: 'Alto' });
+  window.DB.restrictions.create({ equipmentId: eq5.id, descricao: 'Falta de Mão de Obra especializada', impacto: 'Médio' });
   
   window.DB.parts.create({ equipmentId: eq2.id, descricao: 'Mangueira de Alta Pressão 3/4', pn: 'PN-98765', qtd: 2, status: 'Solicitada' });
+  window.DB.parts.create({ equipmentId: eq5.id, descricao: 'Rolamento Cônico', pn: 'PN-6308', qtd: 1, status: 'Recebida' });
   
   alert('Dados de teste gerados com sucesso! A página será recarregada.');
   location.reload();

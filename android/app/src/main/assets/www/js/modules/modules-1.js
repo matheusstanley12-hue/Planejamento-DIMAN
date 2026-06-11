@@ -360,29 +360,29 @@ window.EquipmentModule = (() => {
         }).join('')}
         ${eqs.length === 0 ? `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div>` : ''}
       </div>
-      <!-- Modal create/edit -->
-      <div class="modal-overlay" id="modal-equipment">
-        <div class="modal modal-lg">
-          <div class="modal-header">
-            <div class="modal-title" id="eq-modal-title">Equipamento</div>
-            <button class="modal-close" onclick="closeModal('modal-equipment')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body" id="eq-modal-body"></div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
-            <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
-          </div>
+    </div>
+    <!-- Modal create/edit -->
+    <div class="modal-overlay" id="modal-equipment">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <div class="modal-title" id="eq-modal-title">Equipamento</div>
+          <button class="modal-close" onclick="closeModal('modal-equipment')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div class="modal-body" id="eq-modal-body"></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
+          <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
         </div>
       </div>
-      <!-- Detail modal -->
-      <div class="modal-overlay" id="modal-eq-detail">
-        <div class="modal modal-xl">
-          <div class="modal-header">
-            <div class="modal-title" id="eq-detail-title">Detalhes</div>
-            <button class="modal-close" onclick="closeModal('modal-eq-detail')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body" id="eq-detail-body"></div>
+    </div>
+    <!-- Detail modal -->
+    <div class="modal-overlay" id="modal-eq-detail">
+      <div class="modal modal-xl">
+        <div class="modal-header">
+          <div class="modal-title" id="eq-detail-title">Detalhes</div>
+          <button class="modal-close" onclick="closeModal('modal-eq-detail')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
+        <div class="modal-body" id="eq-detail-body"></div>
       </div>
     </div>`;
   }
@@ -507,27 +507,41 @@ window.EquipmentModule = (() => {
     const getOptions = (disc) => {
       const workers = wf.filter(w => w.disciplina === disc);
       const list = workers.length ? workers : wf;
-      return `<option value="">—</option>` + list.map(w => `<option value="${w.nome}" ${map[disc] === w.nome ? 'selected' : ''}>${w.nome}</option>`).join('');
+      const allEqs = DB.equipment.list();
+      
+      return `<option value="">—</option>` + list.map(w => {
+        const allocatedEq = w.equipmentId ? allEqs.find(e => e.id === w.equipmentId) : null;
+        const isAllocatedToOther = w.equipmentId && w.equipmentId !== eq?.id && allocatedEq && allocatedEq.status !== 'Liberado';
+        
+        if (isAllocatedToOther) {
+          return `<option value="${w.nome}" disabled style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq.codigo}">🔒 ${w.nome} (Alocado no equipamento ${allocatedEq.codigo})</option>`;
+        } else {
+          return `<option value="${w.nome}" ${map[disc] === w.nome ? 'selected' : ''}>${w.nome}</option>`;
+        }
+      }).join('');
     };
 
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
-      <div class="form-row"><div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
-      <div class="form-group"><label>Nome do Equipamento *</label><input id="eq-nome" value="${eq?.nome||''}" placeholder="Nome completo" required /></div></div>
-      <div class="form-row"><div class="form-group"><label>O.S. *</label><input id="eq-os" value="${eq?.os||''}" placeholder="Ordem de Serviço" required /></div>
-      <div class="form-group"><label>Cliente</label><input id="eq-cliente" value="${eq?.cliente||''}" /></div></div>
-      <div class="form-row"><div class="form-group"><label>Contrato</label><input id="eq-contrato" value="${eq?.contrato||''}" /></div>
-      <div class="form-group"><label>Tipo</label><input id="eq-tipo" value="${eq?.tipo||''}" placeholder="Sonda, Perfuratriz..." /></div></div>
-      <div class="form-row"><div class="form-group"><label>Localização</label><input id="eq-loc" value="${eq?.localizacao||''}" /></div>
-      <div class="form-row"><div class="form-group"><label>Fabricante</label><input id="eq-fab" value="${eq?.fabricante||''}" /></div>
-      <div class="form-group"><label>Modelo</label><input id="eq-modelo" value="${eq?.modelo||''}" /></div></div>
-      <div class="form-row"><div class="form-group"><label>Número de Série</label><input id="eq-serie" value="${eq?.numeroSerie||''}" /></div>
-      <div class="form-group"><label>Responsável</label><input id="eq-resp" value="${eq?.responsavel||''}" /></div></div>
-      <div class="form-row"><div class="form-group"><label>Data de Entrada</label><input type="date" id="eq-entrada" value="${toDateInput(eq?.dataEntrada)}" /></div>
-      <div class="form-group"><label>🔒 Data Planejada de Liberação ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div></div>
-      <div class="form-row"><div class="form-group"><label>Status</label><select id="eq-status">
-        ${['Em Manutenção','Liberado','Bloqueado','Cancelado'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
-      </select></div>
-      <div class="form-group"><label>% de Avanço (0-100)</label><input type="number" id="eq-pct" min="0" max="100" value="${eq?.pctAvanco||0}" /></div></div>
+      <div class="form-row">
+        <div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
+        <div class="form-group"><label>O.S. *</label><input id="eq-os" value="${eq?.os||''}" placeholder="Ordem de Serviço" required /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Cliente</label><input id="eq-cliente" value="${eq?.cliente||''}" /></div>
+        <div class="form-group"><label>Tipo</label><select id="eq-tipo" class="form-control" style="width:100%;height:38px;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:0 var(--space-3);">
+          ${['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Outros'].map(t => `<option value="${t}" ${eq?.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Modelo</label><input id="eq-modelo" value="${eq?.modelo||''}" /></div>
+        <div class="form-group"><label>Data de Entrada</label><input type="date" id="eq-entrada" value="${toDateInput(eq?.dataEntrada)}" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>🔒 Data Planejada de Liberação ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
+        <div class="form-group"><label>Status</label><select id="eq-status">
+          ${['Em Manutenção','Liberado','Bloqueado','Cancelado'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+      </div>
       
       <div style="border-top:1px solid var(--border-card);padding-top:var(--space-4);margin-top:var(--space-2);">
         <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-3);">Mão de Obra por Disciplina (Auto-preenchimento)</div>
@@ -562,19 +576,19 @@ window.EquipmentModule = (() => {
     const id = document.getElementById('eq-editing-id').value;
     const data = {
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
-      nome: document.getElementById('eq-nome').value.trim(),
+      nome: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       os: document.getElementById('eq-os').value.trim(),
       cliente: document.getElementById('eq-cliente').value.trim(),
-      contrato: document.getElementById('eq-contrato').value.trim(),
+      contrato: '',
       tipo: document.getElementById('eq-tipo').value.trim(),
-      localizacao: document.getElementById('eq-loc').value.trim(),
-      fabricante: document.getElementById('eq-fab').value.trim(),
+      localizacao: '',
+      fabricante: '',
       modelo: document.getElementById('eq-modelo').value.trim(),
-      numeroSerie: document.getElementById('eq-serie').value.trim(),
-      responsavel: document.getElementById('eq-resp').value.trim(),
+      numeroSerie: '',
+      responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
       status: document.getElementById('eq-status').value,
-      pctAvanco: parseInt(document.getElementById('eq-pct').value) || 0,
+      pctAvanco: 0,
       observacoes: document.getElementById('eq-obs').value.trim(),
       workforceMap: {
         'Mecânica': document.getElementById('eq-wf-mecanica').value,
@@ -583,7 +597,7 @@ window.EquipmentModule = (() => {
         'Usinagem': document.getElementById('eq-wf-usinagem').value,
       }
     };
-    if (!data.codigo || !data.nome || !data.os) { Toast.error('Erro', 'Código, Nome e O.S. são obrigatórios.'); return; }
+    if (!data.codigo || !data.os) { Toast.error('Erro', 'Código e O.S. são obrigatórios.'); return; }
     if (id) { DB.equipment.update(id, data); Toast.success('Equipamento atualizado!', data.codigo); }
     else { data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; DB.equipment.create(data); Toast.success('Equipamento criado!', data.codigo); }
     closeModal('modal-equipment');
@@ -645,9 +659,9 @@ window.EquipmentModule = (() => {
 // TASKS MODULE
 // ================================================================
 window.TasksModule = (() => {
-  let eqFilter = '';
 
   function render() {
+    const eqFilter = window.GlobalEqFilter;
     const eqs = DB.equipment.list();
     const tasks = DB.tasks.getAll();
     const equipMap = {};
@@ -664,7 +678,7 @@ window.TasksModule = (() => {
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-3);">
               <div>
                 <div style="font-size:1.4rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;">${e.codigo}</div>
-                <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-secondary);margin-top:2px;">Cliente: ${e.cliente || '—'}</div>
+                <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-secondary);margin-top:2px;">Cliente: ${e.cliente || '—'} &middot; O.S.: ${e.os || '—'}</div>
               </div>
               <div>
                 ${statusBadge(e.status)}
@@ -716,14 +730,14 @@ window.TasksModule = (() => {
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-5);">
             ${cardsHtml || '<div class="empty-state" style="grid-column:1/-1;"><p>Nenhum equipamento encontrado</p></div>'}
           </div>
+        </div>
 
-          <!-- Modal -->
-          <div class="modal-overlay" id="modal-task">
-            <div class="modal modal-lg">
-              <div class="modal-header"><div class="modal-title" id="task-modal-title">Tarefa</div><button class="modal-close" onclick="closeModal('modal-task')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-              <div class="modal-body" id="task-modal-body"></div>
-              <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
-            </div>
+        <!-- Modal -->
+        <div class="modal-overlay" id="modal-task">
+          <div class="modal modal-lg">
+            <div class="modal-header"><div class="modal-title" id="task-modal-title">Tarefa</div><button class="modal-close" onclick="closeModal('modal-task')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+            <div class="modal-body" id="task-modal-body"></div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
           </div>
         </div>
       `;
@@ -768,14 +782,14 @@ window.TasksModule = (() => {
           ${filteredTasks.length === 0 ? '<div class="empty-state"><p>Nenhuma tarefa cadastrada para este equipamento.</p></div>' : ''}
           ${filteredTasks.map(t => renderTaskRow(t, equipMap)).join('')}
         </div>
+      </div>
 
-        <!-- Modal -->
-        <div class="modal-overlay" id="modal-task">
-          <div class="modal modal-lg">
-            <div class="modal-header"><div class="modal-title" id="task-modal-title">Tarefa</div><button class="modal-close" onclick="closeModal('modal-task')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-            <div class="modal-body" id="task-modal-body"></div>
-            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
-          </div>
+      <!-- Modal -->
+      <div class="modal-overlay" id="modal-task">
+        <div class="modal modal-lg">
+          <div class="modal-header"><div class="modal-title" id="task-modal-title">Tarefa</div><button class="modal-close" onclick="closeModal('modal-task')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+          <div class="modal-body" id="task-modal-body"></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
         </div>
       </div>
     `;
@@ -816,16 +830,51 @@ window.TasksModule = (() => {
   function taskForm(t) {
     const eqs = DB.equipment.list();
     const wf = DB.workforce.list();
+    
+    const currentEqId = t?.equipmentId || (eqs.length ? eqs[0].id : '');
+    const filteredWf = wf.filter(w => w.equipmentId === currentEqId);
+    
+    if (t?.responsavel && t.responsavel !== 'Não atribuído') {
+      const respWorker = wf.find(w => w.nome === t.responsavel);
+      if (respWorker && !filteredWf.some(w => w.id === respWorker.id)) {
+        filteredWf.push(respWorker);
+      }
+    }
+
     const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Lavagem','Instrumentação','Hidráulica','Pneumática','Outras'];
     const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
+    let obsHistoryHtml = '';
+    let obsTextValue = '';
+    if (t?.observacoes) {
+      let isJson = false;
+      try {
+        const comments = JSON.parse(t.observacoes);
+        if (Array.isArray(comments)) {
+          isJson = true;
+          obsHistoryHtml = `<div style="max-height: 80px; overflow-y: auto; font-size: 11px; margin-bottom: 8px; border: 1px solid var(--border-default); padding: 4px; border-radius: 4px; background: var(--bg-base);">
+            ${comments.map(c => `
+              <div style="margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.02);">
+                <span style="font-weight:bold;color:var(--brand-primary-light);">${c.user}:</span> ${c.text}
+                <span style="font-size:9px;color:var(--text-muted);display:block;">${new Date(c.createdAt).toLocaleString('pt-BR')}</span>
+              </div>
+            `).join('')}
+          </div>`;
+        }
+      } catch (e) {}
+      
+      if (!isJson) {
+        obsTextValue = t.observacoes;
+      }
+    }
+
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Equipamento *</label><select id="tk-eq" onchange="TasksModule.onFormChange()">${eqs.map(e=>`<option value="${e.id}" ${t?.equipmentId===e.id?'selected':''}>${e.codigo}</option>`).join('')}</select></div>
       <div class="form-group"><label>Código</label><input id="tk-cod" value="${t?.codigo||''}" /></div></div>
       <div class="form-group"><label>Descrição *</label><input id="tk-desc" value="${t?.descricao||''}" required /></div>
       <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="tk-disc" onchange="TasksModule.onFormChange()">${discs.map(d=>`<option ${t?.disciplina===d?'selected':''}>${d}</option>`).join('')}</select></div>
       <div class="form-group"><label>Prioridade</label><select id="tk-prio">${prios.map(p=>`<option ${t?.prioridade===p?'selected':''}>${p}</option>`).join('')}</select></div></div>
-      <div class="form-row"><div class="form-group"><label>Responsável</label><select id="tk-resp"><option value="">—</option>${wf.map(w=>`<option value="${w.nome}" ${t?.responsavel===w.nome?'selected':''}>${w.nome}</option>`).join('')}</select></div>
+      <div class="form-row"><div class="form-group"><label>Responsável</label><select id="tk-resp"><option value="">—</option>${filteredWf.map(w=>`<option value="${w.nome}" ${t?.responsavel===w.nome?'selected':''}>${w.nome}</option>`).join('')}</select></div>
       <div class="form-group"><label>Status</label><select id="tk-status">${statuses.map(s=>`<option ${t?.status===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
       <div class="form-row"><div class="form-group"><label>Início Planejado</label><input type="date" id="tk-ip" value="${toDateInput(t?.dataPlanejadaInicio)}" /></div>
       <div class="form-group"><label>Término Planejado</label><input type="date" id="tk-tp" value="${toDateInput(t?.dataPlanejadaTermino)}" /></div></div>
@@ -834,7 +883,10 @@ window.TasksModule = (() => {
       <div class="form-group"><label>% Executado: <span id="tk-pct-val">${t?.pctExecutado||0}</span>%</label>
         <input type="range" id="tk-pct" min="0" max="100" value="${t?.pctExecutado||0}" oninput="document.getElementById('tk-pct-val').textContent=this.value" /></div>
       <div class="checkbox-wrap"><input type="checkbox" id="tk-critico" ${t?.critico?'checked':''} /><label for="tk-critico">Marcar como Tarefa Crítica (Caminho Crítico)</label></div>
-      <div class="form-group"><label>Observações</label><textarea id="tk-obs">${t?.observacoes||''}</textarea></div>
+      <div class="form-group"><label>Observações</label>
+        ${obsHistoryHtml}
+        <textarea id="tk-obs" placeholder="${obsHistoryHtml ? 'Adicionar nova observação...' : 'Observações...'}">${obsTextValue}</textarea>
+      </div>
       <input type="hidden" id="tk-editing-id" value="${t?.id||''}" />
     </div>`;
   }
@@ -886,6 +938,53 @@ window.TasksModule = (() => {
     if (!desc) { Toast.error('Erro', 'Descrição é obrigatória.'); return; }
     const status = document.getElementById('tk-status').value;
     const today = new Date().toISOString().slice(0,10);
+    
+    const newObsText = document.getElementById('tk-obs').value.trim();
+    let finalObservacoes = '';
+    
+    if (id) {
+      const t = DB.tasks.get(id);
+      if (t) {
+        let comments = [];
+        let isJson = false;
+        if (t.observacoes) {
+          try {
+            comments = JSON.parse(t.observacoes);
+            if (Array.isArray(comments)) isJson = true;
+          } catch(e) {}
+        }
+        
+        if (isJson) {
+          if (newObsText) {
+            const session = window.Auth.getSession();
+            comments.push({
+              id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+              text: newObsText,
+              user: session ? session.nome : 'Usuário',
+              userId: session ? session.userId : 'anonymous',
+              createdAt: new Date().toISOString()
+            });
+          }
+          finalObservacoes = JSON.stringify(comments);
+        } else {
+          finalObservacoes = newObsText || t.observacoes || '';
+        }
+      }
+    } else {
+      if (newObsText) {
+        const session = window.Auth.getSession();
+        finalObservacoes = JSON.stringify([{
+          id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+          text: newObsText,
+          user: session ? session.nome : 'Usuário',
+          userId: session ? session.userId : 'anonymous',
+          createdAt: new Date().toISOString()
+        }]);
+      } else {
+        finalObservacoes = '[]';
+      }
+    }
+
     const data = {
       equipmentId: document.getElementById('tk-eq').value,
       codigo: document.getElementById('tk-cod').value.trim(),
@@ -900,7 +999,7 @@ window.TasksModule = (() => {
       horasRealizadas: parseFloat(document.getElementById('tk-hr').value) || 0,
       pctExecutado: parseInt(document.getElementById('tk-pct').value) || 0,
       critico: document.getElementById('tk-critico').checked,
-      observacoes: document.getElementById('tk-obs').value.trim(),
+      observacoes: finalObservacoes,
     };
     if (status === 'Concluída') { data.pctExecutado = 100; data.dataRealTermino = data.dataRealTermino || today; }
 
@@ -930,7 +1029,27 @@ window.TasksModule = (() => {
       
       data.justificativaMaoDeObra = justTrimmed;
       const dateStr = new Date().toLocaleString('pt-BR');
-      data.observacoes = (data.observacoes ? data.observacoes : '') + `\n[M.O. Alterada em ${dateStr}]: ${justTrimmed}`;
+      
+      let comments = [];
+      let isJson = false;
+      try {
+        comments = JSON.parse(data.observacoes);
+        if (Array.isArray(comments)) isJson = true;
+      } catch(e) {}
+      
+      if (isJson) {
+        const session = window.Auth.getSession();
+        comments.push({
+          id: 'c-sys-' + Date.now(),
+          text: `[M.O. Alterada]: ${justTrimmed}`,
+          user: session ? session.nome : 'Sistema',
+          userId: session ? session.userId : 'system',
+          createdAt: new Date().toISOString()
+        });
+        data.observacoes = JSON.stringify(comments);
+      } else {
+        data.observacoes = (data.observacoes ? data.observacoes : '') + `\n[M.O. Alterada em ${dateStr}]: ${justTrimmed}`;
+      }
     }
 
     if (id) { DB.tasks.update(id, data); Toast.success('Tarefa atualizada!'); }
@@ -949,8 +1068,7 @@ window.TasksModule = (() => {
   }
 
   function setEq(eqId) {
-    eqFilter = eqId;
-    Router.navigate('tasks', { force: true });
+    window.setGlobalEqFilter(eqId);
   }
 
   function onFormChange() {
@@ -962,10 +1080,38 @@ window.TasksModule = (() => {
     const eqId = eqSelect.value;
     const disc = discSelect.value;
     const eq = DB.equipment.get(eqId);
+    
+    const wf = DB.workforce.list();
+    const filteredWf = wf.filter(w => w.equipmentId === eqId);
+    
+    const currentVal = respSelect.value;
+    if (currentVal && currentVal !== 'Não atribuído') {
+      const respWorker = wf.find(w => w.nome === currentVal);
+      if (respWorker && !filteredWf.some(w => w.id === respWorker.id)) {
+        filteredWf.push(respWorker);
+      }
+    }
+    
+    let html = '<option value="">—</option>';
+    filteredWf.forEach(w => {
+      html += `<option value="${w.nome}" ${w.nome === currentVal ? 'selected' : ''}>${w.nome}</option>`;
+    });
+    respSelect.innerHTML = html;
+    
     if (eq && eq.workforceMap && eq.workforceMap[disc]) {
-      respSelect.value = eq.workforceMap[disc];
-    } else {
-      respSelect.value = '';
+      const defaultName = eq.workforceMap[disc];
+      if (filteredWf.some(w => w.nome === defaultName)) {
+        respSelect.value = defaultName;
+      } else {
+        const mappedWorker = wf.find(w => w.nome === defaultName);
+        if (mappedWorker) {
+          if (!filteredWf.some(w => w.id === mappedWorker.id)) {
+            filteredWf.push(mappedWorker);
+            respSelect.innerHTML += `<option value="${mappedWorker.nome}">${mappedWorker.nome}</option>`;
+          }
+          respSelect.value = defaultName;
+        }
+      }
     }
   }
 

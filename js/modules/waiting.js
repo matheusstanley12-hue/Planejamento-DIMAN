@@ -18,7 +18,7 @@ window.WaitingModule = (() => {
               <div style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-2);">${e.nome}</div>
               <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);">
                 <span class="badge badge-warning">Aguardando Manutenção</span>
-                ${e.cliente ? `<span>Cliente: ${e.cliente}</span>` : ''}
+                ${e.cliente ? `<span>Cliente: ${e.cliente} &middot; O.S.: ${e.os || '—'}</span>` : ''}
               </div>
             </div>
           `).join('') : '<div style="grid-column:1/-1;padding:var(--space-6);color:var(--text-muted);text-align:center;">Nenhum equipamento aguardando manutenção.</div>'}
