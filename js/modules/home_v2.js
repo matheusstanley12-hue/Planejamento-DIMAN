@@ -1,8 +1,8 @@
 window.HomeModule = (() => {
   function render() {
-    const eqs = DB.equipment.list();
-    const parts = DB.parts.getAll();
-    const restrictions = DB.restrictions.getAll();
+    const eqs = window.DB.equipment.list();
+    const parts = window.DB.parts.getAll();
+    const restrictions = window.DB.restrictions.getAll();
     const today = new Date().toISOString().slice(0,10);
 
     const emManutencao = eqs.filter(e => e.status !== 'Liberado').length;
@@ -49,9 +49,9 @@ window.HomeModule = (() => {
         <div style="margin-bottom:var(--space-6); display:flex; gap:var(--space-4); align-items:center; max-width:800px; margin-left:auto; margin-right:auto;">
           <div class="input-group" style="flex:1;">
             <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-            <input type="text" id="home-search" placeholder="Pesquisar equipamento (Ex: SSM-288)..." style="font-size:1.2rem;padding:var(--space-4) var(--space-4) var(--space-4) 40px;" oninput="HomeModule.filter(this.value)" />
+            <input type="text" id="home-search" placeholder="Pesquisar equipamento (Ex: SSM-288)..." style="font-size:1.2rem;padding:var(--space-4) var(--space-4) var(--space-4) 40px;" oninput="window.HomeModule.filter(this.value)" />
           </div>
-          <button class="btn btn-primary" style="padding:var(--space-4) var(--space-6);font-size:1.1rem;" onclick="HomeModule.openCreateModal()">+ Novo Equipamento</button>
+          <button class="btn btn-primary" style="padding:var(--space-4) var(--space-6);font-size:1.1rem;" onclick="window.HomeModule.openCreateModal()">+ Novo Equipamento</button>
         </div>
 
         <!-- Equipment List -->
@@ -66,7 +66,7 @@ window.HomeModule = (() => {
             }
             
             return `
-            <div class="card hover-lift home-eq-card" data-search="${e.codigo.toLowerCase()} ${e.nome.toLowerCase()}" onclick="Router.navigate('equipment-panel', {id: '${e.id}'})" style="cursor:pointer;display:flex;flex-direction:column;padding:var(--space-5);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'};">
+            <div class="card hover-lift home-eq-card" data-search="${e.codigo.toLowerCase()} ${e.nome.toLowerCase()}" onclick="window.Router.navigate('equipment-panel', {id: '${e.id}'})" style="cursor:pointer;display:flex;flex-direction:column;padding:var(--space-5);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'};">
               <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-3);">
                 <div>
                   <div style="font-size:1.4rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;">${e.codigo}</div>
@@ -106,7 +106,7 @@ window.HomeModule = (() => {
         </div>
 
         <!-- Create Equipment Modal -->
-        <div id="home-create-modal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+        <div id="home-create-modal" class="modal-overlay">
           <div class="card" style="width:100%;max-width:500px;padding:var(--space-6);">
             <h3 style="margin-bottom:var(--space-4);font-size:1.5rem;font-weight:800;">Novo Equipamento</h3>
             <div class="form-group" style="margin-bottom:var(--space-3);">
@@ -126,8 +126,8 @@ window.HomeModule = (() => {
               <input type="date" id="new-eq-data" />
             </div>
             <div style="display:flex;gap:var(--space-3);justify-content:flex-end;">
-              <button class="btn btn-ghost" onclick="document.getElementById('home-create-modal').style.display='none'">Cancelar</button>
-              <button class="btn btn-primary" onclick="HomeModule.saveEquipment()">Salvar</button>
+              <button class="btn btn-ghost" onclick="document.getElementById('home-create-modal').classList.remove('open')">Cancelar</button>
+              <button class="btn btn-primary" onclick="window.HomeModule.saveEquipment()">Salvar</button>
             </div>
           </div>
         </div>
@@ -136,7 +136,9 @@ window.HomeModule = (() => {
   }
 
   function openCreateModal() {
-    document.getElementById('home-create-modal').style.display = 'flex';
+    const modal = document.getElementById('home-create-modal');
+    if (!modal) return;
+    modal.classList.add('open');
     document.getElementById('new-eq-codigo').value = '';
     document.getElementById('new-eq-nome').value = '';
     document.getElementById('new-eq-cliente').value = '';
@@ -144,34 +146,38 @@ window.HomeModule = (() => {
   }
 
   function saveEquipment() {
-    const codigo = document.getElementById('new-eq-codigo').value.trim();
-    const nome = document.getElementById('new-eq-nome').value.trim();
-    const cliente = document.getElementById('new-eq-cliente').value.trim();
-    const dataPlanejada = document.getElementById('new-eq-data').value;
+    try {
+      const codigo = document.getElementById('new-eq-codigo').value.trim();
+      const nome = document.getElementById('new-eq-nome').value.trim();
+      const cliente = document.getElementById('new-eq-cliente').value.trim();
+      const dataPlanejada = document.getElementById('new-eq-data').value;
 
-    if (!codigo || !nome) {
-      Toast.error('Erro', 'Código e Nome são obrigatórios.');
-      return;
+      if (!codigo || !nome) {
+        window.Toast.error('Erro', 'Código e Nome são obrigatórios.');
+        return;
+      }
+
+      const newEq = {
+        codigo,
+        nome,
+        cliente,
+        status: 'Em Manutenção',
+        pctAvanco: 0,
+        dataPlanejadaInicio: new Date().toISOString().slice(0,10),
+        dataLiberacaoPlanejada: dataPlanejada,
+        dataLiberacaoAtual: dataPlanejada,
+        disciplinas: ['Mecânica', 'Elétrica', 'Caldeiraria', 'Usinagem', 'Pintura', 'Hidráulica'],
+        observacoes: '',
+        responsavel: window.Auth.getSession()?.nome || ''
+      };
+
+      const created = window.DB.equipment.create(newEq);
+      document.getElementById('home-create-modal').classList.remove('open');
+      window.Toast.success('Equipamento cadastrado com sucesso!');
+      window.Router.navigate('home', {force:true});
+    } catch (e) {
+      alert('Erro ao salvar: ' + e.message + '\n\n' + e.stack);
     }
-
-    const newEq = {
-      codigo,
-      nome,
-      cliente,
-      status: 'Em Manutenção',
-      pctAvanco: 0,
-      dataPlanejadaInicio: new Date().toISOString().slice(0,10),
-      dataLiberacaoPlanejada: dataPlanejada,
-      dataLiberacaoAtual: dataPlanejada,
-      disciplinas: ['Mecânica', 'Elétrica', 'Caldeiraria', 'Usinagem', 'Pintura', 'Hidráulica'],
-      observacoes: '',
-      responsavel: Auth.getSession()?.nome || ''
-    };
-
-    const created = DB.equipment.create(newEq);
-    document.getElementById('home-create-modal').style.display = 'none';
-    Toast.success('Equipamento cadastrado com sucesso!');
-    Router.navigate('home', {force:true});
   }
 
   function filter(term) {

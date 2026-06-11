@@ -10,7 +10,7 @@ const Auth = window.Auth || {};
 const events = window.events || {};
 const Toast = window.Toast || {};
 
-const Router = (() => {
+window.Router = (() => {
   const routes = {};
   let current = null;
   let destroyFn = null;
@@ -408,8 +408,8 @@ function renderShell(session) {
         lastSection = item.section;
       }
       const badge = item.route === 'restrictions' ?
-        `<span class="nav-badge" id="nav-badge-restrictions">${(window.DB.restrictions ? window.DB.restrictions.getAll().filter(r=>r.status==='Aberta').length : 0) || ''}</span>` : '';
-      html += `<div class="nav-item" data-route="${item.route}" onclick="Router.navigate('${item.route}')">
+        `<span class="nav-badge" id="nav-badge-restrictions">${(DB && DB.restrictions ? DB.restrictions.getAll().filter(r=>r.status==='Aberta').length : 0) || ''}</span>` : '';
+      html += `<div class="nav-item" data-route="${item.route}" onclick="window.Router.navigate('${item.route}')">
         <span class="nav-icon">${icon(item.icon)}</span>
         <span class="nav-label">${item.label}</span>
         ${badge}
@@ -438,6 +438,11 @@ function renderShell(session) {
           </div>
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
+        <div class="sidebar-section-label" style="margin-top:auto;">DEV</div>
+        <div class="nav-item" onclick="gerarDadosDeTeste()" style="color:var(--brand-primary-light);">
+          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+          <span class="nav-label">Gerar Testes</span>
+        </div>
       </aside>
 
       <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
@@ -454,12 +459,12 @@ function renderShell(session) {
             
             <div style="width:1px;height:24px;background:var(--border-card);margin:0 var(--space-2);"></div>
             
-            <button class="btn btn-primary btn-sm" onclick="Router.navigate('home')" title="Página Inicial" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);">
+            <button class="btn btn-primary btn-sm" onclick="window.Router.navigate('home')" title="Página Inicial" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
               Início
             </button>
 
-            <button class="btn btn-outline btn-sm" onclick="DB.forceSyncAll()" title="Forçar envio de dados locais para a nuvem" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);color:var(--brand-primary-light);border-color:var(--brand-primary-light);margin-left:var(--space-2);">
+            <button class="btn btn-outline btn-sm" onclick="window.DB.forceSyncAll()" title="Forçar envio de dados locais para a nuvem" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);color:var(--brand-primary-light);border-color:var(--brand-primary-light);margin-left:var(--space-2);">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
               Sincronizar Nuvem
             </button>
@@ -481,7 +486,7 @@ function renderShell(session) {
             <button class="theme-btn" onclick="toggleTheme()" title="Alternar tema">
               <svg id="theme-icon-app" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="Auth.logout();location.reload();" title="Sair">
+            <button class="btn btn-ghost btn-sm" onclick="window.Auth.logout();location.reload();" title="Sair">
               Sair
             </button>
           </div>
@@ -595,6 +600,23 @@ function renderPublicQrView(eqId) {
 // ================================================================
 // INIT
 // ================================================================
+
+window.gerarDadosDeTeste = function() {
+  if (!window.DB) return alert('DB não carregado');
+  const eq1 = window.DB.equipment.create({ nome: 'Caminhão Fora de Estrada 01', codigo: 'CAM-001', familia: 'Caminhões', status: 'Em Manutenção', area: 'Mina 1' });
+  const eq2 = window.DB.equipment.create({ nome: 'Escavadeira Hidráulica 02', codigo: 'ESC-002', familia: 'Escavadeiras', status: 'Em Manutenção', area: 'Mina 2' });
+  
+  window.DB.tasks.create({ equipmentId: eq1.id, descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false });
+  window.DB.tasks.create({ equipmentId: eq1.id, descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true });
+  window.DB.tasks.create({ equipmentId: eq2.id, descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true });
+  
+  window.DB.restrictions.create({ equipmentId: eq1.id, descricao: 'Aguardando liberação de área', impacto: 'Alto' });
+  
+  window.DB.parts.create({ equipmentId: eq2.id, descricao: 'Mangueira de Alta Pressão 3/4', pn: 'PN-98765', qtd: 2, status: 'Solicitada' });
+  
+  alert('Dados de teste gerados com sucesso! A página será recarregada.');
+  location.reload();
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Apply saved theme

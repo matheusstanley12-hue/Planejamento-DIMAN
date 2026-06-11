@@ -589,9 +589,13 @@ window.EquipmentModule = (() => {
 
   function confirmDelete(id, nome) {
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Todas as tarefas e dados associados serão removidos.`, () => {
-      DB.equipment.delete(id);
-      Router.navigate('equipment', { force: true });
-      Toast.success('Equipamento excluído', nome);
+      try {
+        window.DB.equipment.delete(id);
+        window.Router.navigate('equipment', { force: true });
+        window.Toast.success('Equipamento excluído', nome);
+      } catch(e) {
+        alert('Erro ao excluir: ' + e.message);
+      }
     });
   }
 

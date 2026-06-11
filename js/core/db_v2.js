@@ -3,6 +3,7 @@
    ============================================================ */
 
 window.DB = (() => {
+  try {
   const SUPABASE_URL = 'https://umsozbjpfmxvhwycjjkr.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_NGJvPtMUdiDGCnK5qRroYg_7_wPqZiH';
   let supabaseClient = null;
@@ -34,9 +35,33 @@ window.DB = (() => {
     }
   };
 
+  function now() { return new Date().toISOString(); }
+
+  const INITIAL_DATA = {
+    [KEYS.equipment]: [
+      { id: 'eq-test-1', nome: 'Caminhão Fora de Estrada 01', codigo: 'CAM-001', familia: 'Caminhões', status: 'Em Manutenção', area: 'Mina 1', timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
+      { id: 'eq-test-2', nome: 'Escavadeira Hidráulica 02', codigo: 'ESC-002', familia: 'Escavadeiras', status: 'Em Manutenção', area: 'Mina 2', timeline: [], replanning: [], createdAt: now(), updatedAt: now() }
+    ],
+    [KEYS.tasks]: [
+      { id: 'tk-test-1', equipmentId: 'eq-test-1', descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false, createdAt: now(), updatedAt: now() },
+      { id: 'tk-test-2', equipmentId: 'eq-test-1', descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true, createdAt: now(), updatedAt: now() },
+      { id: 'tk-test-3', equipmentId: 'eq-test-2', descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true, createdAt: now(), updatedAt: now() }
+    ],
+    [KEYS.restrictions]: [
+      { id: 'rs-test-1', equipmentId: 'eq-test-1', descricao: 'Aguardando liberação de área', impacto: 'Alto', status: 'Aberta', createdAt: now(), updatedAt: now() }
+    ],
+    [KEYS.parts]: [
+      { id: 'pt-test-1', equipmentId: 'eq-test-2', descricao: 'Mangueira de Alta Pressão', pn: 'PN-98765', qtd: 2, status: 'Solicitada', createdAt: now(), updatedAt: now() }
+    ]
+  };
+
   function get(key) {
-    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
-    catch { return []; }
+    try { 
+      const val = localStorage.getItem(key);
+      if (val) return JSON.parse(val);
+      return INITIAL_DATA[key] || [];
+    }
+    catch { return INITIAL_DATA[key] || []; }
   }
   function getObj(key) {
     try { return JSON.parse(localStorage.getItem(key) || '{}'); }
@@ -54,11 +79,10 @@ window.DB = (() => {
     syncToSupabase(key, data);
   }
   function uid(prefix = 'id') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
-  function now() { return new Date().toISOString(); }
 
   async function forceSyncAll() {
     if (!supabaseClient) {
-      if (window.Toast) Toast.error('Erro de Sincronização', 'Cliente do Supabase não conectado.');
+      if (window.Toast) window.Toast.error('Erro de Sincronização', 'Cliente do Supabase não conectado.');
       return;
     }
     const allKeys = Object.values(KEYS);
@@ -73,7 +97,7 @@ window.DB = (() => {
         }
       }
     }
-    if (window.Toast) Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem do Supabase.');
+    if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem do Supabase.');
   }
 
   async function initSupabase() {
@@ -102,8 +126,8 @@ window.DB = (() => {
       const item = { id: uid('eq'), ...data, createdAt: now(), updatedAt: now(), timeline: [], replanning: [] };
       items.push(item);
       set(KEYS.equipment, items);
-      Auth.addAuditLog('CREATE_EQUIPMENT', `Equipamento ${data.nome} criado`, data);
-      events.emit('equipment:created', item);
+      if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('CREATE_EQUIPMENT', `Equipamento ${data.nome} criado`, data);
+      if (window.events && window.events.emit) window.events.emit('equipment:created', item);
       return item;
     },
     update(id, data) {
@@ -113,15 +137,18 @@ window.DB = (() => {
       const before = { ...items[idx] };
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.equipment, items);
-      Auth.addAuditLog('UPDATE_EQUIPMENT', `Equipamento ${items[idx].nome} atualizado`, { before, after: items[idx] });
-      events.emit('equipment:updated', items[idx]);
+      if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('UPDATE_EQUIPMENT', `Equipamento ${items[idx].nome} atualizado`, { before, after: items[idx] });
+      if (window.events && window.events.emit) window.events.emit('equipment:updated', items[idx]);
       return items[idx];
     },
     delete(id) {
       const items = get(KEYS.equipment);
       const eq = items.find(e => e.id === id);
       set(KEYS.equipment, items.filter(e => e.id !== id));
-      if (eq) { Auth.addAuditLog('DELETE_EQUIPMENT', `Equipamento ${eq.nome} removido`, null); events.emit('equipment:deleted', id); }
+      if (eq) { 
+        if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('DELETE_EQUIPMENT', `Equipamento ${eq.nome} removido`, null); 
+        if (window.events && window.events.emit) window.events.emit('equipment:deleted', id); 
+      }
       return true;
     },
     addTimeline(id, event) {
@@ -132,7 +159,7 @@ window.DB = (() => {
       items[idx].timeline.push({ id: uid('tl'), ...event, timestamp: now() });
       items[idx].updatedAt = now();
       set(KEYS.equipment, items);
-      events.emit('timeline:updated', { equipmentId: id });
+      if (window.events && window.events.emit) window.events.emit('timeline:updated', { equipmentId: id });
     },
     addReplanning(id, data) {
       const items = get(KEYS.equipment);
@@ -144,8 +171,8 @@ window.DB = (() => {
       items[idx].replanning.push(entry);
       items[idx].updatedAt = now();
       set(KEYS.equipment, items);
-      Auth.addAuditLog('REPLANNING', `Replanejamento R${n} criado para ${items[idx].nome}`, data);
-      events.emit('replanning:created', { equipmentId: id, entry });
+      if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('REPLANNING', `Replanejamento R${n} criado para ${items[idx].nome}`, data);
+      if (window.events && window.events.emit) window.events.emit('replanning:created', { equipmentId: id, entry });
       return entry;
     }
   };
@@ -275,6 +302,19 @@ window.DB = (() => {
       return item;
     },
     delete(id) { set(KEYS.timesheets, get(KEYS.timesheets).filter(t => t.id !== id)); }
+  };
+
+  // ==================== REPLANNINGS ====================
+  const replannings = {
+    list: () => get(KEYS.replannings),
+    create(data) {
+      const items = get(KEYS.replannings);
+      const item = { id: uid('rp'), ...data, createdAt: now() };
+      items.push(item);
+      set(KEYS.replannings, items);
+      return item;
+    },
+    delete(id) { set(KEYS.replannings, get(KEYS.replannings).filter(r => r.id !== id)); }
   };
 
   // ==================== RESTRICTIONS ====================
@@ -482,4 +522,8 @@ window.DB = (() => {
   return {
     equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
+  } catch(err) {
+    alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);
+    return {};
+  }
 })();

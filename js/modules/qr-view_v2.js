@@ -1,6 +1,7 @@
 window.QrViewModule = (() => {
-  function render(id) {
-    const eq = DB.equipment.get(id);
+  function render(params) {
+    const id = typeof params === 'object' ? params.id : params;
+    const eq = window.DB.equipment.get(id);
     if (!eq) return `<div style="text-align:center;padding:50px;color:white;">Equipamento não encontrado.</div>`;
 
     const pct = eq.pctAvanco || 0;
@@ -16,7 +17,7 @@ window.QrViewModule = (() => {
     const sColor = statusColors[eq.status] || 'var(--text-secondary)';
 
     // Gather data
-    const allTasks = DB.tasks.getAll().filter(t => t.equipmentId === id);
+    const allTasks = window.DB.tasks.getAll().filter(t => t.equipmentId === id);
     const todayStr = new Date().toISOString().split('T')[0];
     const todaysTasks = allTasks.filter(t => {
       if(t.status === 'Concluída') return false;
@@ -38,7 +39,7 @@ window.QrViewModule = (() => {
     const recebimento = checklists.find(c => c.tipo === 'Recebimento');
     const devolucao = checklists.find(c => c.tipo === 'Devolução');
 
-    const restrictions = DB.restrictions.getAll().filter(r => r.equipmentId === id && r.status === 'Aberta');
+    const restrictions = window.DB.restrictions.getAll().filter(r => r.equipmentId === id && r.status === 'Aberta');
 
     return `
       <style>
