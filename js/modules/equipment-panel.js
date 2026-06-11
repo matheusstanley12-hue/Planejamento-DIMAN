@@ -1,5 +1,6 @@
 window.EquipmentPanel = (() => {
   let currentEqId = null;
+  let editingTaskId = null;
   let openAccordions = {
     'resumo': true
   };
@@ -212,6 +213,13 @@ window.EquipmentPanel = (() => {
               <label for="new-task-critico" style="font-weight:bold;color:var(--color-danger);">Marcar como atividade CRÍTICA no caminho</label>
             </div>
 
+            <div class="form-group" style="margin-bottom:var(--space-3);">
+              <label>Predecessoras (Tarefas das quais esta depende)</label>
+              <select id="new-task-preds" class="form-select" multiple style="width:100%;height:90px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);padding:var(--space-2);font-size:12px;">
+              </select>
+              <small style="color:var(--text-muted);font-size:10px;display:block;margin-top:2px;">Segure Ctrl (ou Cmd) para selecionar mais de uma tarefa.</small>
+            </div>
+
             <div class="form-group" style="margin-bottom:var(--space-5);">
               <label>Observações</label>
               <textarea id="new-task-obs" placeholder="Alguma observação relevante..." style="width:100%;height:60px;padding:var(--space-2);background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);resize:vertical;"></textarea>
@@ -346,6 +354,7 @@ window.EquipmentPanel = (() => {
   }
 
   function renderDisciplina(tasks, eq, disc) {
+    const allEqTasks = DB.tasks.getByEquipment(eq.id);
     let html = '';
     if (tasks.length === 0) {
       html = `<div class="empty-state" style="padding:var(--space-4)"><p>Nenhuma atividade desta disciplina.</p></div>`;
@@ -373,6 +382,16 @@ window.EquipmentPanel = (() => {
                   <td>
                     <input type="text" value="${t.descricao||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'descricao', this.value)" style="width:100%;font-weight:600;padding:2px 4px;font-size:12px;border:1px solid transparent;border-radius:3px;background:transparent;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}" onmouseover="this.style.borderColor='var(--border-default)'" onmouseout="this.style.borderColor='transparent'" onfocus="this.style.borderColor='var(--border-hover)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" title="Clique para editar a descrição da atividade" />
                     ${t.critico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;margin-top:4px;">CRÍTICO</span>':''}
+                    ${t.predecessoras && t.predecessoras.length > 0 ? `
+                      <div style="margin-top:4px;font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                        <span style="font-weight:bold;color:var(--color-warning);text-transform:uppercase;font-size:9px;">Depende de:</span>
+                        ${t.predecessoras.map(pid => {
+                          const pt = allEqTasks.find(x => x.id === pid);
+                          if (!pt) return '';
+                          return `<span class="badge badge-ghost" style="font-size:9px;padding:2px 4px;border:1px solid rgba(255,152,0,0.3);color:var(--color-warning);" title="${pt.descricao}">${pt.descricao}</span>`;
+                        }).filter(Boolean).join('')}
+                      </div>
+                    ` : ''}
                     <div style="margin-top:6px;display:flex;align-items:center;gap:4px;">
                       <span style="font-size:9px;color:var(--text-muted);font-weight:bold;text-transform:uppercase;flex-shrink:0;">Obs:</span>
                       <input type="text" value="${t.observacoes||''}" placeholder="Adicionar observação..." onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'observacoes', this.value)" style="width:100%;padding:2px 4px;font-size:10px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-secondary);" />
@@ -408,9 +427,14 @@ window.EquipmentPanel = (() => {
                     </div>
                   </td>
                   <td>
-                    <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.deleteTask('${currentEqId}', '${t.id}')" title="Excluir Atividade" style="color:var(--color-danger);padding:4px;">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                    </button>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                      <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" title="Editar Atividade" style="color:var(--brand-primary-light);padding:4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                      </button>
+                      <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.deleteTask('${currentEqId}', '${t.id}')" title="Excluir Atividade" style="color:var(--color-danger);padding:4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 `;
@@ -617,45 +641,91 @@ window.EquipmentPanel = (() => {
     return `<div class="empty-state" style="padding:var(--space-4)"><p>Nenhum anexo. Arraste arquivos aqui.</p></div>`;
   }
 
-  function openTaskModal(disciplina) {
+  function openTaskModal(disciplina, taskId = null) {
+    editingTaskId = taskId;
     openModal('eq-task-modal');
     document.getElementById('new-task-disc').value = disciplina;
     document.getElementById('new-task-disc-label').textContent = disciplina.toUpperCase();
     
-    const today = new Date().toISOString().slice(0,10);
-    document.getElementById('new-task-desc').value = '';
-    document.getElementById('new-task-resp').value = '';
-    document.getElementById('new-task-horas').value = 0;
-    document.getElementById('new-task-ini').value = today;
-    document.getElementById('new-task-fim').value = today;
-    document.getElementById('new-task-critico').checked = false;
-    document.getElementById('new-task-obs').value = '';
+    // Fetch all other tasks of the current equipment (excluding the task being edited to avoid self-dependency)
+    const allTasks = DB.tasks.getByEquipment(currentEqId);
+    const otherTasks = taskId ? allTasks.filter(t => t.id !== taskId) : allTasks;
+    
+    // Render the predecessors selector options
+    const predsSelect = document.getElementById('new-task-preds');
+    predsSelect.innerHTML = otherTasks.map(ot => `<option value="${ot.id}">${ot.descricao} (${ot.disciplina})</option>`).join('');
+
+    const titleEl = document.querySelector('#eq-task-modal h3');
+    
+    if (taskId) {
+      const t = DB.tasks.get(taskId);
+      titleEl.innerHTML = `Editar Atividade - <span style="color:var(--brand-primary-light);">${disciplina.toUpperCase()}</span>`;
+      document.getElementById('new-task-desc').value = t.descricao || '';
+      document.getElementById('new-task-resp').value = t.responsavel || '';
+      document.getElementById('new-task-horas').value = t.horasPlanejadas || 0;
+      document.getElementById('new-task-ini').value = t.dataPlanejadaInicio || '';
+      document.getElementById('new-task-fim').value = t.dataPlanejadaTermino || '';
+      document.getElementById('new-task-critico').checked = !!t.critico;
+      document.getElementById('new-task-obs').value = t.observacoes || '';
+      
+      // Select the predecessor options
+      const preds = t.predecessoras || [];
+      Array.from(predsSelect.options).forEach(opt => {
+        opt.selected = preds.includes(opt.value);
+      });
+    } else {
+      titleEl.innerHTML = `Nova Atividade - <span style="color:var(--brand-primary-light);">${disciplina.toUpperCase()}</span>`;
+      const today = new Date().toISOString().slice(0,10);
+      document.getElementById('new-task-desc').value = '';
+      document.getElementById('new-task-resp').value = '';
+      document.getElementById('new-task-horas').value = 0;
+      document.getElementById('new-task-ini').value = today;
+      document.getElementById('new-task-fim').value = today;
+      document.getElementById('new-task-critico').checked = false;
+      document.getElementById('new-task-obs').value = '';
+      Array.from(predsSelect.options).forEach(opt => opt.selected = false);
+    }
   }
 
   function saveTask(eqId) {
     const desc = document.getElementById('new-task-desc').value.trim();
     if (!desc) { Toast.error('Erro', 'Descrição é obrigatória.'); return; }
 
-    const newTask = {
+    const predsSelect = document.getElementById('new-task-preds');
+    const selectedPreds = Array.from(predsSelect.selectedOptions).map(opt => opt.value);
+
+    const taskData = {
       equipmentId: eqId || currentEqId,
-      codigo: 'ATV-' + Math.floor(Math.random() * 10000),
       descricao: desc,
       disciplina: document.getElementById('new-task-disc').value,
       responsavel: document.getElementById('new-task-resp').value.trim() || 'Não atribuído',
       horasPlanejadas: parseInt(document.getElementById('new-task-horas').value) || 0,
-      horasRealizadas: 0,
       dataPlanejadaInicio: document.getElementById('new-task-ini').value,
       dataPlanejadaTermino: document.getElementById('new-task-fim').value,
-      pctExecutado: 0,
-      status: 'Não Iniciada',
       prioridade: document.getElementById('new-task-critico').checked ? 'Crítica' : 'Média',
       critico: document.getElementById('new-task-critico').checked,
-      observacoes: document.getElementById('new-task-obs').value.trim()
+      observacoes: document.getElementById('new-task-obs').value.trim(),
+      predecessoras: selectedPreds
     };
 
-    DB.tasks.create(newTask);
+    if (editingTaskId) {
+      const t = DB.tasks.get(editingTaskId);
+      const updatedTask = { ...t, ...taskData };
+      DB.tasks.update(editingTaskId, updatedTask);
+      Toast.success('Atividade Atualizada', `A atividade "${desc}" foi atualizada com sucesso.`);
+    } else {
+      const newTask = {
+        ...taskData,
+        codigo: 'ATV-' + Math.floor(Math.random() * 10000),
+        horasRealizadas: 0,
+        pctExecutado: 0,
+        status: 'Não Iniciada'
+      };
+      DB.tasks.create(newTask);
+      Toast.success('Atividade Adicionada', `A atividade "${desc}" foi criada com sucesso.`);
+    }
+    
     closeModal('eq-task-modal');
-    Toast.success('Atividade Adicionada', `A atividade "${desc}" foi criada com sucesso.`);
     Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
   }
 
