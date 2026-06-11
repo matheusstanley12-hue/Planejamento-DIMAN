@@ -204,7 +204,7 @@ window.EquipmentPanel = (() => {
 
             <div style="display:flex;gap:var(--space-3);justify-content:flex-end;">
               <button class="btn btn-ghost" onclick="closeModal('eq-task-modal')">Cancelar</button>
-              <button class="btn btn-primary" onclick="EquipmentPanel.saveTask()">Salvar Atividade</button>
+              <button class="btn btn-primary" id="btn-save-task">Salvar Atividade</button>
             </div>
           </div>
         </div>
@@ -360,23 +360,23 @@ window.EquipmentPanel = (() => {
                     <div style="font-size:10px;margin-bottom:2px"><strong>Real:</strong> ${formatDate(t.dataRealInicio)||'—'} a ${formatDate(t.dataRealTermino)||'—'}</div>
                     <div style="font-size:10px;display:flex;align-items:center;gap:4px;">
                       <strong>Replan:</strong> 
-                      <input type="date" value="${t.dataReplanejada||''}" onchange="window.EquipmentPanel.updateTaskField('${t.id}', 'dataReplanejada', this.value)" style="padding:1px;font-size:10px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary)" title="Data Replanejada" />
+                      <input type="${t.dataReplanejada ? 'date' : 'text'}" placeholder="--/--/----" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'" value="${t.dataReplanejada||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'dataReplanejada', this.value)" style="width:90px;padding:2px;font-size:10px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary);text-align:center;" title="Data Replanejada" />
                     </div>
                   </td>
                   <td style="font-size:11px;">P: ${t.horasPlanejadas||0}h<br/>R: ${t.horasRealizadas||0}h</td>
                   <td>
-                    <select class="form-select" style="font-size:11px;padding:2px 4px;height:auto;border-radius:4px;border:1px solid ${t.status==='Falta de Peça'?'var(--color-orange)':'var(--border-hover)'};color:${t.status==='Falta de Peça'?'var(--color-orange)':'inherit'};font-weight:${t.status==='Falta de Peça'?'bold':'normal'};margin-bottom:4px;width:105px;" onchange="window.EquipmentPanel.updateTaskStatus('${t.id}', this.value)">
+                    <select class="form-select" style="font-size:11px;padding:2px 4px;height:auto;border-radius:4px;border:1px solid ${t.status==='Falta de Peça'?'var(--color-orange)':'var(--border-hover)'};color:${t.status==='Falta de Peça'?'var(--color-orange)':'inherit'};font-weight:${t.status==='Falta de Peça'?'bold':'normal'};margin-bottom:4px;width:105px;" onchange="window.EquipmentPanel.updateTaskStatus('${currentEqId}', '${t.id}', this.value)">
                       <option value="Não Iniciada" ${t.status==='Não Iniciada'?'selected':''}>Não Iniciada</option>
                       <option value="Em Andamento" ${t.status==='Em Andamento'?'selected':''}>Em Andamento</option>
                       <option value="Falta de Peça" ${t.status==='Falta de Peça'?'selected':''}>Falta de Peça</option>
                       <option value="Concluída" ${t.status==='Concluída'?'selected':''}>Concluída</option>
                     </select>
                     <div style="display:flex;align-items:center;gap:4px;font-size:10px;">
-                      Avanço: <input type="number" min="0" max="100" value="${t.pctExecutado||0}" onchange="window.EquipmentPanel.updateTaskField('${t.id}', 'pctExecutado', this.value)" style="width:40px;padding:1px;font-size:10px;text-align:center;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary)" title="% de Avanço" /> %
+                      Avanço: <input type="number" min="0" max="100" value="${t.pctExecutado||0}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'pctExecutado', this.value)" style="width:40px;padding:1px;font-size:10px;text-align:center;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary)" title="% de Avanço" /> %
                     </div>
                   </td>
                   <td>
-                    <button class="btn btn-ghost btn-sm" onclick="EquipmentPanel.deleteTask('${t.id}')" title="Excluir Atividade" style="color:var(--color-danger);padding:4px;">
+                    <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.deleteTask('${currentEqId}', '${t.id}')" title="Excluir Atividade" style="color:var(--color-danger);padding:4px;">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                   </td>
@@ -598,12 +598,12 @@ window.EquipmentPanel = (() => {
     document.getElementById('new-task-critico').checked = false;
   }
 
-  function saveTask() {
+  function saveTask(eqId) {
     const desc = document.getElementById('new-task-desc').value.trim();
     if (!desc) { Toast.error('Erro', 'Descrição é obrigatória.'); return; }
 
     const newTask = {
-      equipmentId: currentEqId,
+      equipmentId: eqId || currentEqId,
       codigo: 'ATV-' + Math.floor(Math.random() * 10000),
       descricao: desc,
       disciplina: document.getElementById('new-task-disc').value,
@@ -621,14 +621,14 @@ window.EquipmentPanel = (() => {
     DB.tasks.create(newTask);
     closeModal('eq-task-modal');
     Toast.success('Atividade Adicionada', `A atividade "${desc}" foi criada com sucesso.`);
-    Router.navigate('equipment-panel', { id: currentEqId, force: true });
+    Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
   }
 
-  function deleteTask(id) {
+  function deleteTask(eqId, id) {
     if (confirm('Tem certeza que deseja excluir esta atividade?')) {
       DB.tasks.delete(id);
       Toast.success('Atividade removida.');
-      Router.navigate('equipment-panel', { id: currentEqId, force: true });
+      Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
     }
   }
 
@@ -676,7 +676,7 @@ window.EquipmentPanel = (() => {
     }
   }
 
-  function updateTaskStatus(id, newStatus) {
+  function updateTaskStatus(eqId, id, newStatus) {
     const tasks = DB.tasks.getAll();
     const t = tasks.find(x => x.id === id);
     if(t) {
@@ -684,11 +684,11 @@ window.EquipmentPanel = (() => {
       if (newStatus === 'Concluída') t.pctExecutado = 100;
       window.DB.tasks.update(id, t);
       window.Toast.success('Status da atividade atualizado!');
-      window.Router.navigate('equipment-panel', { id: currentEqId, force: true });
+      window.Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
     }
   }
 
-  function updateTaskField(id, field, value) {
+  function updateTaskField(eqId, id, field, value) {
     const t = window.DB.tasks.get(id);
     if (!t) return;
     const data = { updatedAt: new Date().toISOString() };
@@ -711,7 +711,7 @@ window.EquipmentPanel = (() => {
     window.DB.tasks.update(id, data);
     window.Toast.success('Salvo', 'Atividade atualizada com sucesso.');
     if (field === 'pctExecutado') {
-      window.Router.navigate('equipment-panel', { id: currentEqId, force: true });
+      window.Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
     }
   }
 
