@@ -456,6 +456,9 @@ function renderShell(session) {
   const navItems = [
     { route:'home',       label:'Início',                icon:'home',           perm:'dashboard',   section:'MENU PRINCIPAL' },
     { route:'worker-panel', label:'Meu Painel',          icon:'wrench-screwdriver', perm:'workerPanel', section:'' },
+    { route:'worker-parts', label:'Solicitar Peças',     icon:'cube',           perm:'workerPanel', section:'' },
+    { route:'worker-services', label:'Solicitar Serviços', icon:'clipboard-document-check', perm:'workerPanel', section:'' },
+    { route:'worker-manuals', label:'Meus Manuais',      icon:'document-report', perm:'workerPanel', section:'' },
     { route:'d-panel',    label:'D-1 | D | D+1',       icon:'calendar-days',  perm:'dashboard',   section:'OPERACIONAL' },
     { route:'dashboard',  label:'Dashboard',             icon:'squares-2x2',    perm:'dashboard',   section:'' },
     { route:'workshop',   label:'Controle de Oficina',  icon:'building-office', perm:'workshop',   section:'' },
@@ -479,6 +482,7 @@ function renderShell(session) {
     { route:'qr-generator', label:'Gerador QR Code',     icon:'qr-code',        perm:'dashboard',   section:'ADMINISTRAÇÃO' },
     { route:'ai',         label:'Assistente IA',         icon:'sparkles',       perm:'ai',          section:'INTELIGÊNCIA' },
     { route:'action-plans', label:'Plano de Ação',        icon:'clipboard-document-check', perm:'ai', section:'' },
+    { route:'manuals',    label:'Gestão de Manuais',     icon:'document-report', perm:'equipment',  section:'DOCUMENTAÇÃO' },
     { route:'lessons',    label:'Lições Aprendidas',     icon:'light-bulb',     perm:'lessons',     section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'GESTÃO' },
     { route:'users',      label:'Usuários',              icon:'user-group',     perm:'users',       section:'' },
@@ -523,9 +527,9 @@ function renderShell(session) {
     let lastSection = '';
     navItems.forEach(item => {
       if (isExecutante) {
-        if (item.route !== 'worker-panel') return;
+        if (!['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'].includes(item.route)) return;
       } else {
-        if (item.route === 'worker-panel') return;
+        if (['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'].includes(item.route)) return;
       }
       
       if (!Auth.hasPermission(item.perm)) return;
@@ -660,6 +664,10 @@ function renderShell(session) {
   // Register all routes
   Router.register('home', () => HomeModule.render());
   Router.register('worker-panel', () => WorkerPanel.render());
+  Router.register('worker-parts', () => typeof WorkerParts !== 'undefined' ? WorkerParts.render() : '<div class="page-container">Erro ao carregar módulo de Peças</div>');
+  Router.register('worker-services', () => typeof WorkerServices !== 'undefined' ? WorkerServices.render() : '<div class="page-container">Erro ao carregar módulo de Serviços</div>');
+  Router.register('worker-manuals', () => typeof WorkerManuals !== 'undefined' ? WorkerManuals.render() : '<div class="page-container">Erro ao carregar módulo de Manuais</div>');
+  Router.register('manuals', () => typeof ManualsAdmin !== 'undefined' ? ManualsAdmin.render() : '<div class="page-container">Erro ao carregar módulo de Gestão de Manuais</div>');
   Router.register('services', () => window.ServicesModule ? window.ServicesModule.render() : '<div class="page-container">Erro ao carregar módulo de serviços</div>');
   Router.register('released', () => ReleasedModule.render());
   if (typeof WaitingModule !== 'undefined') Router.register('waiting', () => WaitingModule.render());

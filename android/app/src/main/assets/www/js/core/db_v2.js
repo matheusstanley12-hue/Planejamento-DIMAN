@@ -26,7 +26,8 @@ window.DB = (() => {
     settings: 'diman_settings',
     solicitacoes: 'diman_solicitacoes',
     users: 'diman_users',
-    audit: 'diman_audit'
+    audit: 'diman_audit',
+    manuals: 'diman_manuals'
   };
 
   window.GlobalEqFilter = '';
@@ -798,8 +799,15 @@ window.DB = (() => {
     delete: (id) => { const s = get(KEYS.solicitacoes); set(KEYS.solicitacoes, s.filter(r => r.id !== id)); }
   };
 
+  const manuals = {
+    list: () => get(KEYS.manuals),
+    add: (data) => { const m = get(KEYS.manuals); m.push({ ...data, createdAt: now() }); set(KEYS.manuals, m); },
+    update: (id, updates) => { let m = get(KEYS.manuals); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.manuals, m); } },
+    delete: (id) => { const m = get(KEYS.manuals); set(KEYS.manuals, m.filter(r => r.id !== id)); }
+  };
+
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);

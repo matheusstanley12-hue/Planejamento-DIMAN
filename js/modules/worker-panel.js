@@ -855,7 +855,7 @@ window.WorkerPanel = (() => {
               <div class="form-row">
                 <div class="form-group">
                   <label>Status</label>
-                  <select id="w-tk-status">
+                  <select id="w-tk-status" onchange="const p=document.getElementById('w-tk-photo-group'); if(this.value==='Concluída'){p.style.display='block';}else{p.style.display='none';}">
                     ${['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'].map(s => 
                       `<option ${t.status === s ? 'selected' : ''}>${s}</option>`
                     ).join('')}
@@ -893,6 +893,15 @@ window.WorkerPanel = (() => {
                 ${obsHistoryHtml}
                 <textarea id="w-tk-obs" rows="2" placeholder="${obsHistoryHtml ? 'Adicionar nova observação...' : 'Observações...'}">${obsTextValue}</textarea>
               </div>
+
+              <div class="form-group" id="w-tk-photo-group" style="display:${t.status === 'Concluída' ? 'block' : 'none'}; background:rgba(59,130,246,0.05); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid rgba(59,130,246,0.2);">
+                <label style="color:var(--brand-primary-light);font-weight:700;">📸 Foto de Comprovação (Obrigatória)</label>
+                <input type="file" id="w-tk-photo" accept="image/*" capture="environment" class="form-control" style="margin-top:4px;" />
+                <input type="hidden" id="w-tk-photo-b64" value="${t.fotoComprovacao || ''}" />
+                <div id="w-tk-photo-preview" style="margin-top:8px; width:100%; border-radius:8px; overflow:hidden; display:${t.fotoComprovacao ? 'block' : 'none'};">
+                  <img id="w-tk-photo-img" src="${t.fotoComprovacao || ''}" style="width:100%; max-height:250px; object-fit:contain; background:#000;" />
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -907,6 +916,22 @@ window.WorkerPanel = (() => {
     if (container) {
       container.innerHTML = modalHtml;
       openModal('modal-worker-task');
+
+      // Add listener for file input to convert to base64
+      const fileInput = document.getElementById('w-tk-photo');
+      fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const b64 = evt.target.result;
+          document.getElementById('w-tk-photo-b64').value = b64;
+          document.getElementById('w-tk-photo-img').src = b64;
+          document.getElementById('w-tk-photo-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      });
     }
   }
 
@@ -920,6 +945,12 @@ window.WorkerPanel = (() => {
     const ip = document.getElementById('w-tk-ip').value;
     const tp = document.getElementById('w-tk-tp').value;
     const obs = document.getElementById('w-tk-obs').value.trim();
+    const photoB64 = document.getElementById('w-tk-photo-b64').value;
+
+    if (status === 'Concluída' && !photoB64) {
+      window.Toast.error('Foto Obrigatória', 'Para concluir a atividade, é obrigatório tirar uma foto para comprovação.');
+      return;
+    }
 
     const dateChanged = (t.dataPlanejadaInicio !== ip || t.dataPlanejadaTermino !== tp);
     const statusChanged = (t.status !== status);
@@ -998,11 +1029,12 @@ window.WorkerPanel = (() => {
 
     const data = {
       status,
-      pctExecutado: pct,
+      pctExecutado: (status === 'Concluída') ? 100 : pct,
       horasRealizadas: hr,
-      dataReprogramadaInicio: ip,
-      dataReprogramadaTermino: tp,
-      observacoes: finalObs
+      dataPlanejadaInicio: ip,
+      dataPlanejadaTermino: tp,
+      observacoes: finalObs,
+      fotoComprovacao: photoB64 || t.fotoComprovacao
     };
 
     if (status === 'Concluída') {
@@ -1373,4 +1405,221 @@ window.WorkerPanel = (() => {
     updateRestrictionTasks,
     saveRestriction
   };
+})();
+
+// ================================================================
+// NEW MODULES FOR WORKER PARTS & SERVICES PAGES
+// ================================================================
+
+window.WorkerParts = (() => {
+  function render() {
+    const session = window.Auth.getSession();
+    if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
+
+    const eqs = window.DB.equipment.list() || [];
+    const myEqs = eqs.filter(e => {
+      const map = e.workforceMap || {};
+      return Object.values(map).includes(session.nome);
+    });
+
+    if (myEqs.length === 0) {
+      return `
+        <div class="page-container" style="animation:fadeIn 0.3s ease;">
+          <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-6);">Solicitar Peças</h1>
+          <div class="empty-state" style="padding:var(--space-8);text-align:center;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-xl);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px;height:48px;margin:0 auto var(--space-4);color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <h3 style="color:var(--text-primary);font-weight:600;">Sem Equipamento Alocado</h3>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:8px;">Você precisa estar alocado em um equipamento para solicitar peças.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    setTimeout(() => {
+      document.getElementById('btn-w-pt-save').addEventListener('click', () => {
+        const desc = document.getElementById('w-pt-desc').value.trim();
+        if (!desc) {
+          window.Toast.error('Erro', 'Descrição da peça é obrigatória.');
+          return;
+        }
+
+        const eqId = document.getElementById('w-pt-eq').value;
+        const pn = document.getElementById('w-pt-pn').value.trim();
+        const qty = parseInt(document.getElementById('w-pt-qty').value) || 1;
+        const obs = document.getElementById('w-pt-obs').value.trim();
+
+        const data = {
+          equipmentId: eqId,
+          descricao: `Qtd: ${qty}x — ${desc}`,
+          codigo: pn,
+          status: 'Solicitada',
+          critica: document.getElementById('w-pt-critica').checked,
+          fornecedor: 'Solicitado pelo Executante',
+          fabricante: '',
+          prazoEntrega: '',
+          pedido: '',
+          observacoes: obs,
+          createdAt: window.DB.now()
+        };
+
+        window.DB.parts.create(data);
+        window.Toast.success('Solicitação Enviada!', `Peça "${desc}" cadastrada com status Solicitada.`);
+        document.getElementById('w-pt-desc').value = '';
+        document.getElementById('w-pt-pn').value = '';
+        document.getElementById('w-pt-qty').value = '1';
+        document.getElementById('w-pt-obs').value = '';
+      });
+    }, 100);
+
+    return `
+      <div class="page-container" style="animation:fadeIn 0.3s ease;">
+        <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-2);">Solicitar Falta de Peça</h1>
+        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-6);">Informe as peças necessárias para o andamento do seu serviço.</p>
+        
+        <div class="card" style="max-width:600px;background:var(--bg-card);border:1px solid var(--border-card);">
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+            <div class="form-group">
+              <label>Equipamento *</label>
+              <select id="w-pt-eq" class="form-control">
+                ${myEqs.map(e => `<option value="${e.id}">${e.codigo} - ${e.nome}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Descrição da Peça *</label>
+              <input id="w-pt-desc" class="form-control" placeholder="Ex: Filtro de ar primário" required />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Part Number / Código</label>
+                <input id="w-pt-pn" class="form-control" placeholder="Ex: PN-98765" />
+              </div>
+              <div class="form-group">
+                <label>Quantidade *</label>
+                <input type="number" id="w-pt-qty" class="form-control" value="1" min="1" required />
+              </div>
+            </div>
+            
+            <div class="checkbox-wrap" style="background:rgba(255,179,0,0.1);border:1px solid rgba(255,179,0,0.3);padding:var(--space-3);border-radius:var(--radius-md);">
+              <input type="checkbox" id="w-pt-critica" />
+              <label for="w-pt-critica" style="cursor:pointer;color:var(--color-warning);font-weight:600;">Peça Crítica (Bloqueia o equipamento)</label>
+            </div>
+
+            <div class="form-group">
+              <label>Observações / Justificativa</label>
+              <textarea id="w-pt-obs" class="form-control" rows="3" placeholder="Informações adicionais para o PCM..."></textarea>
+            </div>
+            
+            <div style="margin-top:var(--space-4);text-align:right;">
+              <button class="btn btn-primary" id="btn-w-pt-save" style="width:100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;margin-right:8px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                Enviar Solicitação de Peça
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return { render };
+})();
+
+window.WorkerServices = (() => {
+  function render() {
+    const session = window.Auth.getSession();
+    if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
+
+    const eqs = window.DB.equipment.list() || [];
+    const myEqs = eqs.filter(e => {
+      const map = e.workforceMap || {};
+      return Object.values(map).includes(session.nome);
+    });
+
+    if (myEqs.length === 0) {
+      return `
+        <div class="page-container" style="animation:fadeIn 0.3s ease;">
+          <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-6);">Solicitar Serviço de Terceiro</h1>
+          <div class="empty-state" style="padding:var(--space-8);text-align:center;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-xl);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px;height:48px;margin:0 auto var(--space-4);color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <h3 style="color:var(--text-primary);font-weight:600;">Sem Equipamento Alocado</h3>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:8px;">Você precisa estar alocado em um equipamento para solicitar serviços.</p>
+          </div>
+        </div>
+      `;
+    }
+
+    setTimeout(() => {
+      document.getElementById('btn-w-sv-save').addEventListener('click', () => {
+        const desc = document.getElementById('w-sv-desc').value.trim();
+        const dest = document.getElementById('w-sv-dest').value;
+
+        if (!desc) {
+          window.Toast.error('Erro', 'Descrição do serviço é obrigatória.');
+          return;
+        }
+        if (!dest) {
+          window.Toast.error('Erro', 'Setor de destino é obrigatório.');
+          return;
+        }
+
+        const eqId = document.getElementById('w-sv-eq').value;
+        const eq = window.DB.equipment.get(eqId);
+        
+        const payload = {
+          id: window.DB.uid('sol'),
+          origem: 'Executante (' + session.nome + ')',
+          destino: dest,
+          equipmentId: eqId,
+          descricao: desc,
+          status: 'Aguardando',
+          createdAt: window.DB.now(),
+          updatedAt: window.DB.now()
+        };
+
+        window.DB.solicitacoes.add(payload);
+        window.Toast.success('Enviado!', `Solicitação para ${dest} enviada ao PCM.`);
+        document.getElementById('w-sv-desc').value = '';
+      });
+    }, 100);
+
+    return `
+      <div class="page-container" style="animation:fadeIn 0.3s ease;">
+        <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-2);">Solicitar Serviço Externo</h1>
+        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-6);">Abra uma requisição para outros setores de manutenção (Usinagem, Elétrica, etc).</p>
+
+        <div class="card" style="max-width:600px;background:var(--bg-card);border:1px solid var(--border-card);">
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+            <div class="form-group">
+              <label>Equipamento *</label>
+              <select id="w-sv-eq" class="form-control">
+                ${myEqs.map(e => `<option value="${e.id}">${e.codigo} - ${e.nome}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Setor de Destino *</label>
+              <select id="w-sv-dest" class="form-control">
+                <option value="">Selecione o setor...</option>
+                <option value="Usinagem">Usinagem</option>
+                <option value="Caldeiraria">Caldeiraria</option>
+                <option value="Mecânica">Mecânica</option>
+                <option value="Elétrica">Elétrica</option>
+                <option value="Lubrificação">Lubrificação</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Descrição do Serviço *</label>
+              <textarea id="w-sv-desc" class="form-control" rows="4" placeholder="Detalhe o serviço que precisa ser realizado..." required></textarea>
+            </div>
+            
+            <div style="margin-top:var(--space-4);text-align:right;">
+              <button class="btn btn-primary" id="btn-w-sv-save" style="width:100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;margin-right:8px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                Enviar Solicitação
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return { render };
 })();
