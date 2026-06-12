@@ -251,6 +251,19 @@ window.WorkerPanel = (() => {
       </div>
     `;
 
+    const controlsHtml = `
+      <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-4);margin-bottom:var(--space-4);">
+        <button class="btn btn-primary" onclick="WorkerPanel.openCreateTask()" style="display:flex;align-items:center;gap:var(--space-2);">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+          Nova Atividade
+        </button>
+        <button class="btn btn-outline" style="border-color:var(--color-warning);color:var(--color-warning);" onclick="WorkerPanel.openReportRestriction()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:6px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          Apontar Impedimento
+        </button>
+      </div>
+    `;
+
     // Inject CSS for custom sub-animations (pulsing for timer button)
     if (!document.getElementById('worker-panel-styles')) {
       const style = document.createElement('style');
