@@ -571,7 +571,7 @@ window.EquipmentModule = (() => {
       <div class="form-row">
         <div class="form-group"><label>Cliente</label><input id="eq-cliente" value="${eq?.cliente||''}" /></div>
         <div class="form-group"><label>Tipo</label><select id="eq-tipo" class="form-control" style="width:100%;height:38px;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:0 var(--space-3);">
-          ${['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Outros Equipamentos'].map(t => `<option value="${t}" ${eq?.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+          ${['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Outros Equipamentos'].map(t => `<option value="${t}" ${eq?.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
         </select></div>
       </div>
       <div class="form-row cols-3">

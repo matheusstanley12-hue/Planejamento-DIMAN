@@ -127,7 +127,9 @@ window.WorkerPanel = (() => {
           </div>
           
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);">
+            <button class="btn btn-outline btn-xs" onclick="WorkerPanel.openCreateTask('${e.id}')" style="font-size:10px;justify-content:center;padding:4px 8px;border-radius:var(--radius-sm);">Nova Tarefa</button>
             <button class="btn btn-outline btn-xs" onclick="WorkerPanel.openRequestPart('${e.id}')" style="font-size:10px;justify-content:center;padding:4px 8px;border-radius:var(--radius-sm);">Solicitar Peça</button>
+            <button class="btn btn-outline btn-xs" onclick="WorkerPanel.openRequestService('${e.id}')" style="font-size:10px;justify-content:center;padding:4px 8px;border-radius:var(--radius-sm);">Solicitar Serviço</button>
             <button class="btn btn-outline btn-xs" onclick="WorkerPanel.openReportRestriction('${e.id}')" style="font-size:10px;justify-content:center;padding:4px 8px;color:var(--color-danger);border-color:rgba(244,67,54,0.3);border-radius:var(--radius-sm);">Impedimento</button>
           </div>
         </div>
@@ -503,6 +505,21 @@ window.WorkerPanel = (() => {
     if (activeTimer && activeTimer.taskId === taskId) {
       saveTimer(null);
     }
+    
+    if (t.solicitacaoId && DB.solicitacoes) {
+      DB.solicitacoes.update(t.solicitacaoId, { status: 'Concluída', finalizadoAt: DB.now() });
+      const sol = DB.solicitacoes.list().find(s => s.id === t.solicitacaoId);
+      if (sol && DB.notifications) {
+        DB.notifications.add({
+          userId: sol.solicitanteId,
+          title: 'Serviço Concluído',
+          message: `O serviço '${sol.descricao}' foi finalizado pelo setor ${sol.setorDestino}.`,
+          type: 'info',
+          read: false,
+          createdAt: DB.now()
+        });
+      }
+    }
 
     Toast.success('Sucesso', 'Tarefa concluída com sucesso!');
     Router.navigate('worker-panel', { force: true });
@@ -631,6 +648,128 @@ window.WorkerPanel = (() => {
     }
   }
 
+  function openCreateTask(equipmentId) {
+    const eqs = DB.equipment.list();
+    const session = Auth.getSession();
+    
+    // Get only allocated machines
+    const myEqs = eqs.filter(e => {
+      const map = e.workforceMap || {};
+      return Object.values(map).includes(session.nome);
+    });
+
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-new-task">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Nova Tarefa</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-new-task')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+              
+              <div class="form-group">
+                <label>Equipamento *</label>
+                <select id="w-new-eq">
+                  ${myEqs.map(e => `<option value="${e.id}" ${e.id === equipmentId ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('')}
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Código da Tarefa</label>
+                  <input id="w-new-cod" placeholder="Opcional" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Descrição *</label>
+                <input id="w-new-desc" placeholder="Descreva a atividade..." required />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Disciplina</label>
+                  <input value="${session.disciplina}" disabled style="opacity:0.6;cursor:not-allowed;background:var(--bg-base);" />
+                </div>
+                <div class="form-group">
+                  <label>Responsável</label>
+                  <input value="${session.nome}" disabled style="opacity:0.6;cursor:not-allowed;background:var(--bg-base);" />
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Prioridade</label>
+                  <select id="w-new-prio">
+                    <option>Média</option>
+                    <option>Alta</option>
+                    <option>Crítica</option>
+                    <option>Baixa</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Status Inicial</label>
+                  <select id="w-new-status">
+                    <option>Não Iniciada</option>
+                    <option>Em Andamento</option>
+                    <option>Aguardando Peça</option>
+                    <option>Bloqueada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Início Planejado</label>
+                  <input type="date" id="w-new-ip" value="${new Date().toISOString().slice(0,10)}" />
+                </div>
+                <div class="form-group">
+                  <label>Término Planejado</label>
+                  <input type="date" id="w-new-tp" value="${new Date().toISOString().slice(0,10)}" />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Horas Planejadas</label>
+                  <input type="number" id="w-new-hp" value="0" min="0" />
+                </div>
+                <div class="form-group">
+                  <label>Horas Realizadas</label>
+                  <input type="number" id="w-new-hr" value="0" min="0" />
+                </div>
+              </div>
+
+              <div class="checkbox-wrap" style="margin-top:var(--space-2)">
+                <input type="checkbox" id="w-new-critico" />
+                <label for="w-new-critico" style="cursor:pointer;color:var(--color-danger);font-weight:600;">Atividade no Caminho Crítico</label>
+              </div>
+
+              <div class="form-group" style="margin-top:var(--space-2)">
+                <label>Observações Adicionais</label>
+                <textarea id="w-new-obs" rows="2" placeholder="Detalhes da execução..."></textarea>
+              </div>
+
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-worker-new-task')">Cancelar</button>
+            <button class="btn btn-primary" onclick="WorkerPanel.saveNewTask()">Criar Tarefa</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('worker-panel-modals');
+    if (container) {
+      container.innerHTML = modalHtml;
+      openModal('modal-worker-new-task');
+    }
+  }
+
   function saveNewTask() {
     const session = Auth.getSession();
     const desc = document.getElementById('w-new-desc').value.trim();
@@ -667,7 +806,8 @@ window.WorkerPanel = (() => {
         userId: session.userId,
         createdAt: new Date().toISOString()
       }]) : '[]',
-      predecessoras: []
+      predecessoras: [],
+      createdAt: DB.now()
     };
 
     if (status === 'Concluída') {
@@ -873,8 +1013,8 @@ window.WorkerPanel = (() => {
       status,
       pctExecutado: pct,
       horasRealizadas: hr,
-      dataPlanejadaInicio: ip,
-      dataPlanejadaTermino: tp,
+      dataReprogramadaInicio: ip,
+      dataReprogramadaTermino: tp,
       observacoes: finalObs
     };
 
@@ -883,6 +1023,20 @@ window.WorkerPanel = (() => {
       data.dataRealTermino = t.dataRealTermino || today;
       if (activeTimer && activeTimer.taskId === id) {
         saveTimer(null);
+      }
+      if (t.solicitacaoId && DB.solicitacoes) {
+        DB.solicitacoes.update(t.solicitacaoId, { status: 'Concluída', finalizadoAt: DB.now() });
+        const sol = DB.solicitacoes.list().find(s => s.id === t.solicitacaoId);
+        if (sol && DB.notifications) {
+          DB.notifications.add({
+            userId: sol.solicitanteId,
+            title: 'Serviço Concluído',
+            message: `O serviço '${sol.descricao}' foi finalizado pelo setor ${sol.setorDestino}.`,
+            type: 'info',
+            read: false,
+            createdAt: DB.now()
+          });
+        }
       }
     }
 
@@ -984,12 +1138,117 @@ window.WorkerPanel = (() => {
       fabricante: '',
       prazoEntrega: '',
       pedido: '',
-      observacoes: obs
+      observacoes: obs,
+      createdAt: DB.now()
     };
 
     DB.parts.create(data);
     Toast.success('Solicitação Enviada!', `Peça "${desc}" cadastrada com status Solicitada.`);
     closeModal('modal-worker-part');
+    Router.navigate('worker-panel', { force: true });
+  }
+
+  // --- SERVICE REQUESTS ---
+
+  function openRequestService(equipmentId) {
+    const eqs = DB.equipment.list();
+    const session = Auth.getSession();
+    
+    // Get only allocated machines
+    const myEqs = eqs.filter(e => {
+      const map = e.workforceMap || {};
+      return Object.values(map).includes(session.nome);
+    });
+
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-service">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Solicitar Serviço</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-service')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div style="display:flex;flex-direction:column;gap:var(--space-4);">
+              <div class="form-group">
+                <label>Equipamento *</label>
+                <select id="w-sv-eq">
+                  ${myEqs.map(e => `<option value="${e.id}" ${e.id === equipmentId ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Setor Destino *</label>
+                <select id="w-sv-setor">
+                  <option value="Usinagem">Usinagem</option>
+                  <option value="Mecânica">Mecânica</option>
+                  <option value="Caldeiraria">Caldeiraria</option>
+                  <option value="Elétrica">Elétrica</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Descrição do Serviço / Peça *</label>
+                <input id="w-sv-desc" placeholder="Descreva com detalhes o serviço..." required />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Prazo / Data Desejada *</label>
+                  <input type="date" id="w-sv-prazo" required value="${new Date().toISOString().slice(0, 10)}" />
+                </div>
+              </div>
+              <div class="checkbox-wrap">
+                <input type="checkbox" id="w-sv-critica" />
+                <label for="w-sv-critica" style="cursor:pointer;color:var(--color-danger);font-weight:600;">Serviço Crítico (Bloqueia o andamento)</label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-worker-service')">Cancelar</button>
+            <button class="btn btn-primary" onclick="WorkerPanel.saveRequestService()">Enviar Solicitação</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('worker-panel-modals');
+    if (container) {
+      container.innerHTML = modalHtml;
+      openModal('modal-worker-service');
+    }
+  }
+
+  function saveRequestService() {
+    const session = Auth.getSession();
+    const desc = document.getElementById('w-sv-desc').value.trim();
+    if (!desc) {
+      Toast.error('Erro', 'Descrição do serviço é obrigatória.');
+      return;
+    }
+
+    const eqId = document.getElementById('w-sv-eq').value;
+    const setor = document.getElementById('w-sv-setor').value;
+    const prazo = document.getElementById('w-sv-prazo').value;
+    const critica = document.getElementById('w-sv-critica').checked;
+
+    const data = {
+      id: 'sol-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      equipmentId: eqId,
+      solicitanteId: session.userId,
+      solicitanteNome: session.nome,
+      descricao: desc,
+      setorDestino: setor,
+      prazo: prazo,
+      critico: critica,
+      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado',
+      createdAt: DB.now()
+    };
+
+    if (DB.solicitacoes) {
+      DB.solicitacoes.add(data);
+    }
+
+    Toast.success('Serviço Solicitado!', 'A solicitação foi enviada com sucesso para o setor.');
+    closeModal('modal-worker-service');
     Router.navigate('worker-panel', { force: true });
   }
 
@@ -1121,6 +1380,8 @@ window.WorkerPanel = (() => {
     saveEditedTask,
     openRequestPart,
     savePartRequest,
+    openRequestService,
+    saveRequestService,
     openReportRestriction,
     updateRestrictionTasks,
     saveRestriction

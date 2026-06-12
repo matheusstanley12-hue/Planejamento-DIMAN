@@ -1447,6 +1447,26 @@ window.UsersModule = (() => {
               </div>
             </div>
           </div>
+          
+          <div class="modal-overlay" id="modal-edit-user">
+            <div class="modal">
+              <div class="modal-header">
+                <div class="modal-title">Editar Nível do Usuário</div>
+                <button class="modal-close" onclick="closeModal('modal-edit-user')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <div class="modal-body">
+                <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+                  <input type="hidden" id="eu-id" />
+                  <div class="form-group"><label>Usuário</label><input type="text" id="eu-nome" readonly style="background:var(--bg-base);color:var(--text-muted);" /></div>
+                  <div class="form-group"><label>Nível / Perfil de Acesso *</label><select id="eu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('modal-edit-user')">Cancelar</button>
+                <button class="btn btn-primary" onclick="UsersModule.saveEditUser()">Salvar Alterações</button>
+              </div>
+            </div>
+          </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
       }
@@ -1472,7 +1492,10 @@ window.UsersModule = (() => {
             <td>${statusBadge(u.status||'Ativo')}</td>
             <td>
               <div class="table-actions">
-                ${u.id !== 'u-superadmin' ? `<button class="btn btn-danger btn-sm" onclick="UsersModule.deleteUser('${u.id}')">Excluir</button>` : ''}
+                ${u.id !== 'u-superadmin' ? `
+                  <button class="btn btn-secondary btn-sm" onclick="UsersModule.openEditUser('${u.id}')">Editar</button>
+                  <button class="btn btn-danger btn-sm" onclick="UsersModule.deleteUser('${u.id}')">Excluir</button>
+                ` : ''}
               </div>
             </td>
           </tr>`).join('')}
@@ -1610,12 +1633,447 @@ window.UsersModule = (() => {
     }
   }
 
-  return { render, saveUser, deleteUser };
+  function openEditUser(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem editar usuários.');
+      return;
+    }
+    
+    let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    const user = users.find(u => u.id === id);
+    if(!user) return;
+    
+    document.getElementById('eu-id').value = user.id;
+    document.getElementById('eu-nome').value = user.nome;
+    document.getElementById('eu-perfil').value = user.perfil;
+    
+    openModal('modal-edit-user');
+  }
+
+  function saveEditUser() {
+    const id = document.getElementById('eu-id').value;
+    const newPerfil = document.getElementById('eu-perfil').value;
+    
+    if(!id || !newPerfil) return;
+    
+    let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    const userIndex = users.findIndex(u => u.id === id);
+    if(userIndex === -1) return;
+    
+    users[userIndex].perfil = newPerfil;
+    
+    localStorage.setItem('diman_users', JSON.stringify(users));
+    if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+    
+    Toast && Toast.success('Sucesso', 'Nível do usuário atualizado.');
+    closeModal('modal-edit-user');
+    Router.navigate('users', { force: true });
+  }
+
+  return { render, saveUser, deleteUser, openEditUser, saveEditUser };
+})();
+// ================================================================
+// ACTION PLAN MODULE — AI-generated action plans for release blockers
+// ================================================================
+window.ActionPlanModule = (() => {
+  const STORAGE_KEY = 'diman_action_plans';
+
+  function getPlans() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch { return []; }
+  }
+  function savePlans(plans) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+    if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase(STORAGE_KEY, plans);
+  }
+
+  // ---- AI Analysis Engine ----
+  function analyzeEquipment(eq) {
+    const tasks = DB.tasks.getByEquipment(eq.id);
+    const allRestrictions = DB.restrictions.getAll();
+    const restrictions = allRestrictions.filter(r => r.equipmentId === eq.id && r.status === 'Aberta');
+    const parts = DB.parts.getAll().filter(p => p.equipmentId === eq.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+    const critParts = parts.filter(p => p.critica);
+    const repls = eq.replanning || [];
+    const today = new Date().toISOString().slice(0, 10);
+
+    const openTasks = tasks.filter(t => t.status !== 'Concluída');
+    const blockedTasks = openTasks.filter(t => ['Bloqueada','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação'].includes(t.status));
+    const delayedTasks = openTasks.filter(t => t.dataPlanejadaTermino && t.dataPlanejadaTermino < today);
+    const criticalTasks = openTasks.filter(t => t.critico);
+    const totalDelay = repls.reduce((s, r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
+
+    const totalHPlan = openTasks.reduce((s, t) => s + (t.horasPlanejadas || 0), 0);
+    const totalHReal = openTasks.reduce((s, t) => s + (t.horasRealizadas || 0), 0);
+    const pctAvancoTasks = tasks.length > 0 ? Math.round(tasks.filter(t => t.status === 'Concluída').length / tasks.length * 100) : 0;
+
+    const items = [];
+
+    // Delayed tasks
+    delayedTasks.forEach(t => {
+      const diasAtraso = daysBetween(t.dataPlanejadaTermino, today);
+      items.push({
+        tipo: 'Tarefa Atrasada',
+        severidade: diasAtraso > 5 ? 'Crítica' : diasAtraso > 2 ? 'Alta' : 'Média',
+        descricao: `Atividade "${t.descricao}" está ${diasAtraso} dia(s) atrasada. Disciplina: ${t.disciplina || '—'}. Responsável: ${t.responsavel || 'Não atribuído'}.`,
+        acao: diasAtraso > 5
+          ? `Mobilizar recurso adicional URGENTEMENTE para concluir. Avaliar hora extra ou realocação de equipe de outro equipamento. Prazo: IMEDIATO.`
+          : `Priorizar esta atividade. Verificar se há bloqueio de peça ou recurso. Cobrar atualização do responsável.`,
+        responsavel: t.responsavel || 'Supervisor de Manutenção',
+        prazo: diasAtraso > 5 ? 'Imediato' : `${Math.min(diasAtraso, 3)} dia(s)`,
+        disciplina: t.disciplina || '—',
+        taskId: t.id,
+      });
+    });
+
+    // Blocked tasks
+    blockedTasks.filter(t => !delayedTasks.includes(t)).forEach(t => {
+      const motivo = t.status === 'Aguardando Peça' ? 'Aguardando peça' :
+                     t.status === 'Aguardando Recurso' ? 'Aguardando recurso/mão de obra' :
+                     t.status === 'Aguardando Aprovação' ? 'Aguardando aprovação técnica' : 'Bloqueada';
+      items.push({
+        tipo: 'Tarefa Bloqueada',
+        severidade: t.critico ? 'Crítica' : 'Alta',
+        descricao: `Atividade "${t.descricao}" com status "${t.status}". Motivo: ${motivo}. Disciplina: ${t.disciplina || '—'}.`,
+        acao: t.status === 'Aguardando Peça'
+          ? `Verificar status da peça com suprimentos. Buscar alternativa de peça nacional ou canibalização de outro equipamento se o prazo for superior a 3 dias.`
+          : t.status === 'Aguardando Recurso'
+          ? `Solicitar ao planejamento a alocação de mão de obra qualificada. Avaliar remanejamento de outra frente com menor prioridade.`
+          : t.status === 'Aguardando Aprovação'
+          ? `Escalar para o coordenador/gerente para aprovação imediata. Identificar o responsável pela aprovação e cobrar resposta.`
+          : `Investigar causa raiz do bloqueio e registrar restrição formal no sistema. Escalar para a supervisão.`,
+        responsavel: t.responsavel || 'Planejamento',
+        prazo: t.critico ? 'Imediato' : '2 dias',
+        disciplina: t.disciplina || '—',
+        taskId: t.id,
+      });
+    });
+
+    // Open restrictions
+    restrictions.forEach(r => {
+      items.push({
+        tipo: 'Restrição Aberta',
+        severidade: r.impactoCaminhosCriticos ? 'Crítica' : 'Alta',
+        descricao: `Restrição: "${r.tipo}" — ${r.descricao}. ${r.tarefaBloqueada ? 'Bloqueia tarefa: ' + r.tarefaBloqueada + '.' : ''}`,
+        acao: r.tipo === 'Falta de Peça'
+          ? `Acionar suprimentos para expeditar entrega. Verificar se há alternativa de peça ou possibilidade de canibalização de equipamento já liberado.`
+          : r.tipo === 'Falta de Mão de Obra'
+          ? `Solicitar contratação emergencial ou remanejamento de equipe de outra frente. Considerar subcontratação se prazo for apertado.`
+          : r.tipo === 'Falta de Ferramenta'
+          ? `Verificar disponibilidade de ferramenta no almoxarifado ou unidade vizinha. Avaliar compra/locação emergencial.`
+          : `Reunir equipe de ação para tratamento imediato. Escalar à gerência se necessário.`,
+        responsavel: 'Supervisão / Planejamento',
+        prazo: r.impactoCaminhosCriticos ? 'Imediato' : '3 dias',
+        disciplina: r.disciplina || '—',
+      });
+    });
+
+    // Critical pending parts
+    critParts.forEach(p => {
+      items.push({
+        tipo: 'Peça Crítica Pendente',
+        severidade: 'Crítica',
+        descricao: `Peça "${p.descricao}" (PN: ${p.pn || '—'}) está com status "${p.status}". Impacta diretamente o caminho crítico.`,
+        acao: `Contatar fornecedor para confirmar prazo real. Avaliar frete aéreo se necessário. Verificar possibilidade de canibalização de peça de equipamento já liberado. Comunicar compras e supervisão.`,
+        responsavel: 'Suprimentos / Compras',
+        prazo: 'Imediato',
+        disciplina: '—',
+      });
+    });
+
+    // Replanning excessive
+    if (totalDelay > 7) {
+      items.push({
+        tipo: 'Excesso de Replanejamentos',
+        severidade: 'Alta',
+        descricao: `Equipamento acumula ${totalDelay} dias de atraso com ${repls.length} replanejamento(s). Causas: ${repls.map(r => r.motivo).join('; ')}.`,
+        acao: `Realizar reunião de análise de causa raiz com equipe multidisciplinar. Criar cronograma de recuperação com marcos intermediários. Considerar trabalho em finais de semana ou horas extras controladas para recuperar o atraso.`,
+        responsavel: 'Coordenação / Planejamento',
+        prazo: '2 dias',
+        disciplina: '—',
+      });
+    }
+
+    // Low progress warning
+    if (pctAvancoTasks < 50 && openTasks.length > 3) {
+      const daysToRelease = daysBetween(today, eq.dataLiberacaoPlanejada || today);
+      if (daysToRelease < 15 && daysToRelease > 0) {
+        items.push({
+          tipo: 'Baixo Avanço Físico',
+          severidade: 'Crítica',
+          descricao: `Avanço de apenas ${pctAvancoTasks}% com ${daysToRelease} dias restantes até a data de liberação planejada. ${openTasks.length} atividades ainda em aberto.`,
+          acao: `Priorizar atividades do caminho crítico. Considerar turno estendido ou mobilização de equipe adicional. Rever cronograma e comunicar ao cliente qualquer risco de atraso com plano de mitigação.`,
+          responsavel: 'Coordenação / Gerência',
+          prazo: 'Imediato',
+          disciplina: '—',
+        });
+      }
+    }
+
+    // Sort by severity
+    const sevOrder = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 };
+    items.sort((a, b) => (sevOrder[a.severidade] || 99) - (sevOrder[b.severidade] || 99));
+
+    return {
+      equipmentId: eq.id,
+      equipmentCodigo: eq.codigo,
+      equipmentCliente: eq.cliente,
+      equipmentStatus: eq.status,
+      pctAvanco: eq.pctAvanco || pctAvancoTasks,
+      dataLiberacao: eq.dataLiberacaoPlanejada,
+      totalDelay,
+      totalOpenTasks: openTasks.length,
+      totalCritical: criticalTasks.length,
+      totalRestrictions: restrictions.length,
+      totalPendingParts: parts.length,
+      items,
+    };
+  }
+
+  function generatePlan(eqId) {
+    const eq = DB.equipment.get(eqId);
+    if (!eq) { Toast.error('Erro', 'Equipamento não encontrado'); return; }
+
+    const analysis = analyzeEquipment(eq);
+    const session = window.Auth ? window.Auth.getSession() : null;
+
+    const plan = {
+      id: `ap-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      equipmentId: eqId,
+      equipmentCodigo: eq.codigo,
+      createdAt: new Date().toISOString(),
+      createdBy: session?.nome || 'Sistema',
+      status: 'Em Andamento',
+      analysis,
+      itemsStatus: analysis.items.map(() => 'Pendente'),
+    };
+
+    const plans = getPlans();
+    plans.unshift(plan);
+    savePlans(plans);
+
+    Toast.success('Plano de Ação Gerado!', `${analysis.items.length} ação(ões) identificadas para ${eq.codigo}`);
+    Router.navigate('action-plans', { force: true });
+  }
+
+  function toggleItemStatus(planId, itemIdx) {
+    const plans = getPlans();
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+    const current = plan.itemsStatus[itemIdx];
+    plan.itemsStatus[itemIdx] = current === 'Pendente' ? 'Em Andamento' : current === 'Em Andamento' ? 'Concluído' : 'Pendente';
+
+    // Auto-update plan status
+    const allDone = plan.itemsStatus.every(s => s === 'Concluído');
+    const anyStarted = plan.itemsStatus.some(s => s !== 'Pendente');
+    plan.status = allDone ? 'Concluído' : anyStarted ? 'Em Andamento' : 'Pendente';
+
+    savePlans(plans);
+    Router.navigate('action-plans', { force: true });
+  }
+
+  function deletePlan(planId) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast.error('Acesso Negado', 'Apenas administradores podem excluir planos de ação.');
+      return;
+    }
+    if (!confirm('Tem certeza que deseja excluir este plano de ação?')) return;
+    const plans = getPlans().filter(p => p.id !== planId);
+    savePlans(plans);
+    Toast.success('Plano excluído');
+    Router.navigate('action-plans', { force: true });
+  }
+
+  function render() {
+    const eqs = DB.equipment.list().filter(e => e.status === 'Em Manutenção' || e.status === 'Paralisado');
+    const plans = getPlans();
+
+    const sevColors = {
+      'Crítica': 'danger',
+      'Alta': 'warning',
+      'Média': 'info',
+      'Baixa': 'ghost'
+    };
+    const statusColors = {
+      'Pendente': 'ghost',
+      'Em Andamento': 'warning',
+      'Concluído': 'success'
+    };
+    const statusIcons = {
+      'Pendente': '⬜',
+      'Em Andamento': '🔄',
+      'Concluído': '✅'
+    };
+
+    return `<div class="page-container">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-title-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/>
+            </svg>
+          </div>
+          Plano de Ação — IA
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="margin-bottom:var(--space-5);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+        <div class="alert-content">
+          <div class="alert-title">Análise Inteligente de Impacto</div>
+          <div class="alert-msg">A IA analisa automaticamente restrições, tarefas atrasadas, peças pendentes e replanejamentos para gerar planos de ação priorizados por severidade.</div>
+        </div>
+      </div>
+
+      <!-- Generate new plan -->
+      <div class="card" style="margin-bottom:var(--space-5);padding:var(--space-5);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);">
+          <div>
+            <div style="font-weight:800;font-size:var(--text-base);color:var(--text-primary);margin-bottom:var(--space-1);">⚡ Gerar Novo Plano de Ação</div>
+            <div style="font-size:var(--text-xs);color:var(--text-muted);">Selecione um equipamento para a IA analisar e gerar ações corretivas automaticamente</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:var(--space-3);">
+            <select id="ap-eq-select" style="min-width:200px;">
+              <option value="">Selecione o equipamento...</option>
+              ${eqs.map(e => `<option value="${e.id}">${e.codigo} — ${e.cliente || 'Sem cliente'} (${e.status})</option>`).join('')}
+            </select>
+            <button class="btn btn-primary" onclick="ActionPlanModule.generateFromSelect()" style="white-space:nowrap;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;vertical-align:middle;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+              </svg>
+              Gerar Plano IA
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Existing plans -->
+      ${plans.length === 0 ? `
+        <div class="empty-state" style="padding:var(--space-10);">
+          <div style="font-size:3rem;margin-bottom:var(--space-4);">📋</div>
+          <h3>Nenhum Plano de Ação Gerado</h3>
+          <p style="color:var(--text-muted);">Selecione um equipamento acima e clique em "Gerar Plano IA" para que a inteligência artificial identifique os itens que impactam a liberação do equipamento e crie ações corretivas.</p>
+        </div>
+      ` : plans.map(plan => {
+        const totalItems = plan.analysis.items.length;
+        const done = plan.itemsStatus.filter(s => s === 'Concluído').length;
+        const progress = totalItems > 0 ? Math.round(done / totalItems * 100) : 0;
+        const statusBg = plan.status === 'Concluído' ? 'success' : plan.status === 'Em Andamento' ? 'warning' : 'ghost';
+
+        return `<div class="card" style="margin-bottom:var(--space-5);">
+          <!-- Plan header -->
+          <div style="padding:var(--space-5);border-bottom:1px solid var(--border-card);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-3);">
+              <div>
+                <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-2);">
+                  <span style="font-weight:800;font-size:var(--text-lg);color:var(--text-primary);">📋 ${plan.equipmentCodigo}</span>
+                  <span class="badge badge-${statusBg}">${plan.status}</span>
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);">
+                  Gerado em ${formatDateTime(plan.createdAt)} por <strong>${plan.createdBy}</strong>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:var(--space-3);">
+                <div style="text-align:center;">
+                  <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Progresso</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:var(--color-${progress === 100 ? 'success' : progress > 0 ? 'warning' : 'danger'});">${progress}%</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="ActionPlanModule.deletePlan('${plan.id}')" title="Excluir Plano">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI cards -->
+            <div style="display:flex;gap:var(--space-4);margin-top:var(--space-4);flex-wrap:wrap;">
+              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Ações</div>
+                <div style="font-size:1.3rem;font-weight:800;color:var(--text-primary);">${totalItems}</div>
+              </div>
+              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Concluídas</div>
+                <div style="font-size:1.3rem;font-weight:800;color:var(--color-success);">${done}</div>
+              </div>
+              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Atraso Acum.</div>
+                <div style="font-size:1.3rem;font-weight:800;color:${plan.analysis.totalDelay > 0 ? 'var(--color-danger)' : 'var(--color-success)'};">${plan.analysis.totalDelay} dias</div>
+              </div>
+              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Restrições</div>
+                <div style="font-size:1.3rem;font-weight:800;color:${plan.analysis.totalRestrictions > 0 ? 'var(--color-warning)' : 'var(--color-success)'};">${plan.analysis.totalRestrictions}</div>
+              </div>
+              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Liberação</div>
+                <div style="font-size:1rem;font-weight:800;color:var(--text-primary);">${formatDate(plan.analysis.dataLiberacao)}</div>
+              </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div style="margin-top:var(--space-3);">
+              <div class="progress-track"><div class="progress-fill ${progress === 100 ? 'success' : progress > 50 ? '' : 'danger'}" style="width:${progress}%"></div></div>
+            </div>
+          </div>
+
+          <!-- Action items -->
+          <div style="padding:var(--space-4);">
+            ${plan.analysis.items.length === 0 ? `
+              <div style="text-align:center;padding:var(--space-6);color:var(--text-muted);">
+                <div style="font-size:2rem;margin-bottom:var(--space-2);">✅</div>
+                <div style="font-weight:700;">Nenhum item de impacto identificado</div>
+                <div style="font-size:var(--text-xs);">Este equipamento não possui itens bloqueando a liberação.</div>
+              </div>
+            ` : `
+              <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+                ${plan.analysis.items.map((item, idx) => {
+                  const itemStatus = plan.itemsStatus[idx] || 'Pendente';
+                  const isDone = itemStatus === 'Concluído';
+                  return `<div style="display:flex;gap:var(--space-4);padding:var(--space-4);background:var(--bg-base);border-radius:var(--radius-lg);border-left:4px solid var(--color-${sevColors[item.severidade] || 'ghost'});${isDone ? 'opacity:0.6;' : ''}transition:all .2s;">
+                    <!-- Toggle -->
+                    <div style="flex-shrink:0;padding-top:2px;">
+                      <button onclick="ActionPlanModule.toggleItemStatus('${plan.id}', ${idx})" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;" title="Alterar status">${statusIcons[itemStatus]}</button>
+                    </div>
+                    <!-- Content -->
+                    <div style="flex:1;min-width:0;">
+                      <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2);flex-wrap:wrap;">
+                        <span class="badge badge-${sevColors[item.severidade] || 'ghost'}" style="font-size:10px;">${item.severidade}</span>
+                        <span class="badge badge-ghost" style="font-size:10px;">${item.tipo}</span>
+                        <span class="badge badge-${statusColors[itemStatus]}" style="font-size:10px;">${itemStatus}</span>
+                        ${item.disciplina !== '—' ? `<span class="badge badge-ghost" style="font-size:10px;">📐 ${item.disciplina}</span>` : ''}
+                      </div>
+                      <div style="font-size:var(--text-sm);color:var(--text-primary);margin-bottom:var(--space-2);${isDone ? 'text-decoration:line-through;' : ''}">${item.descricao}</div>
+                      <div style="font-size:var(--text-xs);color:var(--brand-primary-light);background:rgba(21,101,192,0.08);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);margin-bottom:var(--space-2);line-height:1.5;">
+                        💡 <strong>Ação Recomendada:</strong> ${item.acao}
+                      </div>
+                      <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--text-muted);">
+                        <span>👤 ${item.responsavel}</span>
+                        <span>⏰ Prazo: <strong style="color:var(--color-${item.prazo === 'Imediato' ? 'danger' : 'warning'});">${item.prazo}</strong></span>
+                      </div>
+                    </div>
+                  </div>`;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  function generateFromSelect() {
+    const select = document.getElementById('ap-eq-select');
+    if (!select || !select.value) {
+      Toast.error('Erro', 'Selecione um equipamento para gerar o plano.');
+      return;
+    }
+    generatePlan(select.value);
+  }
+
+  return { render, generatePlan, generateFromSelect, toggleItemStatus, deletePlan };
 })();
 
-// ================================================================
-// HELPER: Tab switcher
-// ================================================================
+
 function switchTab(btn, panelId) {
   const container = btn.closest('.tabs');
   container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

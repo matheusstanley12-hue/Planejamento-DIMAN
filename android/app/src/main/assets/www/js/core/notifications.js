@@ -188,6 +188,7 @@ function avatarInitials(name) {
   return (parts[0][0] + (parts[parts.length - 1]?.[0] || '')).toUpperCase();
 }
 function statusBadge(status) {
+  if (!status) return '';
   const map = {
     'Não Iniciada':        'badge-ghost',
     'Em Andamento':        'badge-primary',

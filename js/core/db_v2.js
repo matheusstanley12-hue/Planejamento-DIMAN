@@ -24,6 +24,7 @@ window.DB = (() => {
     notifications: 'diman_notifications',
     kpiCache: 'diman_kpi_cache',
     settings: 'diman_settings',
+    solicitacoes: 'diman_solicitacoes',
   };
 
   window.GlobalEqFilter = '';
@@ -59,6 +60,63 @@ window.DB = (() => {
     ],
     [KEYS.parts]: [
       { id: 'pt-test-1', equipmentId: 'eq-bhz-001', descricao: 'Mangueira de Alta Pressão 3/4', pn: 'PN-98765', qtd: 2, status: 'Solicitada', createdAt: now(), updatedAt: now() }
+    ],
+    [KEYS.kpiCache]: {},
+    [KEYS.solicitacoes]: [],
+    [KEYS.workforce]: [
+      { id: 'wf-6934', matricula: '6934', nome: 'EDSON GOMES DE ALMEIDA', funcao: 'Mecânico', disciplina: 'Subconjunto', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-11275', matricula: '11275', nome: 'FABRICIO DE ASSIS MOREIRA DA S', funcao: 'Mecânico de poços', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-13794', matricula: '13794', nome: 'THIAGO HENRIQUE SANTOS MEDEIRO', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-14147', matricula: '14147', nome: 'IGOR FERREIRA DA SILVA', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-14408', matricula: '14408', nome: 'ERICK SOUZA SANTOS', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-15229', matricula: '15229', nome: 'IGOR CESAR MAGALHAES', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16013', matricula: '16013', nome: 'FELIPE DANIEL MOREIRA DE OLIVE', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16336', matricula: '16336', nome: 'AISES DE OLIVEIRA', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16388', matricula: '16388', nome: 'PEDRO HENRIQUE ARAUJO RAICHARD', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16505', matricula: '16505', nome: 'LEONARDO ALVES', funcao: 'Mecânico de poços', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16538', matricula: '16538', nome: 'LUIZ FERNANDO FIGUEIREDO DE SO', funcao: 'Mecânico', disciplina: 'Subconjunto', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17265', matricula: '17265', nome: 'KAIO FERNANDO RODRIGUES BRAGA', funcao: 'Mecânico', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17634', matricula: '17634', nome: 'ARAMYS EVERTON COSTA', funcao: 'Mecânico de poços', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-5203', matricula: '5203', nome: 'SEBASTIAO VIEIRA DA SILVA', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-7330', matricula: '7330', nome: 'DECIRLEI DO CARMO JOSE', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-10262', matricula: '10262', nome: 'RAIMUNDO FELIX DE MORAIS', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-12216', matricula: '12216', nome: 'KAIO OLIVEIRA PRATES', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-12382', matricula: '12382', nome: 'SEBASTIAO FERNANDES DA PAIXAO', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-12732', matricula: '12732', nome: 'GILBERTO GONCALVES DE SOUZA', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-14587', matricula: '14587', nome: 'JUAREZ GONCALVES DE SOUZA JUNI', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-14856', matricula: '14856', nome: 'FLAVIO SANTOS CONSTANCIO', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-15681', matricula: '15681', nome: 'MARCELO FERREIRA MATOS', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16210', matricula: '16210', nome: 'DANIEL NUNES DE OLIVEIRA', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17252', matricula: '17252', nome: 'PAULO ROBERTO CHAVES', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17485', matricula: '17485', nome: 'KAYKY RYCHARD VICENTE SANTOS', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17531', matricula: '17531', nome: 'LEONARDO SOARES CAMPOLINA', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17707', matricula: '17707', nome: 'ALLYSON SANTOS SILVA', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17726', matricula: '17726', nome: 'ANDERSON MARLEY MARQUES DE SAN', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-15032', matricula: '15032', nome: 'KEVIN OLIVEIRA PRATES', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-15688', matricula: '15688', nome: 'CARLIOFRANQUE NASCIMENTO MIRA', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-16832', matricula: '16832', nome: 'CRISTIANO MARTINS FELIPE', funcao: 'Soldador', disciplina: 'Caldeiraria', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17743', matricula: '17743', nome: 'LEOMARCIO NUNES', funcao: 'Torneiro', disciplina: 'Usinagem', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17573', matricula: '17573', nome: 'PEDRO HENRIQUE PEREIRA CRISPIM', funcao: 'Torneiro', disciplina: 'Usinagem', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-11502', matricula: '11502', nome: 'WEBER FIDELIX', funcao: 'Fresador', disciplina: 'Usinagem', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-15990', matricula: '15990', nome: 'NATAN AUGUSTO DE MORAIS', funcao: 'Fresador', disciplina: 'Usinagem', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-18129', matricula: '18129', nome: 'MARCOS ANTONIO PENA', funcao: 'Fresador', disciplina: 'Usinagem', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17216', matricula: '17216', nome: 'DANIEL HENRIQUE MALTA RAIMUNDO', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17360', matricula: '17360', nome: 'DANIEL HENRIQUE RODRIGUES DE D', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17406', matricula: '17406', nome: 'KEZIA VICTORIA DA SILVA', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17483', matricula: '17483', nome: 'GABRIEL BATISTA CARVALHAIS ROD', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17484', matricula: '17484', nome: 'LAYSSA LOURENCA DA SILVA SANTO', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17526', matricula: '17526', nome: 'GABRIEL HENRIQUE RODRIGUES DIA', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17528', matricula: '17528', nome: 'SAMUEL VITOR ALEIXO CARVALHO', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17572', matricula: '17572', nome: 'RICHARD AUGUSTO GONCALVES SILV', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17690', matricula: '17690', nome: 'KAIQUE SACRAMENTO DA SILVA OLI', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17720', matricula: '17720', nome: 'VICTOR HUGO CARVALHO DE MORAIS', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17752', matricula: '17752', nome: 'DANIEL ALONSO GOMES', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17895', matricula: '17895', nome: 'LUANA VANESSA SANTOS DO CARMO', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-17952', matricula: '17952', nome: 'GABRIEL FERNANDO REIS SILVA', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-18113', matricula: '18113', nome: 'HYURI CRISTOPHER DA SILVA OLIV', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-18130', matricula: '18130', nome: 'GABRIEL LIMA OLIVEIRA', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-18131', matricula: '18131', nome: 'KAIQUE MIRANDA SILVA', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
+      { id: 'wf-18158', matricula: '18158', nome: 'OSEIAS DOS SANTOS ARAUJO', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() }
     ]
   };
 
@@ -687,8 +745,35 @@ window.DB = (() => {
     console.error("Migration error:", e);
   }
 
+  // Seed workforce if missing (for existing clients)
+  setTimeout(() => {
+    try {
+      let currentWf = workforce.list();
+      let seeded = false;
+      if (INITIAL_DATA[KEYS.workforce]) {
+        INITIAL_DATA[KEYS.workforce].forEach(seed => {
+          if (!currentWf.find(w => w.matricula === seed.matricula)) {
+            currentWf.push(seed);
+            seeded = true;
+          }
+        });
+        if (seeded) {
+          localStorage.setItem(KEYS.workforce, JSON.stringify(currentWf));
+          if (window.DB && DB.syncToSupabase) DB.syncToSupabase(KEYS.workforce, currentWf);
+        }
+      }
+    } catch(e) {}
+  }, 1000);
+
+  const solicitacoes = {
+    list: () => get(KEYS.solicitacoes),
+    add: (data) => { const s = get(KEYS.solicitacoes); s.push(data); set(KEYS.solicitacoes, s); },
+    update: (id, updates) => { let s = get(KEYS.solicitacoes); const i = s.findIndex(r => r.id === id); if (i !== -1) { s[i] = { ...s[i], ...updates, updatedAt: now() }; set(KEYS.solicitacoes, s); } },
+    delete: (id) => { const s = get(KEYS.solicitacoes); set(KEYS.solicitacoes, s.filter(r => r.id !== id)); }
+  };
+
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);

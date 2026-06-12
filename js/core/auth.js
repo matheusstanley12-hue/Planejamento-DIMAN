@@ -189,6 +189,7 @@ window.Auth = (() => {
     const session = getSession();
     if (session) addAuditLog('LOGOUT', `Usuário ${session.nome} fez logout`, null);
     sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('diman_last_route');
   }
 
   function getSession() {

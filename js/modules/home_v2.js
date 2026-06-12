@@ -5,6 +5,7 @@ window.HomeModule = (() => {
     { id: 'sondas-pocos', name: 'Sondas Poços', color: 'var(--color-success)' },
     { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)' },
     { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)' },
+    { id: 'prog-almoxarifado', name: 'Programação de almoxarifado', color: 'var(--color-info)' },
     { id: 'outros', name: 'Outros Equipamentos', color: 'var(--text-muted)' }
   ];
 
@@ -16,6 +17,7 @@ window.HomeModule = (() => {
     if (t.includes('sonda') && (t.includes('poço') || t.includes('poco') || t.includes('pocos') || t.includes('poços'))) return 'sondas-pocos';
     if (t.includes('bomba') && (t.includes('poço') || t.includes('poco') || t.includes('pocos') || t.includes('poços'))) return 'bombas-pocos';
     if (t.includes('subconjunto')) return 'subconjuntos';
+    if (t.includes('almoxarifado') || t.includes('programação') || t.includes('programacao')) return 'prog-almoxarifado';
     return 'outros';
   }
 
@@ -49,12 +51,13 @@ window.HomeModule = (() => {
     const partsPendentes = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
 
     // Initialize buckets
-    const bucketsData = {
+    let bucketsData = {
       'sondas-pesquisas': [],
       'bomba-pesquisa': [],
       'sondas-pocos': [],
       'bombas-pocos': [],
       'subconjuntos': [],
+      'prog-almoxarifado': [],
       'outros': []
     };
 
