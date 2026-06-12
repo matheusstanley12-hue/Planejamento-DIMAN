@@ -102,7 +102,7 @@ async  function clearAppCache() {
 // ================================================================
 function showFirstAccessPasswordChange(matricula, session, loginPage) {
   const modalHTML = `
-    <div class="modal-overlay" id="first-access-modal" style="z-index:10000;display:flex;">
+    <div class="modal-overlay open" id="first-access-modal" style="z-index:10000;display:flex;">
       <div class="modal" style="max-width:400px; animation: fadeInUp 0.3s ease;">
         <div class="modal-header">
           <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
@@ -200,6 +200,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const session = Auth.getSession();
+    if (session && session.mustChangePassword) {
+      showLoginPage();
+      const loginPageEl = document.getElementById('login-page');
+      showFirstAccessPasswordChange(session.matricula, session, loginPageEl);
+      return;
+    }
     // Render shell
     renderShell(session);
 
