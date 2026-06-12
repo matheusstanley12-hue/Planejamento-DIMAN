@@ -197,7 +197,7 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('resumo', 'RESUMO EXECUTIVO', 'chart-bar', renderResumo(eq, tasks, openRestr, pendingParts, adherencia, hPlan, hReal))}
           
-          ${['Mecânica','Elétrica','Caldeiraria','Usinagem'].map(disc => {
+          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'].map(disc => {
             const discTasks = tasks.filter(t => t.disciplina === disc);
             const discHPlan = discTasks.reduce((s,t) => s + (t.horasPlanejadas||0), 0);
             const discHReal = discTasks.reduce((s,t) => s + (t.horasRealizadas||0), 0);

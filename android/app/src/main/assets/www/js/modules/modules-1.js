@@ -58,7 +58,7 @@ window.Dashboard = (() => {
     const desvio = realizado - planejado;
     const devClass = desvio >= 0 ? 'success' : (desvio >= -10 ? 'warning' : 'danger');
 
-    const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Hidráulica'];
+    const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
     const allTasks = DB.tasks.getAll();
     function discHours(disc, type) {
       return allTasks.filter(t=>t.disciplina===disc).reduce((s,t)=>s+(parseFloat(t[type])||0),0);
@@ -289,7 +289,7 @@ window.WorkshopModule = (() => {
                 <td><span class="badge badge-${daysClass}">${days === null ? '—' : days < 0 ? Math.abs(days)+' atrasado' : days === 0 ? 'Hoje' : days+'d'}</span></td>
                 <td>${pendParts > 0 ? `<span class="badge badge-danger">${pendParts} pendente${pendParts>1?'s':''}</span>` : `<span class="badge badge-success">OK</span>`}</td>
                 <td><div class="table-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="Router.navigate('equipment')">Ver</button>
+                  <button class="btn btn-secondary btn-sm" onclick="window.Router.navigate('equipment-panel', { id: '${e.id}' })">Ver</button>
                 </div></td>
               </tr>`;
             }).join('')}
@@ -616,6 +616,26 @@ window.EquipmentModule = (() => {
             <select id="eq-wf-usinagem">${getOptions('Usinagem')}</select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Pintor</label>
+            <select id="eq-wf-pintor">${getOptions('Pintor')}</select>
+          </div>
+          <div class="form-group">
+            <label>Lavador</label>
+            <select id="eq-wf-lavador">${getOptions('Lavador')}</select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Montagem</label>
+            <select id="eq-wf-montagem">${getOptions('Montagem')}</select>
+          </div>
+          <div class="form-group">
+            <label>Subconjunto</label>
+            <select id="eq-wf-subconjunto">${getOptions('Subconjunto')}</select>
+          </div>
+        </div>
       </div>
 
       <div class="form-group"><label>Observações</label><textarea id="eq-obs">${eq?.observacoes||''}</textarea></div>
@@ -648,6 +668,10 @@ window.EquipmentModule = (() => {
         'Elétrica': document.getElementById('eq-wf-eletrica').value,
         'Caldeiraria': document.getElementById('eq-wf-caldeiraria').value,
         'Usinagem': document.getElementById('eq-wf-usinagem').value,
+        'Pintor': document.getElementById('eq-wf-pintor').value,
+        'Lavador': document.getElementById('eq-wf-lavador').value,
+        'Montagem': document.getElementById('eq-wf-montagem').value,
+        'Subconjunto': document.getElementById('eq-wf-subconjunto').value,
       }
     };
     if (!data.codigo || !data.os) { Toast.error('Erro', 'Código e O.S. são obrigatórios.'); return; }
@@ -917,7 +941,7 @@ window.TasksModule = (() => {
       }
     }
 
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Lavagem','Instrumentação','Hidráulica','Pneumática','Outras'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
     const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
     let obsHistoryHtml = '';

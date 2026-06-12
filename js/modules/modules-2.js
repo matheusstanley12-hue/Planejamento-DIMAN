@@ -771,7 +771,18 @@ window.WorkforceModule = (() => {
     const eqs = allEqs.filter(e => e.status !== 'Liberado' || e.id === currentEqId);
     
     const isLocked = worker && currentEqId && allEqs.find(e => e.id === currentEqId)?.status !== 'Liberado';
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Lavagem','Instrumentação','Hidráulica'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
+    const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador'];
+    
+    const activeDiscs = [...discs];
+    if (worker?.disciplina && !activeDiscs.includes(worker.disciplina)) {
+      activeDiscs.push(worker.disciplina);
+    }
+    
+    const activeFuncs = [...funcs];
+    if (worker?.funcao && !activeFuncs.includes(worker.funcao)) {
+      activeFuncs.push(worker.funcao);
+    }
     
     document.getElementById('worker-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row">
@@ -779,15 +790,24 @@ window.WorkforceModule = (() => {
         <div class="form-group"><label>Matrícula</label><input id="wk-mat" value="${worker?.matricula || ''}" /></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Função</label><input id="wk-func" placeholder="Mecânico, Eletricista..." value="${worker?.funcao || ''}" /></div>
+        <div class="form-group"><label>Função</label>
+          <select id="wk-func">
+            <option value="">Selecione...</option>
+            ${activeFuncs.map(f => `<option value="${f}" ${worker?.funcao === f ? 'selected' : ''}>${f}</option>`).join('')}
+          </select>
+        </div>
         <div class="form-group"><label>Disciplina</label>
           <select id="wk-disc">
-            ${discs.map(d => `<option ${worker?.disciplina === d ? 'selected' : ''}>${d}</option>`).join('')}
+            ${activeDiscs.map(d => `<option value="${d}" ${worker?.disciplina === d ? 'selected' : ''}>${d}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Telefone</label><input id="wk-tel" value="${worker?.telefone || ''}" /></div>
+        <div class="form-group"><label>Centro de Custo</label>
+          <select id="wk-cc">
+            <option value="05002101" ${(!worker?.centroCusto || worker?.centroCusto === '05002101') ? 'selected' : ''}>05002101</option>
+          </select>
+        </div>
         <div class="form-group"><label>Status</label>
           <select id="wk-status">
             <option ${worker?.status === 'Ativo' ? 'selected' : ''}>Ativo</option>
@@ -831,7 +851,7 @@ window.WorkforceModule = (() => {
       matricula: document.getElementById('wk-mat').value.trim(),
       funcao: document.getElementById('wk-func').value.trim(),
       disciplina: document.getElementById('wk-disc').value,
-      telefone: document.getElementById('wk-tel').value.trim(),
+      centroCusto: document.getElementById('wk-cc').value,
       status: document.getElementById('wk-status').value,
       equipmentId,
       justificativa
@@ -980,12 +1000,12 @@ window.RestrictionsModule = (() => {
   function openCreate() {
     const eqs = DB.equipment.list();
     const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintura','Instrumentação','Hidráulica'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
     document.getElementById('restriction-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Tipo *</label><select id="rs-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
       <div class="form-group"><label>Equipamento</label><select id="rs-eq"><option value="">—</option>${eqs.map(e=>`<option value="${e.id}">${e.codigo}</option>`).join('')}</select></div></div>
       <div class="form-group"><label>Descrição *</label><textarea id="rs-desc" rows="3"></textarea></div>
-      <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="rs-disc">${discs.map(d=>`<option>${d}</option>`).join('')}</select></div>
+      <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="rs-disc">${discs.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
       <div class="form-group"><label>Tarefa Bloqueada</label><input id="rs-tarefa" /></div></div>
       <div class="checkbox-wrap"><input type="checkbox" id="rs-critico" /><label for="rs-critico">Impacta o Caminho Crítico</label></div>
       <input type="hidden" id="rs-editing-id" value="" />
