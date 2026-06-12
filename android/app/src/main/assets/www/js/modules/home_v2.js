@@ -20,10 +20,19 @@ window.HomeModule = (() => {
   }
 
   function render() {
-    const eqs = window.DB.equipment.list();
+    const eqs = [...window.DB.equipment.list()];
+    // Sort equipment by estimated release date ascending (soonest to leave first)
+    eqs.sort((a, b) => {
+      const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada || '9999-12-31';
+      const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada || '9999-12-31';
+      return dateA.localeCompare(dateB);
+    });
+
     const parts = window.DB.parts.getAll();
     const restrictions = window.DB.restrictions.getAll();
     const today = new Date().toISOString().slice(0,10);
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const isAdmin = session && (session.perfil === 'Administrador' || session.perfil === 'Desenvolvedor');
 
     const emManutencao = eqs.filter(e => e.status !== 'Liberado').length;
     let atrasados = 0;
@@ -65,6 +74,14 @@ window.HomeModule = (() => {
       const hasRestr = restrictions.some(r => r.equipmentId === e.id && r.status === 'Aberta') ? '1' : '0';
       const hasPecas = parts.some(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status)) ? '1' : '0';
       
+      const prioridade = e.prioridade || 'Normal';
+      let prioBadge = '';
+      if (prioridade === 'Urgente') {
+        prioBadge = `<span class="badge badge-danger" style="margin-left: 6px;">Urgente</span>`;
+      } else if (prioridade === 'Alta') {
+        prioBadge = `<span class="badge badge-orange" style="margin-left: 6px;">Alta</span>`;
+      }
+
       const cardHtml = `
       <div class="card hover-lift home-eq-card" 
            draggable="true"
@@ -80,10 +97,23 @@ window.HomeModule = (() => {
            style="cursor:grab;display:flex;flex-direction:column;padding:var(--space-4);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'}; margin-bottom: 2px; flex-shrink: 0;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2);">
           <div>
-            <div style="font-size:1.15rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;">${e.codigo}</div>
+            <div style="display:flex;align-items:center;">
+              <div style="font-size:1.15rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;">${e.codigo}</div>
+              ${prioBadge}
+            </div>
             <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:2px;">O.S.: ${e.os || '—'} &middot; Cliente: ${e.cliente || '—'}</div>
           </div>
-          <div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${isAdmin ? `
+              <button class="btn btn-secondary btn-icon" 
+                      style="padding: 2px; border-radius: 4px; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-card); cursor: pointer;" 
+                      title="Editar Equipamento"
+                      onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 14px; height: 14px; color: var(--text-secondary);">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                </svg>
+              </button>
+            ` : ''}
             ${statusBadge(e.status)}
           </div>
         </div>
@@ -330,7 +360,7 @@ window.HomeModule = (() => {
 
     let targetTipo = bucket.name;
     if (bucketId === 'outros') {
-      targetTipo = 'Outros';
+      targetTipo = 'Outros Equipamentos';
     }
 
     const eq = window.DB.equipment.get(eqId);

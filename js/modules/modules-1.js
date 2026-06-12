@@ -32,7 +32,11 @@ window.Dashboard = (() => {
     const parts = DB.parts.getAll();
     const restrictions = DB.restrictions.getAll();
     const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
-    const nextRelease = eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada).sort((a,b)=>a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada))[0];
+    const nextRelease = eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
+      const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
+      const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
+      return dateA.localeCompare(dateB);
+    })[0];
 
     const kpis = [
       { label:'Em Manutenção', value: stats.emManutencao, icon:'primary', type:'info' },
@@ -151,8 +155,13 @@ window.Dashboard = (() => {
         <div class="card">
           <div class="card-header"><div class="card-title">🚀 Próximas Liberações</div></div>
           <div style="display:flex;flex-direction:column;gap:var(--space-3);">
-            ${eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada).sort((a,b)=>a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada)).slice(0,6).map(e => {
-              const days = daysBetween(new Date().toISOString().slice(0,10), e.dataLiberacaoPlanejada);
+            ${eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
+              const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
+              const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
+              return dateA.localeCompare(dateB);
+            }).slice(0,6).map(e => {
+              const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+              const days = daysBetween(new Date().toISOString().slice(0,10), datePrev);
               const cls = days < 0 ? 'danger' : days <= 5 ? 'warning' : 'success';
               return `<div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);">
                 <div class="avatar avatar-sm" style="background:var(--gradient-primary)">${e.codigo.slice(0,2)}</div>
@@ -161,7 +170,7 @@ window.Dashboard = (() => {
                   <div style="font-size:var(--text-xs);color:var(--text-muted)">${e.cliente}</div>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-${cls})">${formatDate(e.dataLiberacaoPlanejada)}</div>
+                  <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-${cls})">${formatDate(datePrev)}</div>
                   <div style="font-size:10px;color:var(--color-${cls})">${days < 0 ? Math.abs(days)+' dias atrasado' : days === 0 ? 'Hoje!' : days+' dias'}</div>
                 </div>
               </div>`;
@@ -321,6 +330,14 @@ window.EquipmentModule = (() => {
           const pendParts = parts.filter(p=>p.equipmentId===e.id&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
           const openRestr = restrictions.filter(r=>r.equipmentId===e.id&&r.status==='Aberta').length;
           const repls = e.replanning || [];
+          const prioridade = e.prioridade || 'Normal';
+          let prioBadge = '';
+          if (prioridade === 'Urgente') {
+            prioBadge = `<span class="badge badge-danger">Urgente</span>`;
+          } else if (prioridade === 'Alta') {
+            prioBadge = `<span class="badge badge-orange">Alta</span>`;
+          }
+
           return `<div class="card card-clickable hover-lift" onclick="EquipmentModule.openDetail('${e.id}')">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3);">
               <div>
@@ -329,6 +346,7 @@ window.EquipmentModule = (() => {
               </div>
               <div style="display:flex;flex-direction:column;gap:var(--space-1);align-items:flex-end;">
                 ${statusBadge(e.status)}
+                ${prioBadge}
                 <span class="badge badge-ghost">${e.cliente}</span>
               </div>
             </div>
@@ -387,13 +405,37 @@ window.EquipmentModule = (() => {
     </div>`;
   }
 
+  function ensureModalExists() {
+    if (!document.getElementById('modal-equipment')) {
+      const modalHtml = `
+      <div class="modal-overlay" id="modal-equipment">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <div class="modal-title" id="eq-modal-title">Equipamento</div>
+            <button class="modal-close" onclick="closeModal('modal-equipment')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+          </div>
+          <div class="modal-body" id="eq-modal-body"></div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
+            <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+          </div>
+        </div>
+      </div>`;
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = modalHtml;
+      document.body.appendChild(wrapper.firstElementChild);
+    }
+  }
+
   function openCreate() {
+    ensureModalExists();
     document.getElementById('eq-modal-title').textContent = 'Novo Equipamento';
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(null);
     openModal('modal-equipment');
   }
 
   function openEdit(id) {
+    ensureModalExists();
     const eq = DB.equipment.get(id);
     document.getElementById('eq-modal-title').textContent = `Editar — ${eq.codigo}`;
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(eq);
@@ -532,9 +574,15 @@ window.EquipmentModule = (() => {
           ${['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Outros Equipamentos'].map(t => `<option value="${t}" ${eq?.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
         </select></div>
       </div>
-      <div class="form-row">
+      <div class="form-row cols-3">
         <div class="form-group"><label>Modelo</label><input id="eq-modelo" value="${eq?.modelo||''}" /></div>
         <div class="form-group"><label>Data de Entrada</label><input type="date" id="eq-entrada" value="${toDateInput(eq?.dataEntrada)}" /></div>
+        <div class="form-group">
+          <label>Prioridade / Urgência</label>
+          <select id="eq-prioridade" class="form-control" style="width:100%;height:38px;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:0 var(--space-3);">
+            ${['Normal','Alta','Urgente'].map(p=>`<option value="${p}" ${eq?.prioridade===p?'selected':''}>${p}</option>`).join('')}
+          </select>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>🔒 Data Planejada de Liberação ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
@@ -588,7 +636,9 @@ window.EquipmentModule = (() => {
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
       status: document.getElementById('eq-status').value,
-      pctAvanco: 0,
+      pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
+      prioridade: document.getElementById('eq-prioridade').value,
+      urgencia: document.getElementById('eq-prioridade').value,
       observacoes: document.getElementById('eq-obs').value.trim(),
       workforceMap: {
         'Mecânica': document.getElementById('eq-wf-mecanica').value,
@@ -601,7 +651,12 @@ window.EquipmentModule = (() => {
     if (id) { DB.equipment.update(id, data); Toast.success('Equipamento atualizado!', data.codigo); }
     else { data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; DB.equipment.create(data); Toast.success('Equipamento criado!', data.codigo); }
     closeModal('modal-equipment');
-    Router.navigate('equipment', { force: true });
+    const currentRoute = Router.getCurrent();
+    if (currentRoute === 'home') {
+      Router.navigate('home', { force: true });
+    } else {
+      Router.navigate('equipment', { force: true });
+    }
   }
 
   function addReplanning(eqId) {
@@ -641,6 +696,11 @@ window.EquipmentModule = (() => {
   }
 
   function confirmDelete(id, nome) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir equipamentos.');
+      return;
+    }
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Todas as tarefas e dados associados serão removidos.`, () => {
       try {
         window.DB.equipment.delete(id);
@@ -1059,6 +1119,11 @@ window.TasksModule = (() => {
   }
 
   function deleteTask(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir tarefas.');
+      return;
+    }
     const t = DB.tasks.get(id);
     confirmDialog('Excluir Tarefa', `Excluir "${t?.descricao}"?`, () => {
       DB.tasks.delete(id);

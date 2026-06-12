@@ -317,8 +317,8 @@ window.PartsModule = (() => {
 
     return `<div class="page-container">
       <div class="section-header">
-        <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg></div>Solicitação de Peças</div>
-        <button class="btn btn-primary" onclick="PartsModule.openCreate()">+ Nova Solicitação</button>
+        <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg></div>Falta de Peças</div>
+        <button class="btn btn-primary" onclick="PartsModule.openCreate()">+ Registrar Peça Faltante</button>
       </div>
 
       <!-- KPI row -->
@@ -345,7 +345,7 @@ window.PartsModule = (() => {
       <!-- Table -->
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Equipamento</th><th>S.A.</th><th>Código / Peça</th><th>Qtd</th><th>Data Solicitação</th><th>Data Prevista</th><th>Data Real</th><th>Entregue?</th><th>Status</th><th>Crítica</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Equipamento</th><th>S.A.</th><th>Código / Peça</th><th>Qtd</th><th>Data Solicitação</th><th>Data Real</th><th>Entregue?</th><th>Status</th><th>Crítica</th><th>Ações</th></tr></thead>
           <tbody>
             ${parts.map(p => {
               const isEntregue = p.entregue || p.status === 'Recebida' || p.status === 'Instalada';
@@ -358,7 +358,6 @@ window.PartsModule = (() => {
                 </td>
                 <td>${p.quantidade||1}</td>
                 <td>${p.dataSolicitacao ? formatDate(p.dataSolicitacao) : '—'}</td>
-                <td>${p.dataPrevista || p.prazoEntrega ? formatDate(p.dataPrevista || p.prazoEntrega) : '—'}</td>
                 <td>${p.dataReal ? formatDate(p.dataReal) : '—'}</td>
                 <td style="text-align:center;">
                   <input type="checkbox" ${isEntregue?'checked':''} onclick="PartsModule.toggleEntregue('${p.id}', this.checked)" style="cursor:pointer;" />
@@ -369,10 +368,10 @@ window.PartsModule = (() => {
                   <select style="font-size:var(--text-xs);padding:var(--space-1) var(--space-2);background:var(--bg-base);border:1px solid var(--border-card);border-radius:var(--radius-sm);color:var(--text-primary);" onchange="PartsModule.updateStatus('${p.id}',this.value)">
                     ${['Solicitada','Comprada','Em Transporte','Recebida','Instalada'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}
                   </select>
-                  <button class="btn btn-secondary btn-sm" onclick="PartsModule.openEdit('${p.id}')" title="Editar Solicitação">
+                  <button class="btn btn-secondary btn-sm" onclick="PartsModule.openEdit('${p.id}')" title="Editar Peça Faltante">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px;height:12px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
                   </button>
-                  <button class="btn btn-danger btn-sm" onclick="PartsModule.deletePart('${p.id}')" title="Excluir Solicitação">
+                  <button class="btn btn-danger btn-sm" onclick="PartsModule.deletePart('${p.id}')" title="Excluir Peça Faltante">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397"/></svg>
                   </button>
                 </div></td>
@@ -445,10 +444,6 @@ window.PartsModule = (() => {
           <input type="date" id="pt-sol" value="${toDateInput(solDate)}" />
         </div>
         <div class="form-group">
-          <label>Previsão Entrega</label>
-          <input type="date" id="pt-prazo" value="${toDateInput(prevDate)}" />
-        </div>
-        <div class="form-group">
           <label>Entrega Real</label>
           <input type="date" id="pt-real" value="${toDateInput(realDate)}" />
         </div>
@@ -474,7 +469,7 @@ window.PartsModule = (() => {
   }
 
   function openCreate() {
-    document.getElementById('part-modal-title').textContent = 'Nova Solicitação';
+    document.getElementById('part-modal-title').textContent = 'Nova Peça Faltante';
     document.getElementById('part-modal-body').innerHTML = partForm(null);
     openModal('modal-part');
   }
@@ -482,7 +477,7 @@ window.PartsModule = (() => {
   function openEdit(id) {
     const p = DB.parts.get(id);
     if (!p) return;
-    document.getElementById('part-modal-title').textContent = 'Editar Solicitação';
+    document.getElementById('part-modal-title').textContent = 'Editar Peça Faltante';
     document.getElementById('part-modal-body').innerHTML = partForm(p);
     openModal('modal-part');
   }
@@ -514,7 +509,7 @@ window.PartsModule = (() => {
       fornecedor: document.getElementById('pt-forn').value.trim(),
       fabricante: document.getElementById('pt-fab').value.trim(),
       dataSolicitacao: document.getElementById('pt-sol').value,
-      dataPrevista: document.getElementById('pt-prazo').value,
+      dataPrevista: '',
       dataReal: dataReal,
       status: status,
       pedido: document.getElementById('pt-pedido').value.trim(),
@@ -524,10 +519,10 @@ window.PartsModule = (() => {
 
     if (id) {
       DB.parts.update(id, data);
-      Toast.success('Solicitação atualizada!');
+      Toast.success('Peça Faltante atualizada!');
     } else {
       DB.parts.create(data);
-      Toast.success('Solicitação cadastrada!');
+      Toast.success('Peça Faltante registrada!');
     }
     closeModal('modal-part');
     Router.navigate('parts', { force: true });
@@ -606,6 +601,11 @@ window.PartsModule = (() => {
   }
 
   function deletePart(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir peças.');
+      return;
+    }
     confirmDialog('Excluir Peça', 'Tem certeza?', () => { DB.parts.delete(id); Router.navigate('parts', { force: true }); Toast.success('Peça excluída'); });
   }
 
@@ -836,6 +836,11 @@ window.WorkforceModule = (() => {
   }
 
   function deleteWorker(id, nome) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir funcionários.');
+      return;
+    }
     confirmDialog('Excluir Funcionário', `Deseja realmente excluir ${nome}?`, () => {
       DB.workforce.delete(id);
       Router.navigate('workforce', { force: true });
@@ -1018,6 +1023,11 @@ window.RestrictionsModule = (() => {
   }
 
   function deleteRestriction(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir restrições.');
+      return;
+    }
     confirmDialog('Excluir Restrição', 'Tem certeza?', () => { DB.restrictions.delete(id); Router.navigate('restrictions', { force: true }); Toast.success('Restrição excluída'); });
   }
 

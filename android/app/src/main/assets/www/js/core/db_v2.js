@@ -618,9 +618,55 @@ window.DB = (() => {
   // Run on startup to ensure existing data is consistent
   try {
     setTimeout(() => {
+      // Seeding default lessons learned
+      const lessonsList = get(KEYS.lessons);
+      if (!lessonsList || lessonsList.length === 0) {
+        const seedLessons = [
+          {
+            id: 'll-seed-1',
+            disciplina: 'Mecânica',
+            equipmentTipo: 'Sondas de Pesquisas',
+            problema: 'Vazamento crônico no retentor da bomba de lama principal durante operação sob alta rotação.',
+            solucao: 'Substituição do retentor original por um modelo de duplo lábio de viton, mais resistente a calor e atrito.',
+            recomendacao: 'Adotar o retentor de viton como padrão em todas as preventivas de 250 horas da bomba de lama.',
+            tempoPerdido: 2,
+            createdAt: new Date(Date.now() - 15 * 86400000).toISOString()
+          },
+          {
+            id: 'll-seed-2',
+            disciplina: 'Caldeiraria',
+            equipmentTipo: 'Sondas Poços',
+            problema: 'Desgaste prematuro e empenamento nos braços oscilantes devido a vibração excessiva no terreno rochoso.',
+            solucao: 'Reforço estrutural dos braços com chapas de aço carbono 1045 de 1/2 polegada nas laterais.',
+            recomendacao: 'Inspecionar trincas com ensaio de líquido penetrante a cada 500 horas de perfuração.',
+            tempoPerdido: 3,
+            createdAt: new Date(Date.now() - 10 * 86400000).toISOString()
+          }
+        ];
+        set(KEYS.lessons, seedLessons);
+      }
+
       const eqs = get(KEYS.equipment);
       let changed = false;
       eqs.forEach(e => {
+        // Seeding default timeline events
+        if (!e.timeline || e.timeline.length === 0) {
+          if (e.codigo === 'SSM-288') {
+            e.timeline = [
+              { id: 'tl-ssm-1', tipo: 'ENTRADA', titulo: 'Entrada em Manutenção', descricao: 'Equipamento deu entrada na oficina de BHZ para manutenção corretiva periódica.', timestamp: new Date(Date.now() - 3 * 86400000).toISOString(), responsavel: 'Sistema' },
+              { id: 'tl-ssm-2', tipo: 'INICIO', titulo: 'Início dos Trabalhos', descricao: 'Abertura da OS-88220 e início da lavagem preliminar para diagnóstico estrutural.', timestamp: new Date(Date.now() - 2 * 86400000).toISOString(), responsavel: 'Sistema' },
+              { id: 'tl-ssm-3', tipo: 'DEFEITO', titulo: 'Defeito Identificado', descricao: 'Trinca estrutural detectada na torre de içamento principal. Requer solda especial.', timestamp: new Date(Date.now() - 1 * 86400000).toISOString(), responsavel: 'Sistema' }
+            ];
+            changed = true;
+          } else if (e.codigo === 'BHZ-001') {
+            e.timeline = [
+              { id: 'tl-bhz-1', tipo: 'ENTRADA', titulo: 'Entrada em Manutenção', descricao: 'Equipamento posicionado no box 3 para revisão do sistema hidráulico e troca de mangueiras.', timestamp: new Date(Date.now() - 4 * 86400000).toISOString(), responsavel: 'Sistema' },
+              { id: 'tl-bhz-2', tipo: 'PECA_SOLICITADA', titulo: 'Falta de Peça Registrada', descricao: 'Solicitada mangueira de alta pressão 3/4 via S.A. 45290. Aguardando entrega do almoxarifado.', timestamp: new Date(Date.now() - 3 * 86400000).toISOString(), responsavel: 'Sistema' }
+            ];
+            changed = true;
+          }
+        }
+
         const eqTasks = get(KEYS.tasks).filter(t => t.equipmentId === e.id);
         const total = eqTasks.length;
         let pct = 0;

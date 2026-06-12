@@ -124,6 +124,11 @@ window.CostsModule = (() => {
   }
 
   function _delete(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir registros.');
+      return;
+    }
     confirmDialog('Excluir Lançamento', 'Tem certeza?', () => { DB.costs.delete(id); Router.navigate('costs', { force: true }); });
   }
 
@@ -178,17 +183,19 @@ window.PlanningModule = (() => {
       <!-- Curva de Avanço Real -->
       <div class="card" style="margin-bottom:var(--space-5);">
         <div class="card-header"><div class="card-title">📊 Curva de Avanço Real</div></div>
-        <div style="display:flex;gap:var(--space-8);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
-          <div style="text-align:center;"><div style="font-size:4rem;font-weight:900;color:var(--brand-primary-light);line-height:1">${planejado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase">PLANEJADO</div></div>
-          <div style="text-align:center;"><div style="font-size:4rem;font-weight:900;color:var(--color-${devCls});line-height:1">${realizado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase">REALIZADO</div></div>
-          <div style="text-align:center;"><div style="font-size:4rem;font-weight:900;color:var(--color-${devCls});line-height:1">${desvio > 0 ? '+' : ''}${desvio}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase">DESVIO</div></div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-            <div style="opacity:${desvio<-15?1:0.25};font-size:1.5rem">🔴 Crítico (&lt;-15%)</div>
-            <div style="opacity:${desvio>=-15&&desvio<-5?1:0.25};font-size:1.5rem">🟡 Atenção (-5% a -15%)</div>
-            <div style="opacity:${desvio>=-5?1:0.25};font-size:1.5rem">🟢 OK (&gt;-5%)</div>
+        <div style="display:flex;gap:var(--space-6);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
+          <div style="text-align:center;"><div style="font-size:2.5rem;font-weight:900;color:var(--brand-primary-light);line-height:1">${planejado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-top:4px;">PLANEJADO</div></div>
+          <div style="text-align:center;"><div style="font-size:2.5rem;font-weight:900;color:var(--color-${devCls});line-height:1">${realizado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-top:4px;">REALIZADO</div></div>
+          <div style="text-align:center;"><div style="font-size:2.5rem;font-weight:900;color:var(--color-${devCls});line-height:1">${desvio > 0 ? '+' : ''}${desvio}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-top:4px;">DESVIO</div></div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;">
+            <div style="opacity:${desvio<-15?1:0.3};font-size:0.95rem;display:flex;align-items:center;gap:8px;">🔴 <span style="color:var(--text-primary);font-weight:600;">Crítico (&lt;-15%)</span></div>
+            <div style="opacity:${desvio>=-15&&desvio<-5?1:0.3};font-size:0.95rem;display:flex;align-items:center;gap:8px;">🟡 <span style="color:var(--text-primary);font-weight:600;">Atenção (-5% a -15%)</span></div>
+            <div style="opacity:${desvio>=-5?1:0.3};font-size:0.95rem;display:flex;align-items:center;gap:8px;">🟢 <span style="color:var(--text-primary);font-weight:600;">OK (&gt;-5%)</span></div>
           </div>
         </div>
-        <canvas id="plan-chart" height="240"></canvas>
+        <div style="position:relative;height:260px;width:100%;margin-top:var(--space-4);">
+          <canvas id="plan-chart"></canvas>
+        </div>
       </div>
 
       <!-- Replanning by equipment -->
@@ -507,9 +514,14 @@ window.AIAssistant = (() => {
       resp += `**Tarefas:** ${stats.totalTarefas} total | ${stats.concluidas} concluídas | ${stats.criticas} críticas\n`;
       resp += `**Restrições abertas:** ${stats.restricoesAbertas}\n\n`;
       resp += `**Próximas liberações:**\n`;
-      eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada).sort((a,b)=>a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada)).slice(0,3).forEach(e => {
-        const days = daysBetween(new Date().toISOString().slice(0,10), e.dataLiberacaoPlanejada);
-        resp += `  • ${e.codigo} (${e.cliente}): ${formatDate(e.dataLiberacaoPlanejada)} ${days < 0 ? `— ${Math.abs(days)} dias ATRASADO ⚠️` : `— ${days} dias`}\n`;
+      eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
+        const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
+        const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
+        return dateA.localeCompare(dateB);
+      }).slice(0,3).forEach(e => {
+        const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+        const days = daysBetween(new Date().toISOString().slice(0,10), datePrev);
+        resp += `  • ${e.codigo} (${e.cliente}): ${formatDate(datePrev)} ${days < 0 ? `— ${Math.abs(days)} dias ATRASADO ⚠️` : `— ${days} dias`}\n`;
       });
       return resp;
     }
@@ -648,8 +660,12 @@ window.MeetingMode = (() => {
     const restrictions = DB.restrictions.getAll().filter(r=>r.status==='Aberta');
     const tasks = DB.tasks.getAll();
     const today = new Date().toISOString().slice(0,10);
-    const nextReleases = eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada).sort((a,b)=>a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada));
-    const delayed = eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada&&e.dataLiberacaoPlanejada<today);
+    const nextReleases = eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
+      const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
+      const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
+      return dateA.localeCompare(dateB);
+    });
+    const delayed = eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)<today);
     const critTasks = tasks.filter(t=>t.critico&&t.status!=='Concluída').slice(0,8);
     const pendParts = parts.filter(p=>['Solicitada','Comprada','Em Transporte'].includes(p.status)).slice(0,6);
 
@@ -671,7 +687,7 @@ window.MeetingMode = (() => {
         <div style="background:#0A1929;border:1px solid rgba(244,67,54,.3);border-radius:12px;padding:16px;overflow:hidden;">
           <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#F44336;margin-bottom:12px;">🔴 Equipamentos Atrasados</div>
           ${delayed.length === 0 ? '<div style="color:#546E7A;font-size:.8rem;">Nenhum atraso registrado ✅</div>' :
-          delayed.map(e=>{const d=daysBetween(e.dataLiberacaoPlanejada,today);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(244,67,54,.1);border-radius:8px;margin-bottom:8px;border-left:3px solid #F44336;"><div><div style="font-weight:800;color:white;font-size:1rem">${e.codigo}</div><div style="font-size:.7rem;color:#8EACC8">${e.cliente}</div></div><div style="font-size:1.8rem;font-weight:900;color:#F44336">${d}d</div></div>`;}).join('')}
+          delayed.map(e=>{const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada; const d=daysBetween(datePrev,today);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(244,67,54,.1);border-radius:8px;margin-bottom:8px;border-left:3px solid #F44336;"><div><div style="font-weight:800;color:white;font-size:1rem">${e.codigo}</div><div style="font-size:.7rem;color:#8EACC8">${e.cliente}</div></div><div style="font-size:1.8rem;font-weight:900;color:#F44336">${d}d</div></div>`;}).join('')}
         </div>
 
         <!-- Panel 2: Critical Path -->
@@ -696,10 +712,10 @@ window.MeetingMode = (() => {
         <!-- Panel 4: Next Releases -->
         <div style="background:#0A1929;border:1px solid rgba(0,200,83,.3);border-radius:12px;padding:16px;overflow:hidden;">
           <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#00C853;margin-bottom:12px;">🚀 Próximas Liberações</div>
-          ${nextReleases.slice(0,5).map(e=>{const d=daysBetween(today,e.dataLiberacaoPlanejada);const cls=d<0?'#F44336':d<=3?'#FF9800':'#00C853';return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(0,200,83,.07);border-radius:8px;margin-bottom:8px;">
+          ${nextReleases.slice(0,5).map(e=>{const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada; const d=daysBetween(today,datePrev);const cls=d<0?'#F44336':d<=3?'#FF9800':'#00C853';return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(0,200,83,.07);border-radius:8px;margin-bottom:8px;">
             <div><div style="font-weight:800;color:white;font-size:.95rem">${e.codigo} <span style="font-size:.7rem;color:#8EACC8">${e.cliente}</span></div>
             <div style="margin-top:4px;background:rgba(255,255,255,.1);border-radius:4px;height:6px;width:100%;overflow:hidden;"><div style="height:100%;width:${e.pctAvanco||0}%;background:#00C853;border-radius:4px;"></div></div></div>
-            <div style="text-align:right;"><div style="font-size:.85rem;font-weight:700;color:${cls}">${formatDate(e.dataLiberacaoPlanejada)}</div><div style="font-size:.65rem;color:${cls}">${d<0?Math.abs(d)+'d atraso':d+'d'}</div></div>
+            <div style="text-align:right;"><div style="font-size:.85rem;font-weight:700;color:${cls}">${formatDate(datePrev)}</div><div style="font-size:.65rem;color:${cls}">${d<0?Math.abs(d)+'d atraso':d+'d'}</div></div>
           </div>`;}).join('')}
         </div>
 
@@ -1421,8 +1437,8 @@ window.UsersModule = (() => {
                   <div class="form-group"><label>Nome *</label><input type="text" id="nu-nome" placeholder="Nome Completo" /></div>
                   <div class="form-group"><label>Email</label><input type="email" id="nu-email" placeholder="email@exemplo.com" /></div>
                   <div class="form-group"><label>Perfil de Acesso *</label><select id="nu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
-                  <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="123456" readonly style="background:var(--bg-base);color:var(--text-muted);"/></div>
-                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O usuário deverá alterar a senha no primeiro acesso.</div>
+                  <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="Gerada automaticamente ao salvar" readonly style="background:var(--bg-base);color:var(--text-muted);font-style:italic;" /></div>
+                  <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O sistema gerará uma senha aleatória que deverá ser informada ao funcionário.</div>
                 </div>
               </div>
               <div class="modal-footer">
@@ -1466,6 +1482,12 @@ window.UsersModule = (() => {
   }
   
   async function saveUser() {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem criar usuários.');
+      return;
+    }
+
     const matricula = document.getElementById('nu-mat').value.trim();
     const nome = document.getElementById('nu-nome').value.trim();
     const email = document.getElementById('nu-email').value.trim();
@@ -1482,8 +1504,11 @@ window.UsersModule = (() => {
       return;
     }
 
-    // Hash the default password '123456'
-    const msgBuffer = new TextEncoder().encode('123456');
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let randomPassword = '';
+    for(let i=0; i<6; i++) randomPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+
+    const msgBuffer = new TextEncoder().encode(randomPassword);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const senhaHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -1502,14 +1527,82 @@ window.UsersModule = (() => {
     
     users.push(newUser);
     localStorage.setItem('diman_users', JSON.stringify(users));
-    if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+    if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_users', users);
     
     closeModal('modal-user-form');
-    Toast && Toast.success('Usuário Criado', 'Senha temporária: 123456');
     Router.navigate('users', { force: true });
+
+    // Exibir modal customizado com opção de copiar a senha
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+      <div class="modal modal-sm" style="max-width:380px;">
+        <div class="modal-body" style="text-align:center;padding:var(--space-6)">
+          <div style="width:48px;height:48px;border-radius:50%;background:rgba(99, 102, 241, 0.1);display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4);color:var(--brand-primary-light);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.745 3.745 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+            </svg>
+          </div>
+          <h3 style="margin-bottom:var(--space-2);font-weight:700;">Usuário Criado!</h3>
+          <p style="font-size:var(--text-sm);color:var(--text-muted);margin-bottom:var(--space-4)">Informe a senha temporária abaixo ao funcionário. Ele precisará trocá-la no primeiro acesso.</p>
+          
+          <div style="display:flex;gap:8px;background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border-default);align-items:center;margin-bottom:var(--space-4);">
+            <input type="text" readonly id="temp-pwd-input" value="${randomPassword}" style="flex:1;background:transparent;border:none;outline:none;color:var(--text-primary);font-family:var(--font-mono);font-size:16px;font-weight:bold;text-align:center;" />
+            <button class="btn btn-secondary btn-sm" id="btn-copy-pwd" style="padding:6px 12px;font-size:11px;">Copiar</button>
+          </div>
+        </div>
+        <div class="modal-footer" style="justify-content:center;border-top:none;padding-top:0;">
+          <button class="btn btn-primary" id="btn-close-pwd" style="width:100%;">Fechar</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => { requestAnimationFrame(() => overlay.classList.add('open')); });
+    
+    const copyBtn = overlay.querySelector('#btn-copy-pwd');
+    const pwdInput = overlay.querySelector('#temp-pwd-input');
+    
+    // Tenta copiar automaticamente de início
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(randomPassword).then(() => {
+        Toast && Toast.success('Copiado!', 'Senha temporária copiada para a área de transferência.');
+      }).catch(() => {});
+    }
+
+    copyBtn.onclick = () => {
+      pwdInput.select();
+      pwdInput.setSelectionRange(0, 99999);
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(randomPassword).then(() => {
+          Toast && Toast.success('Copiado!', 'Senha copiada com sucesso.');
+        }).catch(err => {
+          console.error(err);
+          Toast && Toast.error('Erro', 'Use copiar manualmente.');
+        });
+      } else {
+        try {
+          document.execCommand('copy');
+          Toast && Toast.success('Copiado!', 'Senha copiada com sucesso.');
+        } catch(e) {
+          Toast && Toast.error('Erro', 'Selecione e copie a senha manualmente.');
+        }
+      }
+    };
+    
+    overlay.querySelector('#btn-close-pwd').onclick = () => {
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.remove(), 300);
+    };
   }
 
   function deleteUser(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir usuários.');
+      return;
+    }
     if(confirm('Tem certeza que deseja excluir este usuário?')) {
       let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
       users = users.filter(u => u.id !== id);

@@ -218,7 +218,7 @@ window.EquipmentPanel = (() => {
             );
           }).join('')}
 
-          ${renderAccordion('pecas', `ALMOXARIFADO (PEÇAS) <span class="badge badge-${pendingParts>0?'danger':'success'}" style="margin-left:8px;">${pendingParts} pendentes</span>`, 'cube', renderPecas(parts))}
+          ${renderAccordion('pecas', `FALTA DE PEÇAS <span class="badge badge-${pendingParts>0?'danger':'success'}" style="margin-left:8px;">${pendingParts} pendentes</span>`, 'cube', renderPecas(parts))}
           
           ${renderAccordion('workforce', 'MÃO DE OBRA', 'users', renderMaoDeObra())}
           
@@ -255,6 +255,22 @@ window.EquipmentPanel = (() => {
               <div class="form-group">
                 <label>Horas Planejadas</label>
                 <input type="number" id="new-task-horas" value="0" />
+              </div>
+            </div>
+
+            <div class="form-row cols-2" style="margin-bottom:var(--space-3);">
+              <div class="form-group">
+                <label>Status</label>
+                <select id="new-task-status">
+                  <option value="Não Iniciada">Não Iniciada</option>
+                  <option value="Em Andamento">Em Andamento</option>
+                  <option value="Falta de Peça">Falta de Peça</option>
+                  <option value="Concluída">Concluída</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Avanço (%)</label>
+                <input type="number" id="new-task-pct" min="0" max="100" value="0" />
               </div>
             </div>
 
@@ -298,12 +314,16 @@ window.EquipmentPanel = (() => {
             </div>
 
             <div class="form-group" style="margin-bottom:var(--space-5);">
-              <label>Observações</label>
-              <div id="new-task-obs-history" style="max-height: 80px; overflow-y: auto; font-size: 11px; margin-bottom: var(--space-2); border: 1px solid var(--border-default); padding: 4px; border-radius: 4px; background: var(--bg-base); display: none;"></div>
-              <textarea id="new-task-obs" placeholder="Escreva uma nova observação ou comentário para adicionar..." style="width:100%;height:45px;padding:var(--space-2);background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);resize:vertical;"></textarea>
+              <label>Observações e Comentários</label>
+              <div id="new-task-obs-history" style="max-height: 120px; overflow-y: auto; font-size: 11px; margin-bottom: var(--space-3); border: 1px solid var(--border-default); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--bg-base); display: none;"></div>
+              <div style="display: flex; gap: 6px;">
+                <input type="text" id="new-task-obs" placeholder="Escreva uma observação ou comentário..." onkeydown="if(event.key==='Enter') window.EquipmentPanel.addCommentFromModal()" style="flex: 1; padding: var(--space-2); font-size: 11px; border: 1px solid var(--border-default); border-radius: 3px; background: var(--bg-base); color: var(--text-primary);" />
+                <button class="btn btn-primary btn-sm" onclick="window.EquipmentPanel.addCommentFromModal()" style="padding: 4px 10px; font-size: 11px;">Enviar</button>
+              </div>
             </div>
 
             <div style="display:flex;gap:var(--space-3);justify-content:flex-end;">
+              <button id="new-task-delete-btn" class="btn btn-danger" onclick="window.EquipmentPanel.deleteTaskFromModal()" style="display:none;margin-right:auto;">Excluir Atividade</button>
               <button class="btn btn-ghost" onclick="closeModal('eq-task-modal')">Cancelar</button>
               <button class="btn btn-primary" onclick="window.EquipmentPanel.saveTask('${currentEqId}')">Salvar Atividade</button>
             </div>
@@ -313,7 +333,7 @@ window.EquipmentPanel = (() => {
         <!-- Create Part Modal -->
         <div id="eq-part-modal" class="modal-overlay">
           <div class="card" style="width:100%;max-width:500px;padding:var(--space-6);">
-            <h3 id="eq-part-modal-title" style="margin-bottom:var(--space-4);font-size:1.5rem;font-weight:800;">Nova Peça</h3>
+            <h3 id="eq-part-modal-title" style="margin-bottom:var(--space-4);font-size:1.5rem;font-weight:800;">Nova Peça Faltante</h3>
             
             <div class="form-group" style="margin-bottom:var(--space-3);">
               <label>S.A. (Solicitação Almoxarifado)</label>
@@ -352,10 +372,6 @@ window.EquipmentPanel = (() => {
               <div class="form-group" style="flex:1;">
                 <label>Data Solicitação</label>
                 <input type="date" id="new-part-sol" />
-              </div>
-              <div class="form-group" style="flex:1;">
-                <label>Previsão Entrega</label>
-                <input type="date" id="new-part-prev" />
               </div>
               <div class="form-group" style="flex:1;">
                 <label>Entrega Real</label>
@@ -461,16 +477,14 @@ window.EquipmentPanel = (() => {
                 <th>Responsável</th>
                 <th>Status</th>
                 <th>Avanço</th>
-                <th style="width:40px;"></th>
               </tr>
             </thead>
             <tbody>
               ${tasks.map(t => {
                 const isChecked = t.status === 'Concluída';
-                const isExpanded = t.id === expandedTaskId;
                 
                 return `
-                <tr style="${isChecked?'opacity:0.7;':''} ${t.critico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.toggleTaskExpand('${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+                <tr style="${isChecked?'opacity:0.7;':''} ${t.critico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
                   <td><input type="checkbox" ${isChecked?'checked':''} onclick="event.stopPropagation(); window.EquipmentPanel.updateTaskStatus('${currentEqId}', '${t.id}', this.checked ? 'Concluída' : 'Não Iniciada')" style="cursor:pointer;" /></td>
                   <td>
                     <div style="font-weight:600;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
@@ -479,97 +493,6 @@ window.EquipmentPanel = (() => {
                   <td>${t.responsavel || '—'}</td>
                   <td>${statusBadge(t.status)}</td>
                   <td><span style="font-weight:700;color:var(--text-primary);">${t.pctExecutado||0}%</span></td>
-                  <td style="text-align:center;">
-                    <svg id="chevron-${t.id}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;transition:transform 0.2s; ${isExpanded?'transform:rotate(180deg);':''}"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
-                  </td>
-                </tr>
-                
-                <tr id="task-details-${t.id}" class="task-details-row" style="display: ${isExpanded ? 'table-row' : 'none'}; background: rgba(0,0,0,0.15); border-top: 1px dashed var(--border-default);" onclick="event.stopPropagation();">
-                  <td colspan="6" style="padding: var(--space-4);">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">
-                      <!-- Left side: Dates, Hours, Status & Avanço inputs, Actions -->
-                      <div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
-                          <!-- Datas -->
-                          <div class="card" style="padding: var(--space-3); background: var(--bg-card); border: 1px solid var(--border-card);">
-                            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--space-2);">Datas Planejadas / Reais</div>
-                            <div style="display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px; align-items: center; font-size: 11px;">
-                              <strong>Plan:</strong>
-                              <input type="date" value="${t.dataPlanejadaInicio||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'dataPlanejadaInicio', this.value)" style="width:100%;padding:3px;font-size:11px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary);cursor:pointer;" title="Início Planejado" />
-                              <input type="date" value="${t.dataPlanejadaTermino||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'dataPlanejadaTermino', this.value)" style="width:100%;padding:3px;font-size:11px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary);cursor:pointer;" title="Fim Planejado" />
-
-                              <strong>Real:</strong>
-                              <input type="date" value="${t.dataRealInicio||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'dataRealInicio', this.value)" style="width:100%;padding:3px;font-size:11px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary);cursor:pointer;" title="Início Real" />
-                              <input type="date" value="${t.dataRealTermino||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'dataRealTermino', this.value)" style="width:100%;padding:3px;font-size:11px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary);cursor:pointer;" title="Fim Real" />
-
-                              <strong>Replan:</strong>
-                              <div style="grid-column: span 2;">
-                                <input type="date" value="${t.dataReplanejada||''}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'dataReplanejada', this.value)" style="width:100%;padding:3px;font-size:11px;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary);cursor:pointer;" title="Data Replanejada" />
-                              </div>
-                            </div>
-                          </div>
-                          <!-- Hours & Execution -->
-                          <div class="card" style="padding: var(--space-3); background: var(--bg-card); border: 1px solid var(--border-card); display: flex; flex-direction: column; justify-content: space-between;">
-                            <div>
-                              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--space-2);">Esforço & Avanço</div>
-                              <div style="font-size: 11px; margin-bottom: 8px;">
-                                <strong>Horas:</strong> P: ${t.horasPlanejadas||0}h | R: ${t.horasRealizadas||0}h
-                              </div>
-                              <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 11px;">
-                                <strong>Status:</strong>
-                                <select class="form-select" style="font-size:11px;padding:2px 4px;height:auto;border-radius:4px;width:120px;" onchange="window.EquipmentPanel.updateTaskStatus('${currentEqId}', '${t.id}', this.value)">
-                                  <option value="Não Iniciada" ${t.status==='Não Iniciada'?'selected':''}>Não Iniciada</option>
-                                  <option value="Em Andamento" ${t.status==='Em Andamento'?'selected':''}>Em Andamento</option>
-                                  <option value="Falta de Peça" ${t.status==='Falta de Peça'?'selected':''}>Falta de Peça</option>
-                                  <option value="Concluída" ${t.status==='Concluída'?'selected':''}>Concluída</option>
-                                </select>
-                              </div>
-                              <div style="display:flex;align-items:center;gap:8px;font-size:11px;">
-                                <strong>Avanço:</strong> 
-                                <input type="number" min="0" max="100" value="${t.pctExecutado||0}" onchange="window.EquipmentPanel.updateTaskField('${currentEqId}', '${t.id}', 'pctExecutado', this.value)" style="width:50px;padding:2px;font-size:11px;text-align:center;border:1px solid var(--border-default);border-radius:3px;background:var(--bg-base);color:var(--text-primary)" /> %
-                              </div>
-                            </div>
-                            
-                            <div style="display: flex; gap: 6px; justify-content: flex-end; margin-top: 8px;">
-                              <button class="btn btn-secondary btn-sm" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" style="padding: 4px 8px; font-size: 10px;">
-                                Editar Geral
-                              </button>
-                              <button class="btn btn-danger btn-sm" onclick="window.EquipmentPanel.deleteTask('${currentEqId}', '${t.id}')" style="padding: 4px 8px; font-size: 10px;">
-                                Excluir
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        ${t.predecessoras && t.predecessoras.length > 0 ? `
-                          <div style="margin-bottom: var(--space-4); font-size: 11px; color: var(--text-muted);">
-                            <strong style="color: var(--color-warning);">Depende de:</strong>
-                            <div style="display:flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
-                              ${t.predecessoras.map(pid => {
-                                const pt = allEqTasks.find(x => x.id === pid);
-                                if (!pt) return '';
-                                return `<span class="badge badge-ghost" style="font-size:10px;padding:2px 6px;border:1px solid rgba(255,152,0,0.3);color:var(--color-warning);">${pt.descricao}</span>`;
-                              }).filter(Boolean).join('')}
-                            </div>
-                          </div>
-                        ` : ''}
-                      </div>
-
-                      <!-- Right side: Microsoft Lists-like comment thread (Requirement 2) -->
-                      <div class="card" style="padding: var(--space-3); background: var(--bg-card); border: 1px solid var(--border-card); display: flex; flex-direction: column;">
-                        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: var(--space-2);">Observações e Comentários</div>
-                        <!-- Comments list -->
-                        <div id="comments-list-${t.id}" style="max-height: 140px; overflow-y: auto; margin-bottom: var(--space-3); border: 1px solid var(--border-default); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--bg-base); flex: 1;">
-                          ${renderComments(t.observacoes, t.id)}
-                        </div>
-                        <!-- New comment input -->
-                        <div style="display: flex; gap: 6px;">
-                          <input type="text" id="new-comment-input-${t.id}" placeholder="Escreva um comentário..." onkeydown="if(event.key==='Enter') window.EquipmentPanel.addComment('${t.id}', '${currentEqId}')" style="flex: 1; padding: 4px 8px; font-size: 11px; border: 1px solid var(--border-default); border-radius: 3px; background: var(--bg-base); color: var(--text-primary);" />
-                          <button class="btn btn-primary btn-sm" onclick="window.EquipmentPanel.addComment('${t.id}', '${currentEqId}')" style="padding: 4px 10px; font-size: 11px;">Enviar</button>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
                 </tr>
                 `;
               }).join('')}
@@ -583,7 +506,7 @@ window.EquipmentPanel = (() => {
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
           Baixar Tarefas (${disc})
         </button>
-        <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.openPartModal()" style="color:var(--color-orange);border-color:var(--color-orange);">+ Solicitar Peça</button>
+        <button class="btn btn-outline btn-sm" onclick="window.EquipmentPanel.openPartModal()" style="color:var(--color-orange);border-color:var(--color-orange);">+ Registrar Peça Faltante</button>
         <button class="btn btn-secondary btn-sm" onclick="EquipmentPanel.openTaskModal('${disc}')">+ Adicionar Atividade</button>
       </div>
     `;
@@ -592,7 +515,7 @@ window.EquipmentPanel = (() => {
   function renderPecas(parts) {
     let html = '';
     if (parts.length === 0) {
-      html = `<div class="empty-state" style="padding:var(--space-4)"><p>Nenhuma peça associada.</p></div>`;
+      html = `<div class="empty-state" style="padding:var(--space-4)"><p>Nenhuma peça faltante registrada.</p></div>`;
     } else {
       html = `
         <div class="table-wrap">
@@ -614,34 +537,33 @@ window.EquipmentPanel = (() => {
                 const isEntregue = p.entregue || p.status === 'Recebida' || p.status === 'Instalada';
                 return `
                 <tr style="${p.critica?'background:rgba(244,67,54,0.05);':''}">
-                  <td><code>${p.sa || '—'}</code></td>
-                  <td>
-                    <div style="font-weight:600;">${p.descricao}</div>
-                    <div style="font-size:10px;color:var(--text-muted);">${p.codigo || '—'}</div>
-                    ${p.critica?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;margin-top:2px;">IMPACTA LIBERAÇÃO</span>':''}
-                  </td>
-                  <td>${p.quantidade || 1}</td>
-                  <td>
-                    <div style="font-size:10px;">Sol: <strong style="color:var(--text-primary)">${p.dataSolicitacao ? formatDate(p.dataSolicitacao) : '—'}</strong></div>
-                    <div style="font-size:10px;">Prev: <strong style="color:var(--color-warning)">${p.dataPrevista ? formatDate(p.dataPrevista) : '—'}</strong></div>
-                    <div style="font-size:10px;">Real: <strong style="color:var(--color-success)">${p.dataReal ? formatDate(p.dataReal) : '—'}</strong></div>
-                  </td>
-                  <td>${p.fornecedor || '—'}</td>
-                  <td style="text-align:center;">
-                    <input type="checkbox" ${isEntregue?'checked':''} onclick="window.EquipmentPanel.togglePartEntregue('${p.id}', this.checked)" style="cursor:pointer;" />
-                  </td>
-                  <td>${statusBadge(p.status)}</td>
-                  <td style="text-align:center;">
-                    <div style="display:flex;gap:4px;justify-content:center;">
-                      <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.openPartModal('${p.id}')" title="Editar Peça" style="color:var(--brand-primary-light);padding:4px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                      </button>
-                      <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.deletePart('${p.id}')" title="Excluir Peça" style="color:var(--color-danger);padding:4px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>`;
+                   <td><code>${p.sa || '—'}</code></td>
+                   <td>
+                     <div style="font-weight:600;">${p.descricao}</div>
+                     <div style="font-size:10px;color:var(--text-muted);">${p.codigo || '—'}</div>
+                     ${p.critica?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;margin-top:2px;">IMPACTA LIBERAÇÃO</span>':''}
+                   </td>
+                   <td>${p.quantidade || 1}</td>
+                   <td>
+                     <div style="font-size:10px;">Sol: <strong style="color:var(--text-primary)">${p.dataSolicitacao ? formatDate(p.dataSolicitacao) : '—'}</strong></div>
+                     <div style="font-size:10px;">Real: <strong style="color:var(--color-success)">${p.dataReal ? formatDate(p.dataReal) : '—'}</strong></div>
+                   </td>
+                   <td>${p.fornecedor || '—'}</td>
+                   <td style="text-align:center;">
+                     <input type="checkbox" ${isEntregue?'checked':''} onclick="window.EquipmentPanel.togglePartEntregue('${p.id}', this.checked)" style="cursor:pointer;" />
+                   </td>
+                   <td>${statusBadge(p.status)}</td>
+                   <td style="text-align:center;">
+                     <div style="display:flex;gap:4px;justify-content:center;">
+                       <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.openPartModal('${p.id}')" title="Editar Peça" style="color:var(--brand-primary-light);padding:4px;">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                       </button>
+                       <button class="btn btn-ghost btn-sm" onclick="window.EquipmentPanel.deletePart('${p.id}')" title="Excluir Peça" style="color:var(--color-danger);padding:4px;">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
+                       </button>
+                     </div>
+                   </td>
+                 </tr>`;
               }).join('')}
             </tbody>
           </table>
@@ -650,7 +572,7 @@ window.EquipmentPanel = (() => {
     }
     return html + `
       <div style="margin-top:var(--space-3);text-align:right;">
-        <button class="btn btn-secondary btn-sm" onclick="window.EquipmentPanel.openPartModal()">+ Adicionar Peça</button>
+        <button class="btn btn-secondary btn-sm" onclick="window.EquipmentPanel.openPartModal()">+ Registrar Peça Faltante</button>
       </div>
     `;
   }
@@ -830,6 +752,7 @@ window.EquipmentPanel = (() => {
     respSelect.innerHTML = respHtml;
 
     const titleEl = document.querySelector('#eq-task-modal h3');
+    const deleteBtn = document.getElementById('new-task-delete-btn');
     
     if (taskId) {
       const t = DB.tasks.get(taskId);
@@ -837,12 +760,15 @@ window.EquipmentPanel = (() => {
       document.getElementById('new-task-desc').value = t.descricao || '';
       document.getElementById('new-task-resp').value = t.responsavel || 'Não atribuído';
       document.getElementById('new-task-horas').value = t.horasPlanejadas || 0;
+      document.getElementById('new-task-status').value = t.status || 'Não Iniciada';
+      document.getElementById('new-task-pct').value = t.pctExecutado || 0;
       document.getElementById('new-task-ini').value = t.dataPlanejadaInicio || '';
       document.getElementById('new-task-fim').value = t.dataPlanejadaTermino || '';
       document.getElementById('new-task-real-ini').value = t.dataRealInicio || '';
       document.getElementById('new-task-real-fim').value = t.dataRealTermino || '';
       document.getElementById('new-task-replan').value = t.dataReplanejada || '';
       document.getElementById('new-task-critico').checked = !!t.critico;
+      if (deleteBtn) deleteBtn.style.display = 'block';
       
       // Populate observations history if any
       const obsHistoryEl = document.getElementById('new-task-obs-history');
@@ -854,12 +780,7 @@ window.EquipmentPanel = (() => {
           if (Array.isArray(comments)) {
             isJson = true;
             obsHistoryEl.style.display = 'block';
-            obsHistoryEl.innerHTML = comments.map(c => `
-              <div style="margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.02);">
-                <span style="font-weight:bold;color:var(--brand-primary-light);">${c.user}:</span> ${c.text}
-                <span style="font-size:9px;color:var(--text-muted);display:block;">${new Date(c.createdAt).toLocaleString('pt-BR')}</span>
-              </div>
-            `).join('');
+            obsHistoryEl.innerHTML = renderComments(t.observacoes, t.id);
           }
         } catch (e) {}
         
@@ -884,6 +805,8 @@ window.EquipmentPanel = (() => {
       const defaultWorker = eq && eq.workforceMap ? eq.workforceMap[disciplina] : '';
       document.getElementById('new-task-resp').value = defaultWorker || 'Não atribuído';
       document.getElementById('new-task-horas').value = 0;
+      document.getElementById('new-task-status').value = 'Não Iniciada';
+      document.getElementById('new-task-pct').value = 0;
       document.getElementById('new-task-ini').value = today;
       document.getElementById('new-task-fim').value = today;
       document.getElementById('new-task-real-ini').value = '';
@@ -892,6 +815,7 @@ window.EquipmentPanel = (() => {
       document.getElementById('new-task-critico').checked = false;
       document.getElementById('new-task-obs-history').style.display = 'none';
       document.getElementById('new-task-obs').value = '';
+      if (deleteBtn) deleteBtn.style.display = 'none';
       Array.from(predsSelect.options).forEach(opt => opt.selected = false);
     }
   }
@@ -952,6 +876,33 @@ window.EquipmentPanel = (() => {
       }
     }
 
+    const inputStatus = document.getElementById('new-task-status').value;
+    let inputPct = parseInt(document.getElementById('new-task-pct').value) || 0;
+    if (inputPct < 0) inputPct = 0;
+    if (inputPct > 100) inputPct = 100;
+
+    let realFim = document.getElementById('new-task-real-fim').value || null;
+    let realIni = document.getElementById('new-task-real-ini').value || null;
+    let finalStatus = inputStatus;
+
+    if (finalStatus === 'Concluída' || inputPct === 100) {
+      finalStatus = 'Concluída';
+      inputPct = 100;
+      if (!realFim) {
+        realFim = new Date().toISOString().slice(0,10);
+      }
+      if (!realIni) {
+        realIni = new Date().toISOString().slice(0,10);
+      }
+    } else if (inputPct > 0 && finalStatus === 'Não Iniciada') {
+      finalStatus = 'Em Andamento';
+      if (!realIni) {
+        realIni = new Date().toISOString().slice(0,10);
+      }
+    } else if (finalStatus === 'Em Andamento' && inputPct === 0) {
+      inputPct = 10;
+    }
+
     const taskData = {
       equipmentId: eqId || currentEqId,
       descricao: desc,
@@ -960,13 +911,15 @@ window.EquipmentPanel = (() => {
       horasPlanejadas: parseInt(document.getElementById('new-task-horas').value) || 0,
       dataPlanejadaInicio: document.getElementById('new-task-ini').value,
       dataPlanejadaTermino: document.getElementById('new-task-fim').value,
-      dataRealInicio: document.getElementById('new-task-real-ini').value || null,
-      dataRealTermino: document.getElementById('new-task-real-fim').value || null,
+      dataRealInicio: realIni,
+      dataRealTermino: realFim,
       dataReplanejada: document.getElementById('new-task-replan').value || null,
       prioridade: document.getElementById('new-task-critico').checked ? 'Crítica' : 'Média',
       critico: document.getElementById('new-task-critico').checked,
       observacoes: finalObservacoes,
-      predecessoras: selectedPreds
+      predecessoras: selectedPreds,
+      status: finalStatus,
+      pctExecutado: inputPct
     };
 
     const targetEqId = eqId || currentEqId;
@@ -1019,13 +972,6 @@ window.EquipmentPanel = (() => {
       }
     }
 
-    if (taskData.dataRealTermino) {
-      taskData.status = 'Concluída';
-      taskData.pctExecutado = 100;
-    } else if (taskData.dataRealInicio && (!editingTaskId || DB.tasks.get(editingTaskId)?.status === 'Não Iniciada')) {
-      taskData.status = 'Em Andamento';
-    }
-
     if (editingTaskId) {
       const t = DB.tasks.get(editingTaskId);
       const updatedTask = { ...t, ...taskData };
@@ -1035,9 +981,7 @@ window.EquipmentPanel = (() => {
       const newTask = {
         ...taskData,
         codigo: 'ATV-' + Math.floor(Math.random() * 10000),
-        horasRealizadas: 0,
-        pctExecutado: taskData.pctExecutado || 0,
-        status: taskData.status || 'Não Iniciada'
+        horasRealizadas: 0
       };
       DB.tasks.create(newTask);
       Toast.success('Atividade Adicionada', `A atividade "${desc}" foi criada com sucesso.`);
@@ -1062,7 +1006,7 @@ window.EquipmentPanel = (() => {
     if (partId) {
       const p = DB.parts.get(partId);
       if (p) {
-        document.getElementById('eq-part-modal-title').textContent = 'Editar Solicitação de Peça';
+        document.getElementById('eq-part-modal-title').textContent = 'Editar Peça Faltante';
         document.getElementById('new-part-id').value = p.id;
         document.getElementById('new-part-cod').value = p.codigo || '';
         document.getElementById('new-part-desc').value = p.descricao || '';
@@ -1071,14 +1015,13 @@ window.EquipmentPanel = (() => {
         document.getElementById('new-part-status').value = p.status || 'Solicitada';
         document.getElementById('new-part-critico').checked = !!p.critica;
         document.getElementById('new-part-sol').value = toDateInput(p.dataSolicitacao || today);
-        document.getElementById('new-part-prev').value = toDateInput(p.dataPrevista || p.prazoEntrega || today);
         document.getElementById('new-part-real').value = toDateInput(p.dataReal || '');
         document.getElementById('new-part-entregue').checked = !!p.entregue || p.status === 'Recebida' || p.status === 'Instalada';
         return;
       }
     }
     
-    document.getElementById('eq-part-modal-title').textContent = 'Nova Solicitação de Peça';
+    document.getElementById('eq-part-modal-title').textContent = 'Nova Peça Faltante';
     document.getElementById('new-part-id').value = '';
     document.getElementById('new-part-cod').value = '';
     document.getElementById('new-part-desc').value = '';
@@ -1087,7 +1030,6 @@ window.EquipmentPanel = (() => {
     document.getElementById('new-part-status').value = 'Solicitada';
     document.getElementById('new-part-critico').checked = false;
     document.getElementById('new-part-sol').value = today;
-    document.getElementById('new-part-prev').value = today;
     document.getElementById('new-part-real').value = '';
     document.getElementById('new-part-entregue').checked = false;
   }
@@ -1121,17 +1063,17 @@ window.EquipmentPanel = (() => {
       critica: document.getElementById('new-part-critico').checked,
       fornecedor: '',
       dataSolicitacao: document.getElementById('new-part-sol').value,
-      dataPrevista: document.getElementById('new-part-prev').value,
+      dataPrevista: '',
       dataReal: dataReal,
       entregue: isEntregue
     };
 
     if (id) {
       DB.parts.update(id, partData);
-      Toast.success('Peça Atualizada', `A solicitação da peça "${desc}" foi atualizada.`);
+      Toast.success('Peça Faltante Atualizada', `A peça faltante "${desc}" foi atualizada.`);
     } else {
       DB.parts.create(partData);
-      Toast.success('Peça Solicitada', `A solicitação da peça "${desc}" foi registrada.`);
+      Toast.success('Peça Faltante Registrada', `A peça faltante "${desc}" foi registrada.`);
     }
     closeModal('eq-part-modal');
     Router.navigate('equipment-panel', { id: currentEqId, force: true });
@@ -1529,7 +1471,7 @@ window.EquipmentPanel = (() => {
   function cancelCommentEdit(taskId, commentId) {
     const task = DB.tasks.get(taskId);
     if (!task) return;
-    const listContainer = document.getElementById(`comments-list-${taskId}`);
+    const listContainer = document.getElementById(`comments-list-${taskId}`) || document.getElementById('new-task-obs-history');
     if (listContainer) {
       listContainer.innerHTML = renderComments(task.observacoes, taskId);
     }
@@ -1572,7 +1514,7 @@ window.EquipmentPanel = (() => {
     const updatedObservations = JSON.stringify(comments);
     DB.tasks.update(taskId, { observacoes: updatedObservations });
     
-    const listContainer = document.getElementById(`comments-list-${taskId}`);
+    const listContainer = document.getElementById(`comments-list-${taskId}`) || document.getElementById('new-task-obs-history');
     if (listContainer) {
       listContainer.innerHTML = renderComments(updatedObservations, taskId);
     }
@@ -1607,17 +1549,73 @@ window.EquipmentPanel = (() => {
     const updatedObservations = JSON.stringify(updatedComments);
     DB.tasks.update(taskId, { observacoes: updatedObservations });
 
-    const listContainer = document.getElementById(`comments-list-${taskId}`);
+    const listContainer = document.getElementById(`comments-list-${taskId}`) || document.getElementById('new-task-obs-history');
     if (listContainer) {
       listContainer.innerHTML = renderComments(updatedObservations, taskId);
     }
   }
 
+  function addCommentFromModal() {
+    const input = document.getElementById('new-task-obs');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    if (editingTaskId) {
+      const task = DB.tasks.get(editingTaskId);
+      if (!task) return;
+
+      let comments = [];
+      if (task.observacoes) {
+        try {
+          comments = JSON.parse(task.observacoes);
+          if (!Array.isArray(comments)) {
+            comments = [{ id: 'legacy', text: task.observacoes, user: 'Observação Anterior', createdAt: new Date().toISOString() }];
+          }
+        } catch (e) {
+          comments = [{ id: 'legacy', text: task.observacoes, user: 'Observação Anterior', createdAt: new Date().toISOString() }];
+        }
+      }
+
+      const session = window.Auth.getSession();
+      const newComment = {
+        id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        text: text,
+        user: session ? session.nome : 'Usuário',
+        userId: session ? session.userId : 'anonymous',
+        createdAt: new Date().toISOString()
+      };
+
+      comments.push(newComment);
+      const updatedObservations = JSON.stringify(comments);
+      
+      DB.tasks.update(editingTaskId, { observacoes: updatedObservations });
+      input.value = '';
+      
+      const listContainer = document.getElementById('new-task-obs-history');
+      if (listContainer) {
+        listContainer.style.display = 'block';
+        listContainer.innerHTML = renderComments(updatedObservations, editingTaskId);
+        listContainer.scrollTop = listContainer.scrollHeight;
+      }
+    } else {
+      Toast.warning('Atenção', 'A atividade ainda não foi criada. Salve a atividade primeiro.');
+    }
+  }
+
+  function deleteTaskFromModal() {
+    if (editingTaskId) {
+      deleteTask(currentEqId, editingTaskId);
+    }
+  }
+
   return { 
-    render, toggleAccordion, addFollowUp, openTaskModal, saveTask, deleteTask, 
+    render, toggleAccordion, addFollowUp, openTaskModal, saveTask, deleteTask, deleteTaskFromModal,
     updateTaskStatus, updateTaskField, openPartModal, savePart, deletePart, 
     exportTasksCSV, deleteEquipment, toggleTaskExpand, addComment, editComment, 
     cancelCommentEdit, saveCommentEdit, deleteComment, renderComments,
-    togglePartEntregue, onStatusFormChange, onEntregueFormChange
+    togglePartEntregue, onStatusFormChange, onEntregueFormChange,
+    getEditingTaskId: () => editingTaskId,
+    addCommentFromModal
   };
 })();

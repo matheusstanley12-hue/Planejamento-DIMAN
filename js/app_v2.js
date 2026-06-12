@@ -93,6 +93,78 @@ window.Router = (() => {
 // APP BOOTSTRAP
 // ================================================================
 
+async  function clearAppCache() {
+    if ('caches' in window) { caches.keys().then(names => names.forEach(n => caches.delete(n))); }
+  }
+
+// ================================================================
+// FIRST ACCESS (PASSWORD CHANGE)
+// ================================================================
+function showFirstAccessPasswordChange(matricula, session, loginPage) {
+  const modalHTML = `
+    <div class="modal-overlay" id="first-access-modal" style="z-index:10000;display:flex;">
+      <div class="modal" style="max-width:400px; animation: fadeInUp 0.3s ease;">
+        <div class="modal-header">
+          <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;color:var(--brand-primary-light);"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+            Primeiro Acesso
+          </div>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+          <p style="font-size:var(--text-sm);color:var(--text-secondary);margin:0;">Por motivos de segurança, cadastre sua senha pessoal antes de acessar o sistema.</p>
+          <div class="form-group">
+            <label>Nova Senha</label>
+            <input type="password" id="fa-senha-1" placeholder="Mínimo 6 caracteres" required />
+          </div>
+          <div class="form-group">
+            <label>Confirmar Nova Senha</label>
+            <input type="password" id="fa-senha-2" placeholder="Repita a senha" required />
+          </div>
+          <div id="fa-error" class="alert alert-danger" style="display:none;font-size:var(--text-xs);margin:0;"></div>
+        </div>
+        <div class="modal-footer" style="justify-content:flex-end;">
+          <button class="btn btn-primary" id="fa-save-btn">Acessar Sistema</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+  document.getElementById('fa-save-btn').addEventListener('click', async () => {
+    const s1 = document.getElementById('fa-senha-1').value;
+    const s2 = document.getElementById('fa-senha-2').value;
+    const err = document.getElementById('fa-error');
+    if (s1.length < 6) {
+      err.textContent = 'A senha deve ter pelo menos 6 caracteres.';
+      err.style.display = 'flex';
+      return;
+    }
+    if (s1 !== s2) {
+      err.textContent = 'As senhas não coincidem.';
+      err.style.display = 'flex';
+      return;
+    }
+    
+    const btn = document.getElementById('fa-save-btn');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner spinner-sm"></span> Salvando...`;
+    
+    const success = await window.Auth.changePassword(matricula, s1);
+    if (success) {
+      document.getElementById('first-access-modal').remove();
+      loginPage.remove();
+      session.mustChangePassword = false;
+      window.renderShell(session);
+      window.Router.navigate(session.perfil === 'Executante' ? 'worker-panel' : 'home');
+    } else {
+      err.textContent = 'Erro ao alterar a senha. Tente novamente.';
+      err.style.display = 'flex';
+      btn.disabled = false;
+      btn.textContent = 'Acessar Sistema';
+    }
+  });
+}
+
 async function initApp() {
   if (window.DB && DB.initSupabase) {
     await DB.initSupabase();
@@ -241,9 +313,11 @@ function showLoginPage() {
 
     const result = await Auth.login(matricula, senha);
     if (result.success) {
-      // (wipe logic removed here as well)
-
-      setTimeout(() => { page.remove(); renderShell(result.session); Router.navigate(result.session.perfil === 'Executante' ? 'worker-panel' : 'home'); }, 300);
+      if (result.mustChangePassword) {
+        showFirstAccessPasswordChange(matricula, result.session, page);
+      } else {
+        setTimeout(() => { page.remove(); renderShell(result.session); Router.navigate(result.session.perfil === 'Executante' ? 'worker-panel' : 'home'); }, 300);
+      }
     } else {
       errMsg.textContent = result.error;
       errDiv.style.display = 'flex';
@@ -358,7 +432,7 @@ function renderShell(session) {
     { route:'gantt',      label:'Cronograma Gantt',      icon:'chart-bar',      perm:'gantt',       section:'' },
     { route:'critical',   label:'Caminho Crítico',       icon:'exclamation-triangle', perm:'criticalPath', section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
-    { route:'parts',      label:'Solicitação de Peças',   icon:'cube',           perm:'parts',       section:'' },
+    { route:'parts',      label:'Falta de Peças',   icon:'cube',           perm:'parts',       section:'' },
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO' },
     { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
@@ -371,7 +445,6 @@ function renderShell(session) {
     { route:'ai',         label:'Assistente IA',         icon:'sparkles',       perm:'ai',          section:'INTELIGÊNCIA' },
     { route:'lessons',    label:'Lições Aprendidas',     icon:'light-bulb',     perm:'lessons',     section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'GESTÃO' },
-    { route:'audit',      label:'Auditoria',             icon:'shield-check',   perm:'audit',       section:'' },
     { route:'users',      label:'Usuários',              icon:'user-group',     perm:'users',       section:'' },
   ];
 
@@ -446,6 +519,8 @@ function renderShell(session) {
       }
     </style>
     <div id="app" style="display:flex;height:100vh;overflow:hidden;">
+      <!-- Mobile Sidebar Overlay -->
+      <div id="mobile-overlay" class="mobile-overlay" onclick="closeMobileSidebar()"></div>
       
       <!-- Sidebar -->
       <aside id="sidebar" class="collapsed">
@@ -464,45 +539,37 @@ function renderShell(session) {
           </div>
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
-        ${(session.perfil === 'Desenvolvedor' || session.perfil === 'Administrador') ? `
-        <div class="sidebar-section-label" style="margin-top:auto;">DEV</div>
-        <div class="nav-item" onclick="gerarDadosDeTeste()" style="color:var(--brand-primary-light);">
-          <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
-          <span class="nav-label">Gerar Testes</span>
-        </div>
-        ` : ''}
       </aside>
 
       <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
         <!-- Topbar -->
         <header id="topbar" style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-6);background:var(--bg-card);border-bottom:1px solid var(--border-card);position:sticky;top:0;z-index:100;">
-          <div style="display:flex;align-items:center;gap:var(--space-3);">
-            <div id="sidebar-toggle-topbar" onclick="toggleSidebar()" style="cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;transition:background 0.2s;color:var(--text-primary);margin-right:2px;" onmouseover="this.style.background='var(--bg-base)'" onmouseout="this.style.background='transparent'" title="Menu Lateral">
+          <div style="display:flex;align-items:center;gap:var(--space-3);flex:1;min-width:0;">
+            <div id="sidebar-toggle-topbar" onclick="toggleSidebar()" style="cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;transition:background 0.2s;color:var(--text-primary);margin-right:2px;flex-shrink:0;" onmouseover="this.style.background='var(--bg-base)'" onmouseout="this.style.background='transparent'" title="Menu Lateral">
               <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
                 <circle cx="12" cy="5" r="2"/>
                 <circle cx="12" cy="12" r="2"/>
                 <circle cx="12" cy="19" r="2"/>
               </svg>
             </div>
-            <div style="width:40px;height:40px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform 0.2s;padding:4px;" onclick="toggleSidebar()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Abrir/Fechar Menu Lateral">
+            <div style="width:40px;height:40px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform 0.2s;padding:4px;flex-shrink:0;" onclick="toggleSidebar()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Abrir/Fechar Menu Lateral" class="topbar-title-wrap">
               <img src="logo.png" style="width:100%;height:100%;object-fit:contain;" alt="GEOSOL Logo" />
             </div>
-            <div>
+            <div class="topbar-title-wrap">
               <div style="font-weight:900;font-size:1.2rem;letter-spacing:-0.03em;line-height:1;">DIMAN-BHZ</div>
               <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Planejamento Operacional</div>
             </div>
             
-            <div style="width:1px;height:24px;background:var(--border-card);margin:0 var(--space-2);"></div>
+            <div style="width:1px;height:24px;background:var(--border-card);margin:0 var(--space-2);" class="topbar-title-wrap"></div>
             
-            <button class="btn btn-primary btn-sm" onclick="window.Router.navigate(Auth.getSession()?.perfil === 'Executante' ? 'worker-panel' : 'home')" title="Página Inicial" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);">
+            <button class="btn btn-primary btn-sm btn-home-topbar" onclick="window.Router.navigate(Auth.getSession()?.perfil === 'Executante' ? 'worker-panel' : 'home')" title="Página Inicial" style="display:flex;align-items:center;gap:6px;padding:var(--space-2) var(--space-3);border-radius:var(--radius-full);flex-shrink:0;">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
-              Início
+              <span>Início</span>
             </button>
-
 
             <!-- Global Equipment Filter -->
             ${session.perfil !== 'Executante' ? `
-            <div style="margin-left:var(--space-4); display:flex; align-items:center;">
+            <div style="margin-left:var(--space-4); display:flex; align-items:center; min-width:0; flex:1;" class="topbar-filter-wrap">
               <select id="global-eq-select" class="form-control" style="width:250px; border-radius:var(--radius-full); background:var(--bg-base); border:1px solid var(--border-card); font-size:var(--text-sm);" onchange="window.setGlobalEqFilter(this.value)">
                 <option value="" ${window.GlobalEqFilter === "" ? 'selected' : ''}>Filtro Global: Todos Equipamentos</option>
                 ${DB.equipment.list().filter(e => e.status !== 'Liberado').map(e => `<option value="${e.id}" ${e.id === window.GlobalEqFilter ? 'selected' : ''}>${e.codigo} - ${(e.nome || 'Sem Nome').split(' ').slice(0,2).join(' ')}</option>`).join('')}
@@ -511,15 +578,15 @@ function renderShell(session) {
             ` : ''}
           </div>
           
-          <div class="topbar-actions" style="display:flex;align-items:center;gap:var(--space-3);">
-            <div style="display:flex;align-items:center;gap:var(--space-2);margin-right:var(--space-4);padding-right:var(--space-4);border-right:1px solid var(--border-card);">
+          <div class="topbar-actions" style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;">
+            <div class="topbar-profile" onclick="showUserMenu()" style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;padding:4px var(--space-2);border-radius:var(--radius-md);transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
               <div class="avatar avatar-sm">${avatarInitials(session.nome)}</div>
-              <div style="font-size:var(--text-xs);color:var(--text-secondary);">${session.nome.split(' ')[0]}</div>
+              <div class="topbar-user-name" style="font-size:var(--text-xs);color:var(--text-secondary);">${session.nome.split(' ')[0]}</div>
             </div>
             <button class="theme-btn" onclick="toggleTheme()" title="Alternar tema">
               <svg id="theme-icon-app" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="window.Auth.logout();location.reload();" title="Sair">
+            <button class="btn btn-ghost btn-sm btn-logout-topbar" onclick="window.Auth.logout();location.reload();" title="Sair">
               Sair
             </button>
           </div>
