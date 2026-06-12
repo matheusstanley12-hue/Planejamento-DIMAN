@@ -108,8 +108,8 @@ window.Auth = (() => {
 
   function saveUsers(users) {
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    if (window.DB && DB.syncToSupabase) {
-      DB.syncToSupabase(USERS_KEY, users);
+    if (window.DB && window.DB.syncToSupabase) {
+      window.DB.syncToSupabase(USERS_KEY, users);
     }
   }
 

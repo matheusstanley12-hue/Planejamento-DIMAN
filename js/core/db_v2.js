@@ -25,6 +25,8 @@ window.DB = (() => {
     kpiCache: 'diman_kpi_cache',
     settings: 'diman_settings',
     solicitacoes: 'diman_solicitacoes',
+    users: 'diman_users',
+    audit: 'diman_audit'
   };
 
   window.GlobalEqFilter = '';
@@ -174,13 +176,12 @@ window.DB = (() => {
              if (window.Toast) window.Toast.error('Erro do Banco de Dados', error.message || JSON.stringify(error));
              return;
           }
-        } catch(e) {
+        } catch (e) {
           console.error('Sync failed for collection:', k, e);
           if (window.Toast) window.Toast.error('Erro de Conexão', e.message);
           return;
         }
       }
-    }
     }
     localStorage.setItem('diman_unsynced', 'false');
     if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem.');
