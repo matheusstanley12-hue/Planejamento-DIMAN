@@ -686,13 +686,21 @@ function toggleSidebar() {
 window.toggleSidebar = toggleSidebar;
 
 function openMobileSidebar() {
-  document.getElementById('sidebar')?.classList.add('mobile-open');
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.remove('collapsed');
+    sidebar.classList.add('mobile-open');
+  }
   document.getElementById('mobile-overlay')?.classList.add('visible');
 }
 window.openMobileSidebar = openMobileSidebar;
 
 function closeMobileSidebar() {
-  document.getElementById('sidebar')?.classList.remove('mobile-open');
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    sidebar.classList.remove('mobile-open');
+    sidebar.classList.add('collapsed');
+  }
   document.getElementById('mobile-overlay')?.classList.remove('visible');
 }
 window.closeMobileSidebar = closeMobileSidebar;
