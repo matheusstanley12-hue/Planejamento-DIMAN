@@ -163,8 +163,26 @@ window.Auth = (() => {
   }
 
   async function login(matricula, senha) {
-    const users = getUsers();
-    const user = users.find(u => u.matricula === matricula);
+    let users = getUsers();
+    let user = users.find(u => u.matricula === matricula);
+    
+    // Auto-create user from workforce if they don't exist
+    if (!user && window.DB && DB.workforce) {
+      const wList = DB.workforce.list();
+      const wUser = wList.find(w => w.matricula === matricula);
+      if (wUser) {
+        await createUser({
+          matricula: wUser.matricula,
+          nome: wUser.nome,
+          disciplina: wUser.disciplina,
+          perfil: 'Executante',
+          senhaInicial: '123456'
+        });
+        users = getUsers();
+        user = users.find(u => u.matricula === matricula);
+      }
+    }
+
     if (!user) return { success: false, error: 'Matrícula não encontrada.' };
     if (user.status === 'Inativo') return { success: false, error: 'Usuário inativo. Contate o administrador.' };
     const hash = await hashPassword(senha);
