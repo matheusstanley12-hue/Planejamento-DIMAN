@@ -7,6 +7,21 @@ window.WorkerPanel = (() => {
   let eqFilter = '';
   let activeTimer = null; // { taskId, startTime }
 
+  // Helper function to reliably get equipments for the logged in worker
+  function getMyEquipments(session) {
+    const eqs = window.DB.equipment.list();
+    const workers = window.DB.workforce.list();
+    // Match by matricula first (most reliable), then by exact name
+    const myWorker = workers.find(w => (w.matricula && session.matricula && w.matricula === session.matricula) || w.nome === session.nome);
+    const myDirectEqId = myWorker ? myWorker.equipmentId : null;
+    const myWorkerName = myWorker ? myWorker.nome : session.nome;
+    
+    return eqs.filter(e => {
+      const map = e.workforceMap || {};
+      return Object.values(map).includes(myWorkerName) || Object.values(map).includes(session.nome) || e.id === myDirectEqId;
+    });
+  }
+
   // Load timer state from localStorage on startup
   try {
     const saved = localStorage.getItem('diman_worker_timer');
@@ -56,16 +71,7 @@ window.WorkerPanel = (() => {
     const tasks = DB.tasks.getAll();
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    // Get the current worker object
-    const workers = DB.workforce.list();
-    const myWorker = workers.find(w => w.nome === session.nome);
-    const myDirectEqId = myWorker ? myWorker.equipmentId : null;
-
-    // Get equipments where the worker is listed in the workforceMap OR is directly assigned
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome) || e.id === myDirectEqId;
-    });
+    const myEqs = getMyEquipments(session);
 
     const myEqIds = myEqs.map(e => e.id);
 
@@ -529,11 +535,7 @@ window.WorkerPanel = (() => {
 
   function openCreateTask() {
     const session = Auth.getSession();
-    const eqs = DB.equipment.list();
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments();
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-new-task">
@@ -653,10 +655,7 @@ window.WorkerPanel = (() => {
     const session = Auth.getSession();
     
     // Get only allocated machines
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments(session);
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-new-task">
@@ -1085,10 +1084,7 @@ window.WorkerPanel = (() => {
     const session = Auth.getSession();
     
     // Get only alocated machines
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments(session);
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-part">
@@ -1187,10 +1183,7 @@ window.WorkerPanel = (() => {
     const session = Auth.getSession();
     
     // Get only allocated machines
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments(session);
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-service">
@@ -1289,10 +1282,7 @@ window.WorkerPanel = (() => {
   function openReportRestriction(equipmentId) {
     const eqs = DB.equipment.list();
     const session = Auth.getSession();
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments(session);
 
     const activeEqId = equipmentId || (myEqs[0]?.id || '');
     const tasks = DB.tasks.getAll().filter(t => t.equipmentId === activeEqId);
@@ -1430,10 +1420,7 @@ window.WorkerParts = (() => {
     if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
 
     const eqs = window.DB.equipment.list() || [];
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments(session);
 
     if (myEqs.length === 0) {
       return `
@@ -1542,10 +1529,7 @@ window.WorkerServices = (() => {
     if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
 
     const eqs = window.DB.equipment.list() || [];
-    const myEqs = eqs.filter(e => {
-      const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
-    });
+    const myEqs = getMyEquipments(session);
 
     if (myEqs.length === 0) {
       return `
