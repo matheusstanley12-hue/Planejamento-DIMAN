@@ -15,9 +15,12 @@ if (Test-Path $destDir) {
 # Create destination dir
 New-Item -ItemType Directory -Force -Path $destDir | Out-Null
 
-# Copy index.html
-Write-Host "Copiando index.html..."
+# Copy index.html and logo
+Write-Host "Copiando arquivos da raiz..."
 Copy-Item -Path (Join-Path $srcRoot.FullName "index.html") -Destination (Join-Path $destDir "index.html") -Force
+if (Test-Path (Join-Path $srcRoot.FullName "logo.png")) {
+    Copy-Item -Path (Join-Path $srcRoot.FullName "logo.png") -Destination (Join-Path $destDir "logo.png") -Force
+}
 
 # Copy css folder
 Write-Host "Copiando css/..."

@@ -137,10 +137,18 @@ window.DB = (() => {
       try {
         const { error } = await supabaseClient.from('diman_store')
           .upsert({ collection: collection, key: 'all', data: data }, { onConflict: 'collection,key' });
-        if (error) console.error('Supabase Sync Error:', error);
+        if (error) {
+          console.error('Supabase Sync Error:', error);
+          localStorage.setItem('diman_unsynced', 'true');
+        } else {
+          localStorage.setItem('diman_unsynced', 'false');
+        }
       } catch (err) {
         console.error('Supabase Sync Exception:', err);
+        localStorage.setItem('diman_unsynced', 'true');
       }
+    } else {
+      localStorage.setItem('diman_unsynced', 'true');
     }
   }
   function set(key, data) { 
@@ -173,8 +181,19 @@ window.DB = (() => {
         }
       }
     }
-    if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem do Supabase.');
+    }
+    localStorage.setItem('diman_unsynced', 'false');
+    if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem.');
   }
+
+  // Automatic sync when coming back online
+  window.addEventListener('online', () => {
+    if (localStorage.getItem('diman_unsynced') === 'true') {
+      console.log('[DIMAN] Dispositivo conectado. Sincronizando dados offline...');
+      if (window.Toast) window.Toast.info('Dispositivo Online', 'Sincronizando dados com a nuvem...');
+      forceSyncAll();
+    }
+  });
 
   async function initSupabase() {
     if (!supabaseClient) return;
@@ -187,11 +206,17 @@ window.DB = (() => {
          return; 
       }
       if (data && data.length > 0) {
-        data.forEach(row => {
-          if (row.key === 'all') {
-            localStorage.setItem(row.collection, JSON.stringify(row.data));
-          }
-        });
+        const hasUnsynced = localStorage.getItem('diman_unsynced') === 'true';
+        if (hasUnsynced) {
+          console.log('[DIMAN] Existem alterações locais não sincronizadas. O pull inicial foi cancelado e faremos o push local agora.');
+          await forceSyncAll();
+        } else {
+          data.forEach(row => {
+            if (row.key === 'all') {
+              localStorage.setItem(row.collection, JSON.stringify(row.data));
+            }
+          });
+        }
       }
 
       // 2. Real-time subscription
