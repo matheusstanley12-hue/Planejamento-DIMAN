@@ -1508,10 +1508,7 @@ window.UsersModule = (() => {
     let randomPassword = '';
     for(let i=0; i<6; i++) randomPassword += chars.charAt(Math.floor(Math.random() * chars.length));
 
-    const msgBuffer = new TextEncoder().encode(randomPassword);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const senhaHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const senhaHash = await Auth.hashPassword(randomPassword);
 
     const newUser = {
       id: DB.uid('u'),
