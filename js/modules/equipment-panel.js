@@ -455,7 +455,7 @@ window.EquipmentPanel = (() => {
         </div>
         <div style="background:var(--bg-base);padding:var(--space-4);border-radius:var(--radius-md);border-left:3px solid var(--color-danger);">
           <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Tarefas Críticas Pendentes</div>
-          <div style="font-size:1.8rem;font-weight:800;color:var(--color-danger);">${tasks.filter(t=>t.critico && t.status!=='Concluída').length}</div>
+          <div style="font-size:1.8rem;font-weight:800;color:var(--color-danger);">${tasks.filter(t=>(window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t, tasks) : t.critico) && t.status!=='Concluída').length}</div>
         </div>
       </div>
     `;
@@ -474,6 +474,8 @@ window.EquipmentPanel = (() => {
               <tr>
                 <th style="width:30px;"></th>
                 <th>Descrição da Atividade</th>
+                <th>Planejado</th>
+                <th>Replanejado</th>
                 <th>Responsável</th>
                 <th>Status</th>
                 <th>Avanço</th>
@@ -482,14 +484,28 @@ window.EquipmentPanel = (() => {
             <tbody>
               ${tasks.map(t => {
                 const isChecked = t.status === 'Concluída';
+                const isTaskCritico = window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t, allEqTasks) : t.critico;
                 
+                const preds = (t.predecessoras || []).map(pid => allEqTasks.find(x => x.id === pid)).filter(Boolean);
+                const predsHtml = preds.map(p => `
+                  <span class="badge" style="font-size:9px;padding:2px 6px;background:rgba(255,179,0,0.15);color:var(--color-warning);border:1px solid rgba(255,179,0,0.25);display:inline-flex;align-items:center;gap:3px;margin-top:2px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:9px;height:9px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                    Depende: ${p.descricao} (${p.disciplina})
+                  </span>
+                `).join(' ');
+
                 return `
-                <tr style="${isChecked?'opacity:0.7;':''} ${t.critico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+                <tr style="${isChecked?'opacity:0.7;':''} ${isTaskCritico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
                   <td><input type="checkbox" ${isChecked?'checked':''} onclick="event.stopPropagation(); window.EquipmentPanel.updateTaskStatus('${currentEqId}', '${t.id}', this.checked ? 'Concluída' : 'Não Iniciada')" style="cursor:pointer;" /></td>
                   <td>
                     <div style="font-weight:600;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
-                    ${t.critico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;margin-top:4px;">CRÍTICO</span>':''}
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;">
+                      ${isTaskCritico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;">CRÍTICO</span>':''}
+                      ${predsHtml}
+                    </div>
                   </td>
+                  <td style="font-size:var(--text-xs);color:var(--text-muted);">${t.dataPlanejadaInicio ? `${formatDate(t.dataPlanejadaInicio)} → ${formatDate(t.dataPlanejadaTermino)}` : '—'}</td>
+                  <td style="font-size:var(--text-xs);color:var(--brand-primary-light);font-weight:600;">${t.dataReplanejada ? formatDate(t.dataReplanejada) : '—'}</td>
                   <td>${t.responsavel || '—'}</td>
                   <td>${statusBadge(t.status)}</td>
                   <td><span style="font-weight:700;color:var(--text-primary);">${t.pctExecutado||0}%</span></td>
@@ -1244,7 +1260,7 @@ window.EquipmentPanel = (() => {
       if (leftPct + widthPct > 100) widthPct = 100 - leftPct;
 
       const isDone = t.status === 'Concluída';
-      const isCrit = t.critico;
+      const isCrit = window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t, tasks) : t.critico;
       
       let bg = 'linear-gradient(90deg, var(--brand-primary-light), var(--brand-primary))';
       if (isDone) bg = 'var(--text-muted)';
@@ -1318,7 +1334,7 @@ window.EquipmentPanel = (() => {
       t.horasPlanejadas || 0,
       t.horasRealizadas || 0,
       t.status || '',
-      t.critico ? 'Sim' : 'Não'
+      (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico) ? 'Sim' : 'Não'
     ]);
     
     const csvContent = [

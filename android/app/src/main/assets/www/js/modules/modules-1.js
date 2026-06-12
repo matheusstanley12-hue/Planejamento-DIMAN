@@ -858,18 +858,31 @@ window.TasksModule = (() => {
   function renderTaskRow(t, equipMap) {
     const today = new Date().toISOString().slice(0,10);
     const isLate = t.dataPlanejadaTermino && t.dataPlanejadaTermino < today && t.status !== 'Concluída';
+    
+    // Resolve dependências
+    const allEqTasks = DB.tasks.getByEquipment(t.equipmentId);
+    const preds = (t.predecessoras || []).map(pid => allEqTasks.find(x => x.id === pid)).filter(Boolean);
+    const predsHtml = preds.map(p => `
+      <span class="badge" style="font-size:9px;padding:2px 6px;background:rgba(255,179,0,0.15);color:var(--color-warning);border:1px solid rgba(255,179,0,0.25);display:inline-flex;align-items:center;gap:3px;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:9px;height:9px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+        Depende: ${p.descricao} (${p.disciplina})
+      </span>
+    `).join(' ');
+
     return `<div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4);background:var(--bg-card);border:1px solid ${t.critico ? 'rgba(244,67,54,0.3)' : isLate ? 'rgba(255,179,0,0.2)' : 'var(--border-card)'};border-radius:var(--radius-md);transition:all .2s;" class="hover-lift">
       <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-1);">
+        <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-1);flex-wrap:wrap;">
           ${t.critico ? '<span style="font-size:.7rem;background:var(--color-danger);color:white;padding:2px 6px;border-radius:3px;font-weight:700;">CRÍTICO</span>' : ''}
           <span style="font-size:var(--text-sm);font-weight:700;color:var(--text-primary)">${t.descricao}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
-          <span style="font-size:var(--text-xs);color:var(--text-muted)">${equipMap[t.equipmentId]?.codigo||'—'}</span>
+        <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:4px;">
+          <span style="font-size:var(--text-xs);color:var(--text-muted);font-weight:600;">${equipMap[t.equipmentId]?.codigo||'—'}</span>
           <span class="badge badge-ghost" style="font-size:10px">${t.disciplina}</span>
-          <span style="font-size:var(--text-xs);color:var(--text-muted)">${t.responsavel||'—'}</span>
-          ${t.dataPlanejadaInicio ? `<span style="font-size:var(--text-xs);color:var(--text-muted)">${formatDate(t.dataPlanejadaInicio)} → ${formatDate(t.dataPlanejadaTermino)}</span>` : ''}
+          <span style="font-size:var(--text-xs);color:var(--text-muted)">👤 ${t.responsavel||'—'}</span>
+          ${t.dataPlanejadaInicio ? `<span style="font-size:var(--text-xs);color:var(--text-muted)">📅 Plan: ${formatDate(t.dataPlanejadaInicio)} → ${formatDate(t.dataPlanejadaTermino)}</span>` : ''}
+          ${t.dataReplanejada ? `<span style="font-size:var(--text-xs);color:var(--brand-primary-light);font-weight:600;">🔄 Replan: ${formatDate(t.dataReplanejada)}</span>` : ''}
         </div>
+        ${preds.length > 0 ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;">${predsHtml}</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;">
         <div style="width:80px;">

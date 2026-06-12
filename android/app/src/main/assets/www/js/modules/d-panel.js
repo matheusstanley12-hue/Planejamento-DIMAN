@@ -83,7 +83,7 @@ window.DPanel = (() => {
     });
 
     // Check critical tasks
-    const criticalTomorrow = tomorrowTasks.filter(t => t.critico && t.status !== 'Concluída');
+    const criticalTomorrow = tomorrowTasks.filter(t => (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico) && t.status !== 'Concluída');
     if (criticalTomorrow.length > 0) {
       alerts.push({ type: 'danger', msg: `ATENÇÃO: ${criticalTomorrow.length} atividade${criticalTomorrow.length > 1 ? 's' : ''} do caminho crítico ${criticalTomorrow.length > 1 ? 'estão programadas' : 'está programada'} para amanhã. Verificar disponibilidade de recursos.` });
     }
@@ -107,7 +107,7 @@ window.DPanel = (() => {
     }
 
     // Critical pending from yesterday
-    const yesterdayPending = getTasksForDate(dateOf(-1)).filter(t => t.status !== 'Concluída' && t.critico);
+    const yesterdayPending = getTasksForDate(dateOf(-1)).filter(t => t.status !== 'Concluída' && (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico));
     if (yesterdayPending.length > 0) {
       alerts.push(`Se as ${yesterdayPending.length} atividade${yesterdayPending.length>1?'s':''} pendente${yesterdayPending.length>1?'s':''} de ontem não forem concluídas hoje, a liberação da sonda será impactada.`);
     }
@@ -210,7 +210,7 @@ window.DPanel = (() => {
     const iniciadas = tasks.filter(t => t.status !== 'Não Iniciada').length;
     const emAndamento = tasks.filter(t => t.status === 'Em Andamento').length;
     const concluidas = tasks.filter(t => t.status === 'Concluída').length;
-    const criticas = tasks.filter(t => t.critico).length;
+    const criticas = tasks.filter(t => window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length;
     const equipMap = {};
     DB.equipment.list().forEach(e => { equipMap[e.id] = e; });
 
@@ -311,7 +311,7 @@ window.DPanel = (() => {
           </div>
           <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);">
             <div style="font-size:var(--text-xs);color:var(--color-info)">Críticas</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-info)">${tasks.filter(t=>t.critico).length}</div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-info)">${tasks.filter(t=>window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length}</div>
           </div>
         </div>
 
@@ -390,7 +390,7 @@ window.DPanel = (() => {
             { label: 'Aderência Mensal (30d)', value: `${monthlyAdh}%`, cls: semaphoreClass(monthlyAdh), icon: '📈' },
             { label: 'Índice de Restrições', value: openRestr, cls: openRestr > 5 ? 'danger' : openRestr > 2 ? 'warning' : 'success', icon: '🚧' },
             { label: 'Horas Produtivas Hoje', value: `${hProd.toFixed(0)}h`, cls: 'info', icon: '⏱️' },
-            { label: 'Tarefas Críticas Abertas', value: DB.tasks.getAll().filter(t=>t.critico&&t.status!=='Concluída').length, cls: 'danger', icon: '⚠️' },
+            { label: 'Tarefas Críticas Abertas', value: DB.tasks.getAll().filter(t=>(window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico)&&t.status!=='Concluída').length, cls: 'danger', icon: '⚠️' },
           ].map(item => `
             <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-4);border-left:3px solid var(--color-${item.cls});">
               <div style="font-size:1.3rem;margin-bottom:var(--space-2)">${item.icon}</div>

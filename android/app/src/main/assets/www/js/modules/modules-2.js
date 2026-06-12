@@ -292,7 +292,21 @@ window.CriticalPath = (() => {
     </div>`;
   }
 
-  return { render, calculate };
+  function isTaskCritical(task, allEqTasks) {
+    if (!task) return false;
+    if (task.critico) return true;
+    if (!allEqTasks && window.DB && window.DB.tasks) {
+      allEqTasks = window.DB.tasks.getByEquipment(task.equipmentId);
+    }
+    if (!allEqTasks || !allEqTasks.length) return false;
+    try {
+      const result = calculate(allEqTasks);
+      return result.criticalTasks.some(ct => ct.id === task.id);
+    } catch (e) {}
+    return false;
+  }
+
+  return { render, calculate, isTaskCritical };
 })();
 
 // ================================================================
