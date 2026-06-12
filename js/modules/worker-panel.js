@@ -56,16 +56,21 @@ window.WorkerPanel = (() => {
     const tasks = DB.tasks.getAll();
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    // Get equipments where the worker is listed in the workforceMap
+    // Get the current worker object
+    const workers = DB.workforce.list();
+    const myWorker = workers.find(w => w.nome === session.nome);
+    const myDirectEqId = myWorker ? myWorker.equipmentId : null;
+
+    // Get equipments where the worker is listed in the workforceMap OR is directly assigned
     const myEqs = eqs.filter(e => {
       const map = e.workforceMap || {};
-      return Object.values(map).includes(session.nome);
+      return Object.values(map).includes(session.nome) || e.id === myDirectEqId;
     });
 
     const myEqIds = myEqs.map(e => e.id);
 
-    // Get tasks for those equipments
-    let myTasks = tasks.filter(t => myEqIds.includes(t.equipmentId));
+    // Get tasks for those equipments OR tasks assigned directly to this worker
+    let myTasks = tasks.filter(t => myEqIds.includes(t.equipmentId) || t.responsavel === session.nome);
 
     // Calculate overall metrics BEFORE applying equipment filter
     const totalAtrasadas = myTasks.filter(t => t.status !== 'Concluída' && t.dataPlanejadaTermino && t.dataPlanejadaTermino < todayStr).length;
@@ -230,38 +235,22 @@ window.WorkerPanel = (() => {
     }).join('');
 
     const navTabsHtml = `
-      <div class="filter-tabs" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);border-bottom:1px solid var(--border-card);padding-bottom:var(--space-3);overflow-x:auto;">
-        <button class="btn ${activeTab === 'hoje' ? 'btn-primary' : 'btn-ghost'}" onclick="WorkerPanel.setTab('hoje')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);">
+      <div class="filter-tabs" style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);border-bottom:1px solid var(--border-card);padding-bottom:var(--space-3);overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <button class="btn ${activeTab === 'hoje' ? 'btn-primary' : 'btn-ghost'}" onclick="WorkerPanel.setTab('hoje')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;flex-shrink:0;">
           Hoje <span class="badge ${hoje.length > 0 ? 'badge-primary' : 'badge-ghost'}" style="margin-left:6px">${hoje.length}</span>
         </button>
-        <button class="btn ${activeTab === 'atrasadas' ? 'btn-danger' : 'btn-ghost'}" onclick="WorkerPanel.setTab('atrasadas')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);">
+        <button class="btn ${activeTab === 'atrasadas' ? 'btn-danger' : 'btn-ghost'}" onclick="WorkerPanel.setTab('atrasadas')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;flex-shrink:0;">
           Atrasadas <span class="badge ${atrasadas.length > 0 ? 'badge-danger' : 'badge-ghost'}" style="margin-left:6px">${atrasadas.length}</span>
         </button>
-        <button class="btn ${activeTab === 'futuras' ? 'btn-outline' : 'btn-ghost'}" onclick="WorkerPanel.setTab('futuras')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);">
+        <button class="btn ${activeTab === 'futuras' ? 'btn-outline' : 'btn-ghost'}" onclick="WorkerPanel.setTab('futuras')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;flex-shrink:0;">
           Futuras <span class="badge badge-ghost" style="margin-left:6px">${futuras.length}</span>
         </button>
-        <button class="btn ${activeTab === 'concluidas' ? 'btn-success' : 'btn-ghost'}" onclick="WorkerPanel.setTab('concluidas')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);">
+        <button class="btn ${activeTab === 'concluidas' ? 'btn-success' : 'btn-ghost'}" onclick="WorkerPanel.setTab('concluidas')" style="padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);white-space:nowrap;flex-shrink:0;">
           Concluídas <span class="badge badge-success" style="margin-left:6px">${concluidas.length}</span>
         </button>
       </div>
     `;
 
-    const controlsHtml = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);flex-wrap:wrap;margin-bottom:var(--space-4);">
-        <div style="display:flex;align-items:center;gap:var(--space-2);">
-          <label style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.05em;">Filtro de Equipamento:</label>
-          <select class="form-control" style="width:220px;border-radius:var(--radius-full);background:var(--bg-card);border:1px solid var(--border-card);font-size:var(--text-sm);" onchange="WorkerPanel.setEqFilter(this.value)">
-            <option value="">Todos Equipamentos Alocados</option>
-            ${myEqs.map(e => `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <button class="btn btn-primary btn-sm" onclick="WorkerPanel.openCreateTask()" style="border-radius:var(--radius-full);padding:var(--space-2) var(--space-4);display:inline-flex;align-items:center;gap:6px;">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-            Nova Atividade
-          </button>
-        </div>
-      </div>
     `;
 
     // Inject CSS for custom sub-animations (pulsing for timer button)
