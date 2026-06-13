@@ -474,6 +474,7 @@ function renderShell(session) {
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO' },
     { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
+    { route:'workforce-time', label:'Gestão de Horas',   icon:'clock',          perm:'workforce',   section:'' },
     { route:'costs',      label:'Centro de Custos',      icon:'currency-dollar', perm:'costs',      section:'' },
     { route:'kpi',        label:'Indicadores KPI',       icon:'chart-pie',      perm:'kpi',         section:'ANÁLISE' },
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
@@ -685,6 +686,7 @@ function renderShell(session) {
   if (typeof RestrictionsModule !== 'undefined') Router.register('restrictions', () => RestrictionsModule.render());
   if (typeof PartsModule !== 'undefined') Router.register('parts', () => PartsModule.render());
   if (typeof WorkforceModule !== 'undefined') Router.register('workforce', () => WorkforceModule.render());
+  if (typeof WorkforceTimeModule !== 'undefined') Router.register('workforce-time', () => WorkforceTimeModule.render());
   if (typeof CostsModule !== 'undefined') Router.register('costs', () => CostsModule.render());
   if (typeof KPIModule !== 'undefined') Router.register('kpi', () => KPIModule.render());
   if (typeof TimelineModule !== 'undefined') Router.register('timeline', () => TimelineModule.render());
