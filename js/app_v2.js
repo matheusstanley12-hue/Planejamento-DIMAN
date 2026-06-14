@@ -486,6 +486,7 @@ function renderShell(session) {
     { route:'manuals',    label:'Gestão de Manuais',     icon:'document-report', perm:'equipment',  section:'DOCUMENTAÇÃO' },
     { route:'lessons',    label:'Lições Aprendidas',     icon:'light-bulb',     perm:'lessons',     section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'GESTÃO' },
+    { route:'bonus',      label:'Prêmio Produção',       icon:'currency-dollar', perm:'reports', section:'' },
     { route:'users',      label:'Usuários',              icon:'user-group',     perm:'users',       section:'' },
   ];
 
@@ -671,6 +672,8 @@ function renderShell(session) {
   Router.register('manuals', () => typeof ManualsAdmin !== 'undefined' ? ManualsAdmin.render() : '<div class="page-container">Erro ao carregar módulo de Gestão de Manuais</div>');
   Router.register('services', () => window.ServicesModule ? window.ServicesModule.render() : '<div class="page-container">Erro ao carregar módulo de serviços</div>');
   Router.register('released', () => ReleasedModule.render());
+  Router.register('workforce-time', () => typeof WorkforceTimeModule !== 'undefined' ? WorkforceTimeModule.render() : '<div class="page-container">Erro ao carregar módulo de Gestão de Horas</div>');
+  Router.register('bonus', () => typeof BonusModule !== 'undefined' ? BonusModule.render() : '<div class="page-container">Erro ao carregar módulo de Prêmio Produção</div>');
   if (typeof WaitingModule !== 'undefined') Router.register('waiting', () => WaitingModule.render());
   Router.register('equipment-panel', (p) => EquipmentPanel.render(p));
   Router.register('checklists', ChecklistsModule.render);
