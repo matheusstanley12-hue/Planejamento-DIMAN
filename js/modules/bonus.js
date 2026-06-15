@@ -45,30 +45,42 @@ window.BonusModule = (() => {
     });
 
     // Aggregate by worker
+    // Aggregate by worker
     const workerStats = {};
+    const wfList = DB.workforce.list();
+    const vList = window.DB && DB.vacations ? DB.vacations.list() : [];
+
+    wfList.forEach(w => {
+      let isFerias = false;
+      // Check legacy ferias
+      if (w.feriasInicio && w.feriasFim) {
+        if (new Date(w.feriasInicio + 'T00:00:00') <= endDate && new Date(w.feriasFim + 'T23:59:59') >= startDate) isFerias = true;
+      }
+      // Check vacations db
+      if (vList.some(v => v.workerId === w.id && new Date(v.startDate + 'T00:00:00') <= endDate && new Date(v.endDate + 'T23:59:59') >= startDate)) {
+        isFerias = true;
+      }
+      
+      if (w.status === 'Férias') isFerias = true;
+
+      if (w.status !== 'Ativo' && !isFerias) return;
+
+      workerStats[w.id] = {
+        nome: w.nome,
+        isFerias: isFerias,
+        horasTrabalho: 0,
+        horasPausa: 0,
+        horasExtraFDS: 0,
+        qtdFaltas: 0,
+        horasAtestado: 0
+      };
+    });
 
     filteredTimesheets.forEach(t => {
-      if (!t.workerId) return;
-      
-      // If the worker is currently on vacation, we skip them completely from the bonus
-      const wDB = DB.workforce.get(t.workerId);
-      const isFerias = (typeof AttendanceModule !== 'undefined' && AttendanceModule.isEmFerias) ? AttendanceModule.isEmFerias(wDB) : (wDB && wDB.status === 'Férias');
-      if (isFerias) return;
-
-      if (!workerStats[t.workerId]) {
-        workerStats[t.workerId] = {
-          nome: t.workerNome || 'Desconhecido',
-          horasTrabalho: 0,
-          horasPausa: 0,
-          horasExtraFDS: 0,
-          qtdFaltas: 0,
-          horasAtestado: 0
-        };
-      }
+      if (!t.workerId || !workerStats[t.workerId] || workerStats[t.workerId].isFerias) return;
       
       const hs = parseFloat(t.horasTrabalhadas || 0);
       const tDate = new Date(t.data);
-      // Check if it's Saturday (6) or Sunday (0)
       const isFDS = tDate.getDay() === 0 || tDate.getDay() === 6;
 
       if (t.tipo === 'Trabalho') {
@@ -88,36 +100,42 @@ window.BonusModule = (() => {
     const statsArray = Object.values(workerStats).sort((a,b) => a.nome.localeCompare(b.nome));
 
     statsArray.forEach(w => {
-      const totalHours = w.horasTrabalho + w.horasPausa;
-      let premioPercent = 0;
-      if (totalHours > 0) {
-        premioPercent = (w.horasTrabalho / totalHours) * 100;
-        
-        // Penalize 5% per Unjustified Absence
-        if (w.qtdFaltas > 0) {
-          premioPercent -= (w.qtdFaltas * 5);
+      let badgeColor = 'var(--text-muted)';
+      let badgeText = '0.0%';
+      let trStyle = '';
+
+      if (w.isFerias) {
+        badgeColor = 'var(--color-info)';
+        badgeText = 'Férias (R$ 0,00)';
+        trStyle = 'opacity:0.6;';
+      } else {
+        const totalHours = w.horasTrabalho + w.horasPausa;
+        let premioPercent = 0;
+        if (totalHours > 0) {
+          premioPercent = (w.horasTrabalho / totalHours) * 100;
+          if (w.qtdFaltas > 0) premioPercent -= (w.qtdFaltas * 5);
+          if (premioPercent < 0) premioPercent = 0;
         }
 
-        if (premioPercent < 0) premioPercent = 0;
+        if (premioPercent >= 90) badgeColor = 'var(--color-success)';
+        else if (premioPercent >= 70) badgeColor = 'var(--brand-primary)';
+        else if (premioPercent >= 50) badgeColor = 'var(--color-warning)';
+        else if (premioPercent > 0 || w.horasTrabalho > 0) badgeColor = 'var(--color-danger)';
+        
+        badgeText = premioPercent.toFixed(1) + '%';
       }
 
-      let badgeColor = 'var(--text-muted)';
-      if (premioPercent >= 90) badgeColor = 'var(--color-success)';
-      else if (premioPercent >= 70) badgeColor = 'var(--brand-primary)';
-      else if (premioPercent >= 50) badgeColor = 'var(--color-warning)';
-      else if (premioPercent > 0 || w.horasTrabalho > 0) badgeColor = 'var(--color-danger)';
-
       tableHtml += `
-        <tr style="border-bottom:1px solid var(--border-card); transition:background 0.2s;">
+        <tr style="border-bottom:1px solid var(--border-card); transition:background 0.2s; ${trStyle}">
           <td style="padding:15px;font-weight:bold;color:var(--text-primary);">${w.nome}</td>
-          <td style="padding:15px;color:var(--text-secondary);text-align:center;">${w.horasTrabalho.toFixed(2)}h</td>
-          <td style="padding:15px;color:var(--text-secondary);text-align:center;">${w.horasPausa.toFixed(2)}h</td>
-          <td style="padding:15px;color:var(--color-danger);font-weight:bold;text-align:center;">${w.qtdFaltas}</td>
-          <td style="padding:15px;color:var(--brand-primary);font-weight:bold;text-align:center;">${w.horasAtestado.toFixed(1)}h</td>
-          <td style="padding:15px;color:var(--color-warning);font-weight:bold;text-align:center;">${w.horasExtraFDS.toFixed(2)}h</td>
+          <td style="padding:15px;color:var(--text-secondary);text-align:center;">${w.isFerias ? '—' : w.horasTrabalho.toFixed(2)+'h'}</td>
+          <td style="padding:15px;color:var(--text-secondary);text-align:center;">${w.isFerias ? '—' : w.horasPausa.toFixed(2)+'h'}</td>
+          <td style="padding:15px;color:var(--color-danger);font-weight:bold;text-align:center;">${w.isFerias ? '—' : w.qtdFaltas}</td>
+          <td style="padding:15px;color:var(--brand-primary);font-weight:bold;text-align:center;">${w.isFerias ? '—' : w.horasAtestado.toFixed(1)+'h'}</td>
+          <td style="padding:15px;color:var(--color-warning);font-weight:bold;text-align:center;">${w.isFerias ? '—' : w.horasExtraFDS.toFixed(2)+'h'}</td>
           <td style="padding:15px;text-align:center;">
             <div style="display:inline-block;padding:6px 12px;border-radius:20px;font-weight:900;font-size:14px;background:rgba(0,0,0,0.03);color:${badgeColor};border:1px solid ${badgeColor};" title="Atrasos e pausas reduzem o percentual de trabalho. Faltas reduzem -5% direto.">
-              ${premioPercent.toFixed(1)}%
+              ${badgeText}
             </div>
           </td>
         </tr>

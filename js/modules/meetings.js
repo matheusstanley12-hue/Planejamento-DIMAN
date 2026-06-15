@@ -106,10 +106,7 @@ window.MeetingsModule = (() => {
             <div style="display:flex; gap:15px;">
               <div class="form-group" style="flex:1;">
                 <label>Responsável *</label>
-                <select id="mt-resp" class="form-control" required>
-                  <option value="">Selecione...</option>
-                  ${wf.map(w => `<option value="${w.nome}">${w.nome}</option>`).join('')}
-                </select>
+                <input type="text" id="mt-resp" class="form-control" placeholder="Ex: Engenharia" required />
               </div>
               <div class="form-group" style="flex:1;">
                 <label>Data para Concluir *</label>

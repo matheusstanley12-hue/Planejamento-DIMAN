@@ -19,7 +19,7 @@ window.ManualsAdmin = (() => {
             <h1 style="font-size:var(--text-2xl);font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;">Gestão de Manuais</h1>
             <p style="color:var(--text-secondary);margin-top:var(--space-1);">Cadastre links de manuais e procedimentos (PDF no Drive/SharePoint) para acesso dos executantes.</p>
           </div>
-          <button id="btn-add-manual" class="btn btn-primary" style="display:flex;align-items:center;gap:var(--space-2);">
+          <button onclick="ManualsAdmin.showAddManualModal()" class="btn btn-primary" style="display:flex;align-items:center;gap:var(--space-2);">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Novo Manual
           </button>
@@ -74,7 +74,8 @@ window.ManualsAdmin = (() => {
     `;
   }
 
-  function showAddManualModal(equipments) {
+  function showAddManualModal() {
+    const equipments = window.DB.equipment.list() || [];
     const modalId = `modal-${Date.now()}`;
     const modalHTML = `
       <div id="${modalId}" class="modal-overlay" style="display:flex;animation:fadeIn 0.2s ease;">
@@ -99,14 +100,12 @@ window.ManualsAdmin = (() => {
               <textarea id="man-desc" class="form-control" rows="2" placeholder="Ex: Vista explodida e tabela de torques..."></textarea>
             </div>
             <div class="form-group">
-              <label>Link do Arquivo (URL Pública)</label>
-              <input type="url" id="man-link" class="form-control" placeholder="https://drive.google.com/..." required />
-              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
-                * Cole o link compartilhável do Google Drive, OneDrive ou Dropbox com o PDF.
-              </div>
+              <label>Link do PDF (Drive / SharePoint)</label>
+              <input type="url" id="man-link" class="form-control" placeholder="https://" required />
+              <small style="color:var(--text-muted);display:block;margin-top:4px;">Cole o link direto para o arquivo PDF.</small>
             </div>
           </div>
-          <div class="modal-footer" style="justify-content:flex-end;">
+          <div class="modal-footer">
             <button class="btn btn-ghost" onclick="document.getElementById('${modalId}').remove()">Cancelar</button>
             <button class="btn btn-primary" id="btn-save-man">Salvar Manual</button>
           </div>
@@ -148,7 +147,7 @@ window.ManualsAdmin = (() => {
     }
   }
 
-  return { render, deleteManual };
+  return { render, deleteManual, showAddManualModal };
 })();
 
 window.WorkerManuals = (() => {

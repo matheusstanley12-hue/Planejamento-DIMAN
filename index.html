@@ -27,6 +27,48 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="js/supabase.js"></script>
 
+  <script>
+    // Global Chart.js Plugin for Data Labels
+    if (window.Chart) {
+      Chart.register({
+        id: 'globalDataLabels',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          ctx.save();
+          ctx.font = 'bold 11px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary') || '#333';
+          
+          chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (meta.hidden) return;
+            meta.data.forEach((element, index) => {
+              let value = dataset.data[index];
+              if (value === 0 || value == null || value === '') return;
+              
+              let valStr = String(value);
+              // Add % if it's progress or avanço
+              if (chart.canvas.id === 'ch-eq' || chart.canvas.id === 'plan-chart') valStr += '%';
+
+              const position = element.tooltipPosition();
+              if (chart.config.type === 'bar' || chart.config.type === 'line') {
+                ctx.fillStyle = textColor;
+                ctx.fillText(valStr, position.x, position.y - 12);
+              } else if (chart.config.type === 'doughnut' || chart.config.type === 'pie') {
+                ctx.fillStyle = '#fff';
+                ctx.fillText(valStr, position.x, position.y);
+              }
+            });
+          });
+          ctx.restore();
+        }
+      });
+      // Global Chart Defaults
+      Chart.defaults.layout = { padding: { top: 20 } };
+    }
+  </script>
+
   <!-- Modules -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
@@ -280,7 +322,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script src="js/core/events.js"></script>
-  <script src="js/core/db_v2.js?v=2"></script>
+  <script src="js/core/db_v2.js?v=12"></script>
   <script src="js/core/auth.js"></script>
   <script src="js/core/notifications.js"></script>
 
@@ -295,28 +337,29 @@
   <script src="js/modules/released.js"></script>
   <script src="js/modules/services.js"></script>
   <script src="js/modules/waiting.js"></script>
-  <script src="js/modules/equipment-panel.js?v=2"></script>
-  <script src="js/modules/checklists.js?v=1"></script>
-  <script src="js/modules/equipment-table.js?v=2"></script>
-  <script src="js/modules/modules-1.js?v=4"></script>
-  <script src="js/modules/modules-2.js?v=2"></script>
-  <script src="js/modules/modules-3.js?v=2"></script>
-  <script src="js/modules/worker-panel.js?v=5"></script>
-  <script src="js/modules/workforce-time.js?v=3"></script>
-  <script src="js/modules/bonus.js?v=4"></script>
-  <script src="js/modules/attendance.js?v=3"></script>
-  <script src="js/modules/manuals.js?v=3"></script>
-  <script src="js/modules/meetings.js?v=2"></script>
+  <script src="js/modules/equipment-panel.js?v=12"></script>
+  <script src="js/modules/checklists.js?v=12"></script>
+  <script src="js/modules/equipment-table.js?v=12"></script>
+  <script src="js/modules/modules-1.js?v=12"></script>
+  <script src="js/modules/modules-2.js?v=12"></script>
+  <script src="js/modules/modules-3.js?v=12"></script>
+  <script src="js/modules/worker-panel.js?v=12"></script>
+  <script src="js/modules/workforce-time.js?v=12"></script>
+  <script src="js/modules/bonus.js?v=12"></script>
+  <script src="js/modules/attendance.js?v=12"></script>
+  <script src="js/modules/vacations.js"></script>
+  <script src="js/modules/manuals.js?v=12"></script>
+  <script src="js/modules/meetings.js?v=12"></script>
 
   <!-- D-1 | D | D+1 Panel -->
-  <script src="js/modules/d-panel.js?v=2"></script>
+  <script src="js/modules/d-panel.js?v=12"></script>
 
   <!-- QR Modules -->
   <script src="js/modules/qr-generator.js"></script>
   <script src="js/modules/qr-view_v2.js"></script>
 
   <!-- 3. APP BOOTSTRAP -->
-  <script src="js/app_v2.js?v=5"></script>
+  <script src="js/app_v2.js?v=12"></script>
 
   <!-- Loading screen removal -->
   <script>

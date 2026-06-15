@@ -28,7 +28,8 @@ window.DB = (() => {
     solicitacoes: 'diman_solicitacoes',
     users: 'diman_users',
     audit: 'diman_audit',
-    manuals: 'diman_manuals'
+    manuals: 'diman_manuals',
+    vacations: 'diman_vacations'
   };
 
   window.GlobalEqFilter = '';
@@ -122,7 +123,8 @@ window.DB = (() => {
       { id: 'wf-18131', matricula: '18131', nome: 'KAIQUE MIRANDA SILVA', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() },
       { id: 'wf-18158', matricula: '18158', nome: 'OSEIAS DOS SANTOS ARAUJO', funcao: 'Ajudante', disciplina: 'Mecânica', centroCusto: '05002101', createdAt: now() }
     ],
-    diman_meeting_tasks: []
+    diman_meeting_tasks: [],
+    [KEYS.vacations]: []
   };
 
   function get(key) {
@@ -624,7 +626,7 @@ window.DB = (() => {
         liberados: eqs.filter(e => e.status === 'Liberado').length,
         atrasados: eqs.filter(e => e.status === 'Em Manutenção' && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada < today).length,
         aguardandoPecas: eqs.filter(e => allParts.some(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status))).length,
-        bloqueados: eqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças').length,
+        bloqueados: eqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra').length,
         totalTarefas: allTasks.length,
         concluidas: allTasks.filter(t => t.status === 'Concluída').length,
         pendentes: allTasks.filter(t => t.status !== 'Concluída').length,
@@ -815,8 +817,15 @@ window.DB = (() => {
     delete: (id) => { const m = get(KEYS.meetingTasks); set(KEYS.meetingTasks, m.filter(r => r.id !== id)); }
   };
 
+  const vacations = {
+    list: () => get(KEYS.vacations),
+    add: (data) => { const m = get(KEYS.vacations); m.push({ ...data, createdAt: now() }); set(KEYS.vacations, m); },
+    update: (id, updates) => { let m = get(KEYS.vacations); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.vacations, m); } },
+    delete: (id) => { const m = get(KEYS.vacations); set(KEYS.vacations, m.filter(r => r.id !== id)); }
+  };
+
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, meetingTasks, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, meetingTasks, vacations, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);

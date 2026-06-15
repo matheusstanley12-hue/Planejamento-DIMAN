@@ -87,7 +87,14 @@ window.WorkforceTimeModule = (() => {
           const order = { 'Trabalhando':1, 'Em Pausa':2, 'Ocioso':3 };
           return (order[a.currentState||'Ocioso']) - (order[b.currentState||'Ocioso']);
         }).forEach(w => {
-          const state = w.currentState || 'Ocioso';
+          let isFerias = false;
+          if (typeof AttendanceModule !== 'undefined' && AttendanceModule.isEmFerias) {
+            isFerias = AttendanceModule.isEmFerias(w);
+          }
+          
+          let state = w.currentState || 'Ocioso';
+          if (isFerias) state = 'Férias';
+          
           let stateColor = 'var(--text-muted)';
           let stateBg = 'var(--bg-base)';
           let icon = '';
@@ -107,6 +114,12 @@ window.WorkforceTimeModule = (() => {
             icon = '⏸';
             timerHtml = `<div class="live-timer-wft" data-start="${w.currentActionStartTime}" style="font-family:monospace;font-size:16px;font-weight:bold;margin-top:5px;color:${stateColor}">${formatTimeDiff(w.currentActionStartTime)}</div>`;
             detailsHtml = `<div style="font-size:12px;color:var(--text-secondary);margin-top:5px;">Motivo: <strong>${w.currentPauseReason}</strong></div>`;
+          } else if (state === 'Férias') {
+            stateColor = 'var(--color-info)';
+            stateBg = 'var(--color-info-bg)';
+            icon = '🌴';
+            timerHtml = `<div style="font-family:monospace;font-size:16px;font-weight:bold;margin-top:5px;color:${stateColor}">--:--:--</div>`;
+            detailsHtml = `<div style="font-size:12px;color:var(--text-muted);margin-top:5px;">Aproveitando o descanso</div>`;
           } else {
             icon = '⏹';
             timerHtml = `<div style="font-family:monospace;font-size:16px;font-weight:bold;margin-top:5px;color:var(--text-muted)">00:00:00</div>`;

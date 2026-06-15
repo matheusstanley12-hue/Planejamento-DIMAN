@@ -704,16 +704,27 @@ window.WorkforceModule = (() => {
                         <div class="badge badge-ghost" style="margin:var(--space-2) 0">${w.disciplina}</div>
                         <div style="font-size:var(--text-xs);color:var(--text-muted)">Horas este mês: <strong style="color:var(--brand-primary-light)">${wHours.toFixed(0)}h</strong></div>
                         <div style="margin-top:var(--space-2);">${typeof statusBadge === 'function' ? statusBadge(w.status) : ''}</div>
-                        <div style="margin-top:var(--space-2);">${allocationBadge}</div>
+                        <div style="margin-top:var(--space-2);">
+                          ${(function(){
+                            const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === w.id) : [];
+                            const tIso = new Date().toISOString().slice(0,10);
+                            const activeV = vList.find(v => tIso >= v.startDate && tIso <= v.endDate);
+                            if (activeV) return `<div style="margin:var(--space-1) 0"><span class="badge" style="background:rgba(33, 150, 243, 0.15);color:#2196F3;border:1px solid rgba(33, 150, 243, 0.2);">De Férias</span></div><div style="font-size:10px;color:var(--text-muted);font-style:italic;">Até ${activeV.endDate.split('-').reverse().join('/')}</div>`;
+                            return allocationBadge;
+                          })()}
+                        </div>
                       </div>
-                      <div style="display:flex;justify-content:center;gap:var(--space-2);margin-top:var(--space-3);border-top:1px solid var(--border-color);padding-top:var(--space-2);">
+                      <div style="display:flex;justify-content:center;gap:var(--space-2);margin-top:var(--space-3);border-top:1px solid var(--border-color);padding-top:var(--space-2);flex-wrap:wrap;">
                         <button class="btn btn-ghost btn-sm" onclick="WorkforceModule.openEditWorker('${w.id}')" title="Editar Funcionário" style="display:flex;align-items:center;gap:4px;">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
                           Editar
                         </button>
+                        <button class="btn btn-ghost btn-sm" onclick="WorkforceModule.openVacationModal('${w.id}')" title="Agendar Férias" style="display:flex;align-items:center;gap:4px;color:var(--color-info);">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+                          Férias
+                        </button>
                         <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);display:flex;align-items:center;gap:4px;" onclick="WorkforceModule.deleteWorker('${w.id}', '${w.nome ? w.nome.replace(/'/g, "\\\\'") : ''}')" title="Excluir Funcionário">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397" /></svg>
-                          Excluir
                         </button>
                       </div>
                     </div>`
@@ -782,6 +793,31 @@ window.WorkforceModule = (() => {
       <div class="modal"><div class="modal-header"><div class="modal-title">Apontamento de Horas</div><button class="modal-close" onclick="closeModal('modal-timesheet')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
       <div class="modal-body" id="timesheet-modal-body"></div>
       <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-timesheet')">Cancelar</button><button class="btn btn-primary" onclick="WorkforceModule.saveTimesheet()">Salvar</button></div></div>
+    </div>
+    <!-- Vacation modal -->
+    <div class="modal-overlay" id="modal-vacation">
+      <div class="modal"><div class="modal-header"><div class="modal-title">Agendar Férias</div><button class="modal-close" onclick="closeModal('modal-vacation')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="vacation-worker-id">
+        <div class="form-group">
+          <label>Funcionário</label>
+          <input type="text" id="vacation-worker-name" class="form-control" disabled>
+        </div>
+        <div class="form-row" style="display:flex; gap:10px; margin-top:10px;">
+          <div class="form-group" style="flex:1;">
+            <label>Data de Início</label>
+            <input type="date" id="vacation-start" class="form-control" required>
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Data de Fim</label>
+            <input type="date" id="vacation-end" class="form-control" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('modal-vacation')">Cancelar</button>
+        <button class="btn btn-primary" onclick="WorkforceModule.saveVacation()">Agendar Férias</button>
+      </div></div>
     </div>`;
   }
 
@@ -944,7 +980,47 @@ window.WorkforceModule = (() => {
     Toast.success('Apontamento registrado!', `${hours.toFixed(1)} horas`);
   }
 
-  return { render, setTab, setSector, openCreateWorker, openEditWorker, saveWorker, deleteWorker, openCreateTimesheet, saveTimesheet };
+  function openVacationModal(wId) {
+    const w = DB.workforce.get(wId);
+    if (!w) return;
+    document.getElementById('vacation-worker-id').value = wId;
+    document.getElementById('vacation-worker-name').value = w.nome;
+    const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === wId) : [];
+    const tIso = new Date().toISOString().slice(0,10);
+    const activeV = vList.find(v => tIso >= v.startDate && tIso <= v.endDate);
+    if (activeV) {
+      document.getElementById('vacation-start').value = activeV.startDate;
+      document.getElementById('vacation-end').value = activeV.endDate;
+    } else {
+      document.getElementById('vacation-start').value = tIso;
+      document.getElementById('vacation-end').value = tIso;
+    }
+    openModal('modal-vacation');
+  }
+
+  function saveVacation() {
+    const wId = document.getElementById('vacation-worker-id').value;
+    const start = document.getElementById('vacation-start').value;
+    const end = document.getElementById('vacation-end').value;
+    if (!start || !end) { Toast.error('Erro', 'Preencha as datas.'); return; }
+    if (start > end) { Toast.error('Erro', 'A data de início não pode ser maior que o fim.'); return; }
+    
+    const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === wId) : [];
+    const tIso = new Date().toISOString().slice(0,10);
+    const activeV = vList.find(v => tIso >= v.startDate && tIso <= v.endDate);
+    
+    if (activeV) {
+      DB.vacations.update(activeV.id, { startDate: start, endDate: end });
+    } else {
+      DB.vacations.add({ id: window.DB.uid('vac'), workerId: wId, startDate: start, endDate: end });
+    }
+    
+    closeModal('modal-vacation');
+    Router.navigate('workforce', { force: true });
+    Toast.success('Férias agendadas com sucesso!');
+  }
+
+  return { render, setTab, setSector, openCreateWorker, openEditWorker, saveWorker, deleteWorker, openCreateTimesheet, saveTimesheet, openVacationModal, saveVacation };
 })();
 
 // ================================================================

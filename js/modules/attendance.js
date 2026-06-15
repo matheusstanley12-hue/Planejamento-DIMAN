@@ -4,22 +4,22 @@
 
 window.AttendanceModule = (() => {
 
-  function isEmFerias(w) {
+  function isEmFerias(w, dateToCheck) {
     if (!w) return false;
-    if (w.status === 'Férias') return true; // Legacy fallback
-    if (!w.feriasInicio || !w.feriasFim) return false;
+    if (w.status === 'Férias') return true;
+    const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === w.id) : [];
+    if (vList.length === 0) return false;
     
-    const now = new Date();
-    now.setHours(0,0,0,0);
-    const ini = new Date(w.feriasInicio + 'T00:00:00');
-    const fim = new Date(w.feriasFim + 'T23:59:59');
-    return now >= ini && now <= fim;
+    const d = dateToCheck ? new Date(dateToCheck) : new Date();
+    d.setHours(0,0,0,0);
+    const dateIso = d.toISOString().slice(0, 10);
+    
+    return vList.some(v => dateIso >= v.startDate && dateIso <= v.endDate);
   }
 
   function render() {
     const session = Auth.getSession();
     
-    // Strict permission check: only Admin, Gerente, Desenvolvedor
     if (!session || !['Administrador', 'Gerente', 'Desenvolvedor'].includes(session.perfil)) {
       return `
         <div class="page-container" style="display:flex;justify-content:center;align-items:center;height:80vh;">
@@ -32,22 +32,26 @@ window.AttendanceModule = (() => {
     }
 
     const workers = DB.workforce.list().sort((a,b) => a.nome.localeCompare(b.nome));
+    const vList = window.DB && DB.vacations ? DB.vacations.list() : [];
+    const tIso = new Date().toISOString().slice(0, 10);
 
     let rowsHtml = '';
     workers.forEach(w => {
-      const isFerias = isEmFerias(w);
+      const workerVacations = vList.filter(v => v.workerId === w.id);
+      const activeVacation = workerVacations.find(v => tIso >= v.startDate && tIso <= v.endDate);
+      const scheduledVacation = workerVacations.find(v => v.startDate > tIso);
+
+      const isFerias = !!activeVacation || isEmFerias(w);
       const feriasStyle = isFerias ? 'background:var(--color-warning-bg);opacity:0.8;' : '';
       
       let feriasBadge = '';
       if (isFerias) {
-        feriasBadge = `<span class="badge badge-warning" style="margin-left:10px;">Férias (Até ${w.feriasFim ? w.feriasFim.split('-').reverse().join('/') : '...'})</span>`;
-      } else if (w.feriasInicio) {
-        const now = new Date();
-        now.setHours(0,0,0,0);
-        const ini = new Date(w.feriasInicio + 'T00:00:00');
-        if (ini > now) {
-          feriasBadge = `<span class="badge" style="margin-left:10px;background:rgba(0,0,0,0.05);color:var(--text-muted);">Agendado: ${w.feriasInicio.split('-').reverse().join('/')}</span>`;
-        }
+        const endDate = activeVacation ? activeVacation.endDate : (w.feriasFim || '');
+        feriasBadge = `<span class="badge badge-warning" style="margin-left:10px;">Férias (Até ${endDate.split('-').reverse().join('/')})</span>`;
+      } else if (scheduledVacation) {
+        feriasBadge = `<span class="badge" style="margin-left:10px;background:rgba(0,0,0,0.05);color:var(--text-muted);">Agendado: ${scheduledVacation.startDate.split('-').reverse().join('/')}</span>`;
+      } else if (w.feriasInicio && w.feriasInicio > tIso) {
+        feriasBadge = `<span class="badge" style="margin-left:10px;background:rgba(0,0,0,0.05);color:var(--text-muted);">Agendado: ${w.feriasInicio.split('-').reverse().join('/')}</span>`;
       }
 
       rowsHtml += `
@@ -61,7 +65,7 @@ window.AttendanceModule = (() => {
               <button class="btn btn-outline btn-sm" onclick="AttendanceModule.promptLancamento('${w.id}', 'Falta')" style="color:var(--color-danger);border-color:var(--color-danger);">+ Falta</button>
               <button class="btn btn-outline btn-sm" onclick="AttendanceModule.promptLancamento('${w.id}', 'Atraso')" style="color:var(--color-warning);border-color:var(--color-warning);">+ Atraso</button>
               <button class="btn btn-outline btn-sm" onclick="AttendanceModule.promptLancamento('${w.id}', 'Atestado')" style="color:var(--brand-primary);border-color:var(--brand-primary);">+ Atestado</button>
-              ${isFerias || w.feriasInicio ? 
+              ${isFerias || scheduledVacation || w.feriasInicio ? 
                 `<button class="btn btn-primary btn-sm" onclick="AttendanceModule.cancelFerias('${w.id}')">Cancelar Férias</button>` : 
                 `<button class="btn btn-outline btn-sm" onclick="AttendanceModule.promptFerias('${w.id}')">Programar Férias</button>`
               }
@@ -146,11 +150,13 @@ window.AttendanceModule = (() => {
       return Toast.error('Atenção', 'A data de fim deve ser depois da data de início.');
     }
 
-    DB.workforce.update(workerId, {
-      status: 'Ativo', // Status will be automatically determined by dates
-      feriasInicio: ini,
-      feriasFim: fim
-    });
+    const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === workerId) : [];
+    const activeV = vList.find(v => v.startDate === ini || v.endDate === fim); // simplest way to prevent duplicates, or just add new
+    if (activeV) {
+      DB.vacations.update(activeV.id, { startDate: ini, endDate: fim });
+    } else {
+      DB.vacations.add({ id: window.DB.uid('vac'), workerId, startDate: ini, endDate: fim });
+    }
 
     closeModal('modal-ferias');
     Toast.success('Salvo', 'Férias agendadas com sucesso!');
@@ -159,11 +165,16 @@ window.AttendanceModule = (() => {
 
   function cancelFerias(workerId) {
     if (confirm('Deseja cancelar o período de férias agendado/ativo para este funcionário?')) {
-      DB.workforce.update(workerId, {
-        status: 'Ativo',
-        feriasInicio: null,
-        feriasFim: null
-      });
+      const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === workerId) : [];
+      const tIso = new Date().toISOString().slice(0, 10);
+      const toDelete = vList.find(v => tIso <= v.endDate); // Delete current or future vacation
+      if (toDelete) {
+        DB.vacations.delete(toDelete.id);
+      }
+      
+      // Clear legacy just in case
+      DB.workforce.update(workerId, { status: 'Ativo', feriasInicio: null, feriasFim: null });
+      
       Toast.success('Cancelado', 'As férias foram removidas.');
       Router.navigate('attendance', { force: true });
     }

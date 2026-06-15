@@ -120,9 +120,9 @@ window.HomeModule = (() => {
             ${isAdmin ? `
               <select onchange="event.stopPropagation(); window.HomeModule.updateEquipmentStatus('${e.id}', this.value)" 
                       onclick="event.stopPropagation();" 
-                      class="badge ${e.status === 'Liberado' ? 'badge-success' : e.status === 'Em Manutenção' ? 'badge-primary' : e.status === 'Paralisado' ? 'badge-danger' : e.status === 'Falta de Peças' ? 'badge-warning' : 'badge-ghost'}" 
+                      class="badge ${e.status === 'Liberado' ? 'badge-success' : e.status === 'Em Manutenção' ? 'badge-primary' : e.status === 'Paralisado' ? 'badge-danger' : e.status === 'Falta de Peças' ? 'badge-warning' : e.status === 'Falta de Mão de Obra' ? 'badge-danger' : 'badge-ghost'}" 
                       style="border:none; cursor:pointer; font-weight:700; padding:2px 8px; outline:none; font-family:var(--font-sans); text-align:center; -webkit-appearance:none; -moz-appearance:none; appearance:none;">
-                ${['Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças'].map(s => `
+                ${['Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s => `
                   <option value="${s}" ${e.status === s ? 'selected' : ''} style="background:var(--bg-modal); color:var(--text-primary); font-weight:normal;">${s}</option>
                 `).join('')}
               </select>
@@ -261,7 +261,7 @@ window.HomeModule = (() => {
         </div>
 
         <!-- Kanban Board Horizontal Container -->
-        <div class="planner-board" style="display:flex; gap:var(--space-5); overflow-x:auto; padding-bottom:var(--space-4); align-items:flex-start; width:100%; min-height:calc(100vh - 280px);">
+        <div class="planner-board" style="display:flex; gap:var(--space-5); overflow-x:auto; overflow-y:hidden; padding-bottom:var(--space-4); align-items:flex-start; width:100%; height:calc(100vh - 260px);">
           ${boardHtml}
         </div>
       </div>

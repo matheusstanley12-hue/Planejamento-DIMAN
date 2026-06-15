@@ -743,11 +743,9 @@ window.EquipmentPanel = (() => {
     // Populate the Responsável dropdown based on workforce allocated to currentEqId
     const respSelect = document.getElementById('new-task-resp');
     let wf = DB.workforce.list();
-    if (typeof AttendanceModule !== 'undefined' && AttendanceModule.isEmFerias) {
-      wf = wf.filter(w => !AttendanceModule.isEmFerias(w));
-    } else {
-      wf = wf.filter(w => w.status !== 'Férias');
-    }
+    const vList = window.DB && DB.vacations ? DB.vacations.list() : [];
+    const tIso = new Date().toISOString().slice(0,10);
+    wf = wf.filter(w => !vList.some(v => v.workerId === w.id && tIso >= v.startDate && tIso <= v.endDate));
     const filteredWf = wf.filter(w => w.equipmentId === currentEqId);
     
     let selectedName = '';

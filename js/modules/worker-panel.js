@@ -1353,7 +1353,6 @@ window.WorkerPanel = (() => {
 
   return {
     render,
-    setTab,
     setEqFilter,
     startTimer,
     stopTimer,

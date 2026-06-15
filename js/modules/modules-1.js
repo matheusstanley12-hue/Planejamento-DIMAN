@@ -17,7 +17,10 @@ window.Dashboard = (() => {
   function chartDefaults() {
     return {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#8EACC8', font: { family: 'Inter', size: 11 } } } },
+      plugins: { 
+        legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#8EACC8', font: { family: 'Inter', size: 11 } } },
+      },
+      layout: { padding: { top: 20 } },
       scales: {
         x: { ticks: { color: '#8EACC8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
         y: { ticks: { color: '#8EACC8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -207,22 +210,22 @@ window.Dashboard = (() => {
             { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(21,101,192,0.7)', borderRadius:4 },
             { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(0,200,83,0.7)', borderRadius:4 }
           ]
-        }, options: { ...chartDefaults(), plugins: { legend: { labels: { color:'#8EACC8', font:{family:'Inter',size:11} } } } }});
+        }, options: chartDefaults() });
 
         // Chart 2: Status doughnut
-        const statusCounts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças'].map(s=>eqs.filter(e=>e.status===s).length);
+        const statusCounts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>eqs.filter(e=>e.status===s).length);
         const c2 = document.getElementById('ch-status');
         if (c2) charts.status = new Chart(c2, { type:'doughnut', data: {
-          labels: ['Em Manutenção','Liberado','Paralisado','Falta de Peças'],
-          datasets: [{ data: statusCounts, backgroundColor:['rgba(30,136,229,0.8)','rgba(0,200,83,0.8)','rgba(244,67,54,0.8)','rgba(255,179,0,0.8)'], borderWidth:0 }]
-        }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:'#8EACC8',font:{family:'Inter',size:10}} } } }});
+          labels: ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'],
+          datasets: [{ data: statusCounts, backgroundColor:['rgba(30,136,229,0.8)','rgba(0,200,83,0.8)','rgba(244,67,54,0.8)','rgba(255,179,0,0.8)','rgba(107,114,128,0.8)','rgba(139,92,246,0.8)'], borderWidth:0 }]
+        }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:'#8EACC8',font:{family:'Inter',size:10}} } } } });
 
         // Chart 3: Equipment progress bar
         const c3 = document.getElementById('ch-eq');
         if (c3) charts.eq = new Chart(c3, { type:'bar', data: {
           labels: eqs.map(e=>e.codigo),
           datasets: [{ label:'Avanço %', data: eqs.map(e=>e.pctAvanco||0), backgroundColor: eqs.map(e => e.pctAvanco >= 80 ? 'rgba(0,200,83,0.7)' : e.pctAvanco >= 50 ? 'rgba(30,136,229,0.7)' : 'rgba(255,179,0,0.7)'), borderRadius:4 }]
-        }, options: { ...chartDefaults(), scales: { y: { min:0, max:100, ticks:{color:'#8EACC8',callback:(v)=>v+'%'}, grid:{color:'rgba(255,255,255,0.05)'} }, x:{ticks:{color:'#8EACC8'},grid:{color:'rgba(255,255,255,0.05)'}} } }});
+        }, options: { ...chartDefaults(), scales: { y: { min:0, max:100, ticks:{color:'#8EACC8',callback:(v)=>v+'%'}, grid:{color:'rgba(255,255,255,0.05)'} }, x:{ticks:{color:'#8EACC8'},grid:{color:'rgba(255,255,255,0.05)'}} } } });
 
         // Chart 4: MO consumption
         const ts = DB.timesheets.list();
@@ -588,8 +591,8 @@ window.EquipmentModule = (() => {
         <div class="form-group"><label>🔒 Data Planejada de Liberação ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
         <div class="form-group">
           <label>Status</label>
-          <select id="eq-status" style="background:var(--bg-base);border:1px solid var(--border-card);color:var(--text-primary);">
-            ${['Em Manutenção','Liberado','Paralisado','Falta de Peças'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
+          <select id="eq-status" class="form-control">
+            ${['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -932,7 +935,13 @@ window.TasksModule = (() => {
     const wf = DB.workforce.list();
     
     const currentEqId = t?.equipmentId || (eqs.length ? eqs[0].id : '');
-    const filteredWf = wf.filter(w => w.equipmentId === currentEqId);
+    const vList = window.DB && DB.vacations ? DB.vacations.list() : [];
+    const tIso = new Date().toISOString().slice(0,10);
+    const dateToCheck = t?.dataPlanejadaInicio || tIso;
+    const filteredWf = wf.filter(w => {
+      if (w.equipmentId !== currentEqId) return false;
+      return !vList.some(v => v.workerId === w.id && dateToCheck >= v.startDate && dateToCheck <= v.endDate);
+    });
     
     if (t?.responsavel && t.responsavel !== 'Não atribuído') {
       const respWorker = wf.find(w => w.nome === t.responsavel);

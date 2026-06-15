@@ -476,6 +476,7 @@ function renderShell(session) {
     { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
     { route:'workforce-time', label:'Gestão de Horas',   icon:'clock',          perm:'workforce',   section:'' },
+    { route:'vacations',  label:'Gestão de Férias',      icon:'calendar-days',  perm:'workforce',   section:'' },
     { route:'costs',      label:'Centro de Custos',      icon:'currency-dollar', perm:'costs',      section:'' },
     { route:'kpi',        label:'Indicadores KPI',       icon:'chart-pie',      perm:'kpi',         section:'ANÁLISE' },
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
@@ -592,10 +593,8 @@ function renderShell(session) {
         <header id="topbar" style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-6);background:var(--bg-card);border-bottom:1px solid var(--border-card);position:sticky;top:0;z-index:100;">
           <div style="display:flex;align-items:center;gap:var(--space-3);flex:1;min-width:0;">
             <div id="sidebar-toggle-topbar" onclick="toggleSidebar()" style="cursor:pointer;display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;transition:background 0.2s;color:var(--text-primary);margin-right:2px;flex-shrink:0;" onmouseover="this.style.background='var(--bg-base)'" onmouseout="this.style.background='transparent'" title="Menu Lateral">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" style="width:20px;height:20px;">
-                <circle cx="12" cy="5" r="2"/>
-                <circle cx="12" cy="12" r="2"/>
-                <circle cx="12" cy="19" r="2"/>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
               </svg>
             </div>
             <div style="width:40px;height:40px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform 0.2s;padding:4px;flex-shrink:0;" onclick="toggleSidebar()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Abrir/Fechar Menu Lateral" class="topbar-title-wrap">
@@ -694,6 +693,7 @@ function renderShell(session) {
   if (typeof PartsModule !== 'undefined') Router.register('parts', () => PartsModule.render());
   if (typeof WorkforceModule !== 'undefined') Router.register('workforce', () => WorkforceModule.render());
   if (typeof WorkforceTimeModule !== 'undefined') Router.register('workforce-time', () => WorkforceTimeModule.render());
+  if (typeof VacationsModule !== 'undefined') Router.register('vacations', () => VacationsModule.render());
   if (typeof CostsModule !== 'undefined') Router.register('costs', () => CostsModule.render());
   if (typeof KPIModule !== 'undefined') Router.register('kpi', () => KPIModule.render());
   if (typeof TimelineModule !== 'undefined') Router.register('timeline', () => TimelineModule.render());
@@ -738,10 +738,11 @@ function openMobileSidebar() {
 window.openMobileSidebar = openMobileSidebar;
 
 function closeMobileSidebar() {
+  if (window.innerWidth > 768) return;
   const sidebar = document.getElementById('sidebar');
   if (sidebar) {
     sidebar.classList.remove('mobile-open');
-    sidebar.classList.add('collapsed');
+    // We don't add 'collapsed' here on mobile because mobile uses standard display:none vs transform
   }
   document.getElementById('mobile-overlay')?.classList.remove('visible');
 }

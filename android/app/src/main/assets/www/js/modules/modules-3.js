@@ -434,122 +434,241 @@ window.SimulatorModule = (() => {
 // AI ASSISTANT MODULE
 // ================================================================
 window.AIAssistant = (() => {
-  const messages = [{ role:'ai', content:'Olá! Sou o Assistente de IA do **PLANEJAMENTO DIMAN-BHZ**. Posso analisar dados em tempo real e responder perguntas sobre equipamentos, tarefas, restrições, peças, riscos e muito mais. Como posso ajudar?' }];
+  const messages = [{ role:'ai', content:'Olá! Sou o Assistente de IA avançado do **PLANEJAMENTO DIMAN-BHZ**. Posso analisar dados em tempo real e responder perguntas detalhadas sobre equipamentos, tarefas, restrições, peças, produtividade, custos e riscos. **Importante:** Fui programado exclusivamente para tratar de dados operacionais deste sistema. Como posso ajudar na sua gestão hoje?' }];
 
-  function detectIntent(q) {
-    q = q.toLowerCase();
-    if (/atrasa|demora|atrasad|motivo/.test(q)) return 'delay';
-    if (/liber|entrega|previs/.test(q)) return 'liberation';
-    if (/risco|risk/.test(q)) return 'risk';
-    if (/pe.a|pec|component|material/.test(q)) return 'parts';
-    if (/restri/.test(q)) return 'restrictions';
-    if (/caminho.cr.t|cr.tic/.test(q)) return 'critical';
-    if (/produt|efici|m.o.de.obra|equipe/.test(q)) return 'productivity';
-    if (/recomen|antecip|melhor/.test(q)) return 'recommendation';
-    if (/resum|geral|oficina|status/.test(q)) return 'summary';
-    if (/ol.|oi|ola|bem.vindo|o.que/.test(q)) return 'greeting';
-    return 'general';
+  function normalize(str) {
+    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
   }
 
-  function extractEquipment(q) {
-    const eqs = DB.equipment.list();
-    return eqs.find(e => q.toLowerCase().includes(e.codigo.toLowerCase()));
+  function extractEquipments(query) {
+    const eqs = window.DB && DB.equipment ? DB.equipment.list() : [];
+    const q = normalize(query);
+    return eqs.filter(e => {
+      const code = normalize(e.codigo);
+      if (q.includes(code)) return true;
+      const codeWithoutDash = code.replace(/[-\s]/g, '');
+      if (q.includes(codeWithoutDash)) return true;
+      
+      const numMatch = code.match(/\d+/);
+      if (numMatch && numMatch[0].length >= 2) {
+        const num = numMatch[0];
+        const regex = new RegExp(`\\b${num}\\b`);
+        if (regex.test(q)) return true;
+      }
+      return false;
+    });
+  }
+
+  function detectIntents(q) {
+    q = normalize(q);
+    const intents = [];
+    if (/atraso|atrazo|demora|motivo|porque.*atras|replaneja/.test(q)) intents.push('delay');
+    if (/libera|entrega|previsa|prazo|quando|termina|conclui/.test(q)) intents.push('liberation');
+    if (/risco|perigo|alerta|critico|citico|caminho.*critico|caminho.*citico/.test(q)) intents.push('risk');
+    if (/peca|pesa|material|componente|comprad|solicitad|almoxarifado|sensor|motor|bomba|cilindro/.test(q)) intents.push('parts');
+    if (/restrica|bloqueio|pendencia|impede|impedimento/.test(q)) intents.push('restrictions');
+    if (/produtiv|eficienc|mao.*obra|equipe|mecanic|soldador|ajudante|funcionar/.test(q)) intents.push('productivity');
+    if (/feria|atestado|falta.*funcionar|falta.*mecanic|falta.*equipe|falta.*pessoal|ausencia|atraso.*funcionar/.test(q)) intents.push('attendance');
+    if (/custo|gasto|financeiro|orcamento|valor|preco|comprar/.test(q)) intents.push('costs');
+    if (/resumo|geral|status|panorama|visao.*geral|oficina|como.*esta|tudo/.test(q)) intents.push('summary');
+    if (/ola|oi|bom.*dia|boa.*tarde|boa.*noite|ola.*assistente/.test(q)) intents.push('greeting');
+    if (/internet|web|site|anuncio|manual|esquema|circuito|eletrico|hidraulico|pdf|baixar|download|google|mercado.*livre|procure|pesquise|busque|ache|comprar/.test(q)) intents.push('web_search');
+    return intents;
   }
 
   function processQuery(query) {
-    const intent = detectIntent(query);
-    const eq = extractEquipment(query);
-    const allTasks = DB.tasks.getAll();
-    const parts = DB.parts.getAll();
-    const restrictions = DB.restrictions.getAll().filter(r => r.status === 'Aberta');
-
-    if (intent === 'greeting') {
-      return `Olá! Estou pronto para ajudar. Posso:\n- Analisar motivos de atraso de equipamentos\n- Informar previsões de liberação\n- Identificar riscos e restrições\n- Analisar caminho crítico\n- Verificar peças pendentes\n- Avaliar produtividade da equipe\n\nO que gostaria de saber?`;
+    const intents = detectIntents(query);
+    const matchedEqs = extractEquipments(query);
+    
+    // Strict Guardrail Check for Personal / Non-Maintenance queries
+    if (/receita|piada|politica|clima|futebol|jogo|religiao|pessoal|gerar.*imagem|desenha|piadas/.test(normalize(query))) {
+      return `🚫 **Fora de Escopo**\n\nDesculpe, sou uma IA especializada **exclusivamente** na manutenção de equipamentos e planejamento de oficina. Não respondo a perguntas pessoais, nem gero imagens ou textos fora do contexto industrial.\n\nPor favor, faça perguntas sobre equipamentos, peças, manuais ou produtividade.`;
     }
 
-    if (intent === 'delay') {
-      const target = eq || DB.equipment.list().find(e => e.status === 'Em Manutenção');
-      if (!target) return 'Não encontrei equipamentos em manutenção para analisar.';
-      const repls = target.replanning || [];
-      const openRestr = restrictions.filter(r => r.equipmentId === target.id);
-      const critParts = parts.filter(p => p.equipmentId === target.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-      const totalDelay = repls.reduce((s,r) => s+daysBetween(r.dataAnterior,r.novaData),0);
-      let resp = `📊 **Análise de Atraso — ${target.codigo}**\n\n`;
-      resp += `Status atual: ${target.status} | Avanço: ${target.pctAvanco||0}%\n`;
-      if (totalDelay > 0) resp += `\n⏱️ **Atraso acumulado: ${totalDelay} dias** (${repls.length} replanejamento${repls.length>1?'s':''})\n`;
-      if (repls.length > 0) { resp += `\n📅 Causas dos replanejamentos:\n`; repls.forEach((r,i) => resp += `  R${i+1}: ${r.motivo}\n`); }
-      if (openRestr.length > 0) { resp += `\n🚫 Restrições abertas (${openRestr.length}):\n`; openRestr.forEach(r => resp += `  • ${r.tipo}: ${r.descricao.slice(0,60)}...\n`); }
-      if (critParts.length > 0) { resp += `\n📦 Peças críticas pendentes:\n`; critParts.forEach(p => resp += `  • ${p.descricao} — ${p.status}\n`); }
-      resp += `\n💡 **Recomendação:** ${critParts.length > 0 ? 'Acionar fornecedor das peças críticas com urgência. ' : ''}${openRestr.some(r=>r.tipo==='Falta de Mão de Obra') ? 'Realocar recursos de outras frentes. ' : ''}Monitorar diariamente o caminho crítico.`;
+    if (intents.includes('greeting') && intents.length === 1 && matchedEqs.length === 0) {
+      return `Olá! Estou pronto para fornecer análises precisas da oficina. Posso:\n\n• Diagnosticar motivos de atraso de equipamentos específicos\n• Projetar prazos de liberação\n• Mapear o caminho crítico e gargalos\n• Verificar status de peças e restrições ativas\n• Avaliar alocação de mão de obra e custos\n• Buscar manuais, circuitos e preços de peças na web\n\nMe pergunte sobre um equipamento ou solicite o "resumo geral".`;
+    }
+
+    // Web Search Logic
+    if (intents.includes('web_search')) {
+      const isManual = /manual|esquema|circuito|circuido|pdf|hidraulico|eletrico/.test(normalize(query));
+      const qEncoded = encodeURIComponent(query.replace(/[^\w\s]/gi, ''));
+      
+      let resp = `🌐 **Assistente Web Integrado**\n\n`;
+      resp += `Fiz uma varredura para a sua solicitação. Como não guardo todos os arquivos e preços dentro do banco de dados (por mudarem constantemente), gerei links diretos com filtros precisos para você:\n\n`;
+      
+      if (isManual) {
+        resp += `📄 **Manuais e Circuitos (PDFs):**\n`;
+        resp += `<a href="https://www.google.com/search?q=${qEncoded}+filetype:pdf" target="_blank" style="color:var(--brand-primary);text-decoration:underline;font-weight:bold;">👉 Buscar PDFs no Google (Manuais/Circuitos)</a>\n\n`;
+      } else {
+        resp += `🛒 **Cotação de Peças e Motores:**\n`;
+        resp += `<a href="https://lista.mercadolivre.com.br/${qEncoded.replace(/%20/g, '-')}" target="_blank" style="color:var(--brand-primary);text-decoration:underline;font-weight:bold;">👉 Pesquisar Valores no Mercado Livre</a>\n`;
+        resp += `<a href="https://www.google.com/search?tbm=shop&q=${qEncoded}" target="_blank" style="color:var(--brand-primary);text-decoration:underline;font-weight:bold;">👉 Pesquisar Preços no Google Shopping</a>\n\n`;
+      }
+      
+      resp += `*(Dica: Se encontrar o manual correto, cadastre-o na tela de "Gestão de Manuais" para que a equipe técnica tenha acesso rápido pelo celular).*`;
       return resp;
     }
 
-    if (intent === 'parts') {
-      const critPend = parts.filter(p => p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-      const allPend = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-      let resp = `📦 **Situação das Peças**\n\n`;
-      resp += `Total pendentes: ${allPend.length} | Críticas: ${critPend.length}\n\n`;
-      if (critPend.length > 0) { resp += `⚠️ **Peças críticas bloqueando o caminho crítico:**\n`; critPend.forEach(p => { const eq2 = DB.equipment.get(p.equipmentId); resp += `  • ${p.descricao} (${eq2?.codigo||'—'}) — ${p.status} · Prazo: ${formatDate(p.prazoEntrega)}\n`; }); }
-      if (allPend.length > critPend.length) { resp += `\n📋 Demais peças pendentes: ${allPend.length - critPend.length}\n`; }
-      return resp;
-    }
+    const allTasks = window.DB && DB.tasks ? DB.tasks.getAll() : [];
+    const parts = window.DB && DB.parts ? DB.parts.getAll() : [];
+    const restrictions = window.DB && DB.restrictions ? DB.restrictions.getAll().filter(r => r.status === 'Aberta') : [];
+    const costs = window.DB && DB.costs ? DB.costs.getAll() : [];
 
-    if (intent === 'restrictions') {
-      if (!restrictions.length) return '✅ Nenhuma restrição aberta no momento!';
-      let resp = `🚫 **Restrições Abertas (${restrictions.length})**\n\n`;
-      const byType = {};
-      restrictions.forEach(r => { byType[r.tipo] = (byType[r.tipo]||0)+1; });
-      Object.entries(byType).forEach(([t,c]) => resp += `  • ${t}: ${c}\n`);
-      resp += `\n**Impactando o Caminho Crítico:** ${restrictions.filter(r=>r.impactoCaminhosCriticos).length}\n\n`;
-      restrictions.slice(0,3).forEach(r => { const eq2 = DB.equipment.get(r.equipmentId); resp += `📌 ${eq2?.codigo||'—'}: ${r.descricao.slice(0,80)}...\n`; });
-      return resp;
-    }
+    let resp = '';
 
-    if (intent === 'summary') {
-      const stats = DB.kpi.getEquipmentStats();
-      const eqs = DB.equipment.list();
-      let resp = `🏭 **Resumo Geral da Oficina**\n\n`;
-      resp += `**Equipamentos:** ${stats.emManutencao} em manutenção | ${stats.liberados} liberados | ${stats.bloqueados} paralisados ou com falta de peças\n`;
-      resp += `**Avanço geral:** ${stats.pctAvancoGeral}% concluído\n`;
-      resp += `**Tarefas:** ${stats.totalTarefas} total | ${stats.concluidas} concluídas | ${stats.criticas} críticas\n`;
-      resp += `**Restrições abertas:** ${stats.restricoesAbertas}\n\n`;
-      resp += `**Próximas liberações:**\n`;
-      eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
-        const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
-        const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
-        return dateA.localeCompare(dateB);
-      }).slice(0,3).forEach(e => {
-        const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
-        const days = daysBetween(new Date().toISOString().slice(0,10), datePrev);
-        resp += `  • ${e.codigo} (${e.cliente}): ${formatDate(datePrev)} ${days < 0 ? `— ${Math.abs(days)} dias ATRASADO ⚠️` : `— ${days} dias`}\n`;
+    // If specific equipment mentioned
+    if (matchedEqs.length > 0) {
+      matchedEqs.forEach(eq => {
+        resp += `📊 **Análise do Equipamento: ${eq.codigo}** (${eq.cliente})\n`;
+        resp += `• **Status atual:** ${eq.status} | **Avanço físico:** ${eq.pctAvanco || 0}%\n`;
+        
+        const eqRestr = restrictions.filter(r => r.equipmentId === eq.id);
+        const eqParts = parts.filter(p => p.equipmentId === eq.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+        const eqCritParts = eqParts.filter(p => p.critica);
+        const repls = eq.replanning || [];
+        const eqCosts = costs.filter(c => c.equipmentId === eq.id);
+        const totalRealizado = eqCosts.reduce((s,c) => s+c.valorRealizado, 0);
+
+        const totalDelay = repls.reduce((s,r) => s+window.daysBetween(r.dataAnterior,r.novaData),0);
+        if (totalDelay > 0) {
+          resp += `• **Atraso Acumulado:** ${totalDelay} dias identificados ao longo de ${repls.length} replanejamento(s).\n`;
+          resp += `• **Última Causa de Atraso:** ${repls[repls.length-1].motivo}\n`;
+        }
+        if (eq.dataLiberacaoAtual || eq.dataLiberacaoPlanejada) {
+          const datePrev = eq.dataLiberacaoAtual || eq.dataLiberacaoPlanejada;
+          const daysToLib = window.daysBetween(new Date().toISOString().slice(0,10), datePrev);
+          resp += `• **Previsão de Liberação:** ${window.formatDate(datePrev)} (${daysToLib < 0 ? 'ATRASADO em '+Math.abs(daysToLib)+' dias' : 'em '+daysToLib+' dias'}).\n`;
+        }
+
+        if (eqRestr.length > 0) {
+          resp += `\n🚫 **Restrições Impeditivas:**\n`;
+          eqRestr.forEach(r => resp += `  - [${r.tipo}] ${r.descricao}\n`);
+        } else if (intents.includes('restrictions')) {
+          resp += `\n✅ Nenhuma restrição aberta no momento para este equipamento.\n`;
+        }
+
+        if (eqParts.length > 0) {
+          resp += `\n📦 **Peças Pendentes:** ${eqParts.length} no total.\n`;
+          if (eqCritParts.length > 0) {
+            resp += `  **ATENÇÃO (Caminho Crítico):**\n`;
+            eqCritParts.forEach(p => resp += `  - ${p.descricao} (${p.status}) - Chega em: ${window.formatDate(p.prazoEntrega)}\n`);
+          }
+        } else if (intents.includes('parts')) {
+          resp += `\n✅ Nenhuma peça pendente aguardando entrega.\n`;
+        }
+
+        if (totalRealizado > 0) {
+          resp += `\n💰 **Custo Realizado:** R$ ${totalRealizado.toFixed(2)}\n`;
+        }
+
+        resp += `\n💡 **Diagnóstico IA:** `;
+        if (eq.status === 'Concluído') resp += `Equipamento finalizado sem pendências ativas.`;
+        else if (eqRestr.length > 0 || eqCritParts.length > 0) resp += `O equipamento encontra-se em Risco Alto de atraso devido a ${eqRestr.length} restrições e ${eqCritParts.length} peças críticas. Recomenda-se acompanhamento diário com Suprimentos e priorização pela equipe técnica.`;
+        else resp += `O andamento está dentro da normalidade operacional, sem bloqueios críticos mapeados.`;
+        resp += `\n\n`;
       });
       return resp;
     }
 
-    if (intent === 'risk') {
-      const today = new Date().toISOString().slice(0,10);
+    // General Summary Logic
+    if (intents.includes('summary')) {
+      const stats = DB.kpi.getEquipmentStats();
+      const eqs = DB.equipment.list();
+      resp += `🏢 **Panorama Operacional DIMAN-BHZ**\n\n`;
+      resp += `**Operação:**\n`;
+      resp += `• **${stats.emManutencao}** em manutenção ativa.\n`;
+      resp += `• **${stats.liberados}** equipamentos liberados.\n`;
+      resp += `• **${stats.bloqueados}** paralisados / aguardando peças.\n`;
+      resp += `• Avanço Geral da Oficina: **${stats.pctAvancoGeral}%**\n\n`;
+      
+      const activeRestr = restrictions.length;
+      const critParts = parts.filter(p => p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
+      resp += `**Riscos & Bloqueios:**\n`;
+      resp += `• **${activeRestr}** restrições ativas no momento.\n`;
+      resp += `• **${critParts}** peças críticas atrasando cronogramas.\n\n`;
+
+      const lateEqs = eqs.filter(e => e.status === 'Em Manutenção' && (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) && window.daysBetween(new Date().toISOString().slice(0,10), e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) < 0);
+      if (lateEqs.length > 0) {
+        resp += `⚠️ **Equipamentos Atrasados:**\n`;
+        lateEqs.forEach(e => resp += `  - ${e.codigo} (Avanço: ${e.pctAvanco||0}%)\n`);
+      }
+      return resp;
+    }
+
+    if (intents.includes('productivity') || intents.includes('attendance')) {
+      const wf = window.DB && DB.workforce ? DB.workforce.list() : [];
+      const vacs = window.DB && DB.vacations ? DB.vacations.list() : [];
+      resp += `👥 **Análise de Mão de Obra e Produtividade**\n\n`;
+      resp += `• **Efetivo Total:** ${wf.length} colaboradores cadastrados.\n`;
+      
+      const onVacation = vacs.filter(v => window.daysBetween(v.dataFim, new Date().toISOString().slice(0,10)) <= 0 && window.daysBetween(new Date().toISOString().slice(0,10), v.dataInicio) <= 0);
+      if (onVacation.length > 0) {
+        resp += `• **Colaboradores em Férias/Afastamento:** ${onVacation.length}\n`;
+        onVacation.forEach(v => {
+          const w = wf.find(wk => wk.id === v.workerId);
+          if (w) resp += `  - ${w.nome} (Retorno em: ${window.formatDate(v.dataFim)})\n`;
+        });
+      }
+      resp += `\nA alocação de mão de obra afeta diretamente o tempo de execução. Manter as metas do Prêmio Produção atreladas à presença é vital para a produtividade da equipe.`;
+      return resp;
+    }
+
+    if (intents.includes('restrictions')) {
+      if (!restrictions.length) return '✅ O sistema não acusa nenhuma restrição bloqueando as manutenções no momento. Cenário ideal!';
+      resp += `🚫 **Mapeamento de Restrições Ativas (${restrictions.length})**\n\n`;
+      const byType = {};
+      restrictions.forEach(r => { byType[r.tipo] = (byType[r.tipo]||0)+1; });
+      Object.entries(byType).forEach(([t,c]) => resp += `• **${t}:** ${c} ocorrência(s)\n`);
+      
+      resp += `\n**Impacto Crítico:** ${restrictions.filter(r=>r.impactoCaminhosCriticos).length} restrições estão no Caminho Crítico da oficina, atrasando as datas de entrega finais.\n`;
+      return resp;
+    }
+
+    if (intents.includes('risk') || intents.includes('delay')) {
       const atRisk = DB.equipment.list().filter(e => {
         if (e.status !== 'Em Manutenção') return false;
         const openRestr = restrictions.filter(r => r.equipmentId === e.id);
         const critParts = parts.filter(p => p.equipmentId === e.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
         return openRestr.length > 0 || critParts.length > 0;
       });
-      if (!atRisk.length) return '✅ Nenhum equipamento com risco elevado identificado no momento.';
-      let resp = `⚠️ **Equipamentos com Risco de Atraso (${atRisk.length})**\n\n`;
+      if (!atRisk.length) return '✅ A IA não detectou equipamentos com alto risco de atraso baseado nas restrições e peças atuais.';
+      resp += `⚠️ **Equipamentos com Alto Risco de Atraso (${atRisk.length})**\n\n`;
       atRisk.forEach(e => {
-        const restr = restrictions.filter(r => r.equipmentId === e.id);
-        const cParts = parts.filter(p => p.equipmentId === e.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-        resp += `🔴 **${e.codigo}** (${e.cliente}):\n`;
-        if (restr.length) resp += `  • ${restr.length} restrição(ões) aberta(s)\n`;
-        if (cParts.length) resp += `  • ${cParts.length} peça(s) crítica(s) pendente(s)\n`;
+        resp += `🔴 **${e.codigo}**: `;
+        const issues = [];
+        const restrCount = restrictions.filter(r => r.equipmentId === e.id).length;
+        const partCount = parts.filter(p => p.equipmentId === e.id && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
+        if (restrCount) issues.push(`${restrCount} restrição(ões)`);
+        if (partCount) issues.push(`${partCount} peça(s) crítica(s)`);
+        resp += issues.join(' e ') + '.\n';
       });
       return resp;
     }
+    if (intents.includes('parts')) {
+      const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+      if (!pendingParts.length) return '✅ Nenhuma peça pendente de entrega no momento para a oficina.';
+      
+      let resp = `📦 **Panorama de Peças Pendentes (${pendingParts.length})**\n\n`;
+      const critParts = pendingParts.filter(p => p.critica);
+      
+      if (critParts.length > 0) {
+        resp += `⚠️ **ATENÇÃO - Peças Críticas (${critParts.length}):**\n`;
+        critParts.forEach(p => {
+          const eq = DB.equipment.list().find(e => e.id === p.equipmentId);
+          resp += `• [${eq ? eq.codigo : '?'}] ${p.descricao} (${p.status}) - Chega em: ${window.formatDate(p.prazoEntrega)}\n`;
+        });
+        resp += `\n`;
+      }
+      
+      const normalParts = pendingParts.filter(p => !p.critica);
+      if (normalParts.length > 0) {
+        resp += `**Outras Peças Aguardadas:** ${normalParts.length} item(ns).\n`;
+      }
+      return resp;
+    }
 
-    return `Analisei sua pergunta e posso oferecer as seguintes informações:\n\n${(() => {
-      const stats = DB.kpi.getEquipmentStats();
-      return `📊 Situação atual: ${stats.emManutencao} equipamentos em manutenção, ${stats.restricoesAbertas} restrições abertas, avanço geral de ${stats.pctAvancoGeral}%.\n\nPara análises mais detalhadas, tente perguntas como:\n• "Por que a SSM-288 está atrasada?"\n• "Quais peças bloqueiam a liberação?"\n• "Resumo geral da oficina"`;
-    })()}`;
+    return `🤖 **Processamento Finalizado**\n\nNão consegui cruzar a sua pergunta exata com um de nossos relatórios de prateleira, porém afirmo o seguinte status atual:\nExistem **${DB.equipment.list().filter(e=>e.status==='Em Manutenção').length}** equipamentos em manutenção na oficina.\n\nPara perguntas complexas, experimente incluir o código do equipamento (ex: SSM-288) ou especificar claramente o que busca (Peças, Restrições, Produtividade, etc). Lembrando: atuo estritamente nos dados de Manutenção e Planejamento.`;
   }
 
   function addMessage(role, content) {
@@ -559,11 +678,15 @@ window.AIAssistant = (() => {
       const div = document.createElement('div');
       div.className = `ai-message ${role}`;
       div.innerHTML = `
-        <div class="ai-avatar">${role === 'ai' ? '🤖' : '👤'}</div>
-        <div class="ai-bubble">${content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;')}</div>
+        <div style="font-size:1.3rem;flex-shrink:0">${role === 'ai' ? '🤖' : '👤'}</div>
+        <div style="background:${role === 'ai' ? 'var(--bg-base)' : 'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;max-width:80%;">${content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;')}</div>
       `;
       div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);animation:fadeInUp .3s ease;';
-      if (role === 'user') div.style.flexDirection = 'reverse';
+      if (role === 'user') {
+        div.style.flexDirection = 'row-reverse';
+        div.children[1].style.background = 'var(--brand-primary)';
+        div.children[1].style.color = 'white';
+      }
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
     }
@@ -575,19 +698,19 @@ window.AIAssistant = (() => {
     if (input) input.value = '';
     addMessage('user', query);
 
-    // Typing indicator
     const container = document.getElementById('ai-chat-messages');
     const typing = document.createElement('div');
     typing.id = 'ai-typing';
-    typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);';
-    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Analisando dados...</span>';
+    typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);animation:fadeInUp .3s ease;';
+    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Processando análise de dados...</span>';
     container?.appendChild(typing);
+    container.scrollTop = container.scrollHeight;
 
     setTimeout(() => {
       document.getElementById('ai-typing')?.remove();
       const response = processQuery(query);
       addMessage('ai', response);
-    }, 600);
+    }, 800);
   }
 
   const suggestions = [
@@ -1035,7 +1158,7 @@ window.ReportsModule = (() => {
       const total = filteredEqs.length;
       const emManutencao = filteredEqs.filter(e => e.status === 'Em Manutenção').length;
       const liberados = filteredEqs.filter(e => e.status === 'Liberado').length;
-      const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças').length;
+      const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra').length;
       const avgProgress = total > 0 ? Math.round(filteredEqs.reduce((s, e) => s + (e.pctAvanco || 0), 0) / total) : 0;
 
       addHeader("Relatório de Equipamentos em Manutenção");
