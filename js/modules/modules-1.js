@@ -256,6 +256,19 @@ window.Dashboard = (() => {
           </div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:var(--space-5);">
+        <div class="card-header">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:20px;height:20px;color:var(--brand-primary);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            Inteligência Analítica: Comparativo de Mão de Obra
+          </div>
+        </div>
+        <div id="labor-comparison-container" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:var(--space-4);">
+          <!-- Rendered by JS below -->
+        </div>
+      </div>
+
     </div>`;
 
     setTimeout(() => {
@@ -374,6 +387,13 @@ window.Dashboard = (() => {
         }, options: optAnual });
 
       } catch(e) { console.warn('Chart.js error:', e); }
+
+      try {
+        if (window.EquipmentModule && window.EquipmentModule.renderLaborComparison) {
+          window.EquipmentModule.renderLaborComparison();
+        }
+      } catch(e) { console.error('Labor comparison error:', e); }
+
     }, 100);
 
     return html;
@@ -922,7 +942,86 @@ window.EquipmentModule = (() => {
     });
   }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete };
+  function renderLaborComparison() {
+    setTimeout(() => {
+      try {
+        const allTs = DB.timesheets.list().filter(t => t.tipo === 'Trabalho');
+        const allEqTasks = DB.tasks.getAll();
+        const taskDict = {}; 
+        allEqTasks.forEach(t => taskDict[t.id] = t);
+        
+        const laborMap = {}; 
+        allTs.forEach(ts => {
+          const t = taskDict[ts.taskId];
+          if (!t || !t.descricao) return;
+          const key = (t.descricao.toLowerCase().trim() + '|' + (t.disciplina||'Geral')).trim();
+          if (!laborMap[key]) {
+            laborMap[key] = { desc: t.descricao, disc: t.disciplina||'Geral', workers: {} };
+          }
+          const wName = ts.workerNome || 'Desconhecido';
+          if (!laborMap[key].workers[wName]) {
+            laborMap[key].workers[wName] = { hours: 0, eqs: new Set() };
+          }
+          laborMap[key].workers[wName].hours += (ts.horasTrabalhadas || 0);
+          
+          const eq = DB.equipment.get(t.equipmentId);
+          if (eq) laborMap[key].workers[wName].eqs.add(eq.codigo);
+        });
+
+        const comparisons = Object.values(laborMap).filter(item => Object.keys(item.workers).length > 1);
+        
+        const container = document.getElementById('labor-comparison-container');
+        if (container) {
+          if (comparisons.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Não há dados suficientes para gerar comparativos (é necessário que dois ou mais mecânicos realizem atividades com o mesmo nome).</div>';
+          } else {
+            comparisons.sort((a,b) => {
+              const sumA = Object.values(a.workers).reduce((s,w)=>s+w.hours,0);
+              const sumB = Object.values(b.workers).reduce((s,w)=>s+w.hours,0);
+              return sumB - sumA;
+            });
+
+            container.innerHTML = comparisons.map(item => {
+              const workerList = Object.entries(item.workers).map(([name, data]) => ({name, hours: data.hours, eqs: Array.from(data.eqs)}));
+              workerList.sort((a,b) => a.hours - b.hours);
+              
+              return `
+                <div style="border:1px solid var(--border-card);border-radius:var(--radius-md);padding:var(--space-4);background:var(--bg-base);">
+                  <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">${item.disc}</div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;line-height:1.3;">${item.desc}</div>
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${workerList.map((w, idx) => `
+                      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:4px;border-bottom:1px solid var(--border-light);">
+                        <div>
+                          <div style="font-size:13px;color:var(--text-secondary);font-weight:${idx===0?'700':'400'};">
+                            ${idx===0?'🏆 ':''}${w.name}
+                          </div>
+                          <div style="font-size:10px;color:var(--text-muted);">${w.eqs.join(', ')}</div>
+                        </div>
+                        <div style="font-size:14px;font-weight:700;color:${idx===0?'var(--color-success)':'var(--text-primary)'};">
+                          ${w.hours.toFixed(1)}h
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+      } catch (e) {
+        console.error('Error rendering labor comparison:', e);
+      }
+      
+      try {
+        if (window.EquipmentModule && window.EquipmentModule.renderLaborComparison) {
+          window.EquipmentModule.renderLaborComparison();
+        }
+      } catch(e) { console.error(e); }
+    }, 100);
+  }
+
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison };
 })();
 
 // ================================================================
