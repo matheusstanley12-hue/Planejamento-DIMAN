@@ -471,6 +471,7 @@ function renderShell(session) {
     { route:'services',   label:'Serviços / Aprovações', icon:'clipboard-document-check', perm:'dashboard', section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
     { route:'parts',      label:'Falta de Peças',   icon:'cube',           perm:'parts',       section:'' },
+    { route:'meetings',   label:'Ata de Reunião',   icon:'clipboard-list', perm:'planning',    section:'' },
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO' },
     { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
@@ -679,6 +680,7 @@ function renderShell(session) {
   if (typeof WaitingModule !== 'undefined') Router.register('waiting', () => WaitingModule.render());
   Router.register('equipment-panel', (p) => EquipmentPanel.render(p));
   if (typeof ChecklistsModule !== 'undefined') Router.register('checklists', ChecklistsModule.render);
+  if (typeof MeetingsModule !== 'undefined') Router.register('meetings', () => MeetingsModule.render());
   
   if (typeof DPanel !== 'undefined') Router.register('d-panel', () => DPanel.render());
   if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
