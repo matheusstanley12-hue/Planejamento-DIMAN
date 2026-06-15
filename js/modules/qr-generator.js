@@ -67,14 +67,28 @@ window.QrGeneratorModule = (() => {
   function downloadDirectPDF(id, codigo, nome) {
     const url = window.location.origin + window.location.pathname + '#qrview?id=' + id;
     
-    // Create a hidden wrapper so the user doesn't see the PDF being built
-    const hiddenWrapper = document.createElement('div');
-    hiddenWrapper.style.height = '0px';
-    hiddenWrapper.style.overflow = 'hidden';
-    hiddenWrapper.style.position = 'absolute';
-    hiddenWrapper.style.top = '0';
-    hiddenWrapper.style.left = '0';
-    document.body.appendChild(hiddenWrapper);
+    // Create an overlay that shows the PDF being generated (fixes all blank/invisible html2canvas bugs)
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.zIndex = '999999';
+    overlay.style.background = 'rgba(248, 250, 252, 0.95)';
+    overlay.style.display = 'flex';
+    overlay.style.flexDirection = 'column';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    
+    const loadingText = document.createElement('div');
+    loadingText.innerText = 'Gerando PDF, aguarde...';
+    loadingText.style.fontSize = '20px';
+    loadingText.style.fontWeight = 'bold';
+    loadingText.style.color = '#334155';
+    loadingText.style.marginBottom = '20px';
+    loadingText.style.fontFamily = 'Arial, sans-serif';
+    overlay.appendChild(loadingText);
 
     const wrapper = document.createElement('div');
     wrapper.style.width = '600px';
@@ -82,7 +96,9 @@ window.QrGeneratorModule = (() => {
     wrapper.style.padding = '40px';
     wrapper.style.boxSizing = 'border-box';
     wrapper.style.fontFamily = 'Arial, sans-serif';
-    hiddenWrapper.appendChild(wrapper);
+    wrapper.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+    overlay.appendChild(wrapper);
+    document.body.appendChild(overlay);
 
     const contentBox = document.createElement('div');
     contentBox.style.background = 'white';
@@ -91,13 +107,6 @@ window.QrGeneratorModule = (() => {
     contentBox.style.textAlign = 'center';
     contentBox.style.border = '2px solid #e2e8f0';
     wrapper.appendChild(contentBox);
-
-    const logo = document.createElement('img');
-    logo.src = 'logo.png';
-    logo.style.width = '140px';
-    logo.style.marginBottom = '20px';
-    logo.style.display = 'inline-block';
-    contentBox.appendChild(logo);
 
     const title = document.createElement('div');
     title.style.fontSize = '32px';
@@ -117,7 +126,6 @@ window.QrGeneratorModule = (() => {
     contentBox.appendChild(qrBorder);
 
     const qrContainer = document.createElement('div');
-    // Ensure the container is appropriately sized
     qrContainer.style.width = '250px';
     qrContainer.style.height = '250px';
     qrContainer.style.display = 'flex';
@@ -151,11 +159,11 @@ window.QrGeneratorModule = (() => {
         correctLevel : QRCode.CorrectLevel.H
       });
       
-      // Give QRCode.js a brief moment to render the canvas
+      // Give QRCode.js time to draw and DOM to paint
       setTimeout(() => {
         const canvas = qrContainer.querySelector('canvas');
         if (!canvas) {
-          document.body.removeChild(hiddenWrapper);
+          document.body.removeChild(overlay);
           return alert('Falha ao gerar QR Code interno.');
         }
 
@@ -167,25 +175,23 @@ window.QrGeneratorModule = (() => {
           jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
         
-        Toast && Toast.info('Gerando PDF...', 'Aguarde um instante...');
-        
         if (window.html2pdf) {
           window.html2pdf().set(opt).from(wrapper).save().then(() => {
-            document.body.removeChild(hiddenWrapper);
-            Toast && Toast.success('PDF Gerado', 'O download foi iniciado!');
+            document.body.removeChild(overlay);
+            Toast && Toast.success('PDF Gerado', 'O download foi concluído!');
           }).catch(e => {
-            document.body.removeChild(hiddenWrapper);
+            document.body.removeChild(overlay);
             console.error("html2pdf error:", e);
             Toast && Toast.error('Erro', 'Não foi possível gerar o PDF.');
           });
         } else {
-          document.body.removeChild(hiddenWrapper);
+          document.body.removeChild(overlay);
           alert("A biblioteca html2pdf não está disponível.");
         }
-      }, 300);
+      }, 500); // 500ms for safety
       
     } else {
-      document.body.removeChild(hiddenWrapper);
+      document.body.removeChild(overlay);
       alert("A biblioteca QRCode.js não está carregada.");
     }
   }
