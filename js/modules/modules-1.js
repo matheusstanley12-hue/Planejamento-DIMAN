@@ -61,7 +61,7 @@ window.Dashboard = (() => {
     const desvio = realizado - planejado;
     const devClass = desvio >= 0 ? 'success' : (desvio >= -10 ? 'warning' : 'danger');
 
-    const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
+    const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
     const allTasks = DB.tasks.getAll();
     function discHours(disc, type) {
       return allTasks.filter(t=>t.disciplina===disc).reduce((s,t)=>s+(parseFloat(t[type])||0),0);
@@ -598,7 +598,7 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma','Lavador','Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma','Lavador','Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto','Teste','Retrabalho'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -996,7 +996,7 @@ window.TasksModule = (() => {
       }
     }
 
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
     const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
     let obsHistoryHtml = '';

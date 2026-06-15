@@ -840,7 +840,7 @@ window.WorkforceModule = (() => {
     const eqs = allEqs.filter(e => e.status !== 'Liberado' || e.id === currentEqId);
     
     const isLocked = worker && currentEqId && allEqs.find(e => e.id === currentEqId)?.status !== 'Liberado';
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
     const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador'];
     
     const activeDiscs = [...discs];
@@ -1109,7 +1109,7 @@ window.RestrictionsModule = (() => {
   function openCreate() {
     const eqs = DB.equipment.list();
     const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
     document.getElementById('restriction-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Tipo *</label><select id="rs-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
       <div class="form-group"><label>Equipamento</label><select id="rs-eq"><option value="">—</option>${eqs.map(e=>`<option value="${e.id}">${e.codigo}</option>`).join('')}</select></div></div>

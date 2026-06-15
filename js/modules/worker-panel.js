@@ -1024,7 +1024,23 @@ window.WorkerPanel = (() => {
     }
 
     DB.tasks.create(data);
-    Toast.success('Sucesso', 'Nova tarefa criada e vinculada a você.');
+    
+    // Novo Fluxo: Teste gera Retrabalho
+    if (data.disciplina === 'Teste') {
+      const retrabalhoData = {
+        ...data,
+        id: undefined, // ensure new ID
+        disciplina: 'Retrabalho',
+        descricao: '[RETRABALHO] ' + data.descricao,
+        status: 'Pendente',
+        pctExecutado: 0,
+        horasRealizadas: 0,
+        responsavel: ''
+      };
+      DB.tasks.create(retrabalhoData);
+    }
+
+    Toast.success('Sucesso', 'Nova tarefa criada.');
     closeModal('modal-worker-new-task');
     Router.navigate('worker-panel', { force: true });
   }
@@ -1416,6 +1432,8 @@ window.WorkerPanel = (() => {
                 <select id="w-sv-setor">
                   <option value="Usinagem">Usinagem</option>
                   <option value="Mecânica">Mecânica</option>
+                  <option value="Teste">Teste</option>
+                  <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
                   <option value="Elétrica">Elétrica</option>
                 </select>
@@ -1874,6 +1892,8 @@ window.WorkerServices = (() => {
                 <option value="Usinagem">Usinagem</option>
                 <option value="Caldeiraria">Caldeiraria</option>
                 <option value="Mecânica">Mecânica</option>
+                <option value="Teste">Teste</option>
+                <option value="Retrabalho">Retrabalho</option>
                 <option value="Elétrica">Elétrica</option>
                 <option value="Lubrificação">Lubrificação</option>
               </select>
