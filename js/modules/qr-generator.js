@@ -92,22 +92,21 @@ window.QrGeneratorModule = (() => {
     contentBox.style.border = '2px solid #e2e8f0';
     wrapper.appendChild(contentBox);
 
+    const logo = document.createElement('img');
+    logo.src = 'logo.png';
+    logo.style.width = '140px';
+    logo.style.marginBottom = '20px';
+    logo.style.display = 'inline-block';
+    contentBox.appendChild(logo);
+
     const title = document.createElement('div');
     title.style.fontSize = '32px';
     title.style.fontWeight = '900';
     title.style.color = '#0f172a';
-    title.style.marginBottom = '10px';
+    title.style.marginBottom = '20px';
     title.style.textTransform = 'uppercase';
     title.innerText = nome || codigo;
     contentBox.appendChild(title);
-
-    const subtitle = document.createElement('div');
-    subtitle.style.fontSize = '20px';
-    subtitle.style.fontWeight = '600';
-    subtitle.style.color = '#64748b';
-    subtitle.style.marginBottom = '30px';
-    subtitle.innerText = `Ativo: ${codigo}`;
-    contentBox.appendChild(subtitle);
 
     const qrBorder = document.createElement('div');
     qrBorder.style.background = 'white';
