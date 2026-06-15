@@ -708,7 +708,7 @@ window.WorkerPanel = (() => {
       statusPanelHtml = `
         <div class="active-task-card idle">
           <div class="task-state" style="color:var(--text-muted);font-weight:700;">OCIOSO</div>
-          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Você não possui atividades ativas no momento. Inicie uma atividade abaixo para começar a contar o tempo.</p>
+          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Nenhuma tarefa em execução no momento. Escolha uma atividade na fila abaixo para iniciar seu trabalho.</p>
         </div>
       `;
     }
