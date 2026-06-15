@@ -17,33 +17,49 @@ window.Dashboard = (() => {
   function chartDefaults() {
     return {
       responsive: true, maintainAspectRatio: false,
-      layout: { padding: { top: 35, bottom: 10, left: 10, right: 10 } },
+      layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
+      interaction: { mode: 'index', intersect: false },
       plugins: { 
         legend: { 
           position: 'top',
+          align: 'end',
           labels: { 
-            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#8EACC8', 
-            font: { family: 'Inter', size: 11, weight: '500' },
+            color: '#64748B', 
+            font: { family: 'Inter', size: 11, weight: '600' },
             usePointStyle: true,
-            boxWidth: 8
+            pointStyle: 'circle',
+            boxWidth: 8,
+            padding: 20
           } 
         },
         datalabels: {
-          color: '#4B5563',
-          font: { weight: 'bold', size: 11, family: 'Inter' },
+          color: '#1E293B',
+          font: { weight: '800', size: 11, family: 'Inter' },
           anchor: 'end',
-          align: 'end',
-          offset: 4
+          align: 'top',
+          offset: 4,
+          formatter: (value) => value > 0 ? value : ''
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          titleFont: { family: 'Inter', size: 13 },
+          bodyFont: { family: 'Inter', size: 12 },
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: true
         }
       },
       scales: {
         x: { 
-          ticks: { color: '#8EACC8', font: { size: 10 }, maxRotation: 45, minRotation: 45 }, 
-          grid: { display: false } 
+          ticks: { color: '#64748B', font: { size: 10, family: 'Inter' }, maxRotation: 45, minRotation: 45 }, 
+          grid: { display: false },
+          border: { display: false }
         },
         y: { 
-          ticks: { color: '#8EACC8', font: { size: 10 } }, 
-          grid: { color: 'rgba(0,0,0,0.04)', borderDash: [5, 5] },
+          grace: '30%',
+          ticks: { color: '#94A3B8', font: { size: 10, family: 'Inter' }, padding: 10 }, 
+          grid: { color: '#F1F5F9', drawBorder: false },
+          border: { display: false },
           beginAtZero: true
         }
       }
@@ -258,36 +274,38 @@ window.Dashboard = (() => {
         if (c1) charts.disc = new Chart(c1, { type:'bar', data: {
           labels: disciplines,
           datasets: [
-            { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(33, 150, 243, 0.85)', borderRadius: 6, maxBarThickness: 40 },
-            { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(38, 166, 154, 0.85)', borderRadius: 6, maxBarThickness: 40 }
+            { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(148, 163, 184, 0.4)', hoverBackgroundColor:'rgba(148, 163, 184, 0.6)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false },
+            { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(16, 185, 129, 0.85)', hoverBackgroundColor:'rgba(16, 185, 129, 1)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false }
           ]
         }, options: chartDefaults() });
 
         // Chart 2: Status doughnut
         const statusCounts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>eqs.filter(e=>e.status===s).length);
         const optStatus = chartDefaults();
-        optStatus.layout.padding.top = 10;
+        optStatus.layout.padding = { top: 0, bottom: 0, left: 0, right: 0 };
         optStatus.plugins.legend.position = 'right';
+        optStatus.plugins.legend.align = 'center';
         optStatus.plugins.datalabels = { display: false };
         optStatus.scales = { x: { display: false }, y: { display: false } };
 
         const c2 = document.getElementById('ch-status');
         if (c2) charts.status = new Chart(c2, { type:'doughnut', data: {
           labels: ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'],
-          datasets: [{ data: statusCounts, backgroundColor:['#2196F3','#26A69A','#EF5350','#FFA726','#90A4AE','#AB47BC'], borderWidth:2, borderColor:'#ffffff', hoverOffset: 4 }]
+          datasets: [{ data: statusCounts, backgroundColor:['#3B82F6','#10B981','#EF4444','#F59E0B','#64748B','#8B5CF6'], borderWidth: 0, borderRadius: 4, hoverOffset: 6, cutout: '75%' }]
         }, options: optStatus });
 
         // Chart 3: Equipment progress bar
         const eqsInProg = eqs.filter(e => e.status !== 'Liberado' && e.status !== 'Backlog');
         const optEq = chartDefaults();
         optEq.scales.y.max = 100;
+        optEq.scales.y.grace = '0%'; // Don't need grace for percentages
         optEq.scales.y.ticks.callback = (v)=>v+'%';
         optEq.plugins.datalabels.formatter = (v)=>v+'%';
 
         const c3 = document.getElementById('ch-eq');
         if (c3) charts.eq = new Chart(c3, { type:'bar', data: {
           labels: eqsInProg.map(e=>e.codigo),
-          datasets: [{ label:'Avanço %', data: eqsInProg.map(e=>e.pctAvanco||0), backgroundColor: eqsInProg.map(e => e.pctAvanco >= 80 ? 'rgba(38, 166, 154, 0.85)' : e.pctAvanco >= 50 ? 'rgba(33, 150, 243, 0.85)' : 'rgba(255, 167, 38, 0.85)'), borderRadius: 6, maxBarThickness: 40 }]
+          datasets: [{ label:'Avanço %', data: eqsInProg.map(e=>e.pctAvanco||0), backgroundColor: eqsInProg.map(e => e.pctAvanco >= 80 ? 'rgba(16, 185, 129, 0.85)' : e.pctAvanco >= 50 ? 'rgba(59, 130, 246, 0.85)' : 'rgba(245, 158, 11, 0.85)'), borderRadius: 4, maxBarThickness: 24, borderSkipped: false }]
         }, options: optEq });
 
         // Chart 4: MO consumption
@@ -300,7 +318,7 @@ window.Dashboard = (() => {
         const c4 = document.getElementById('ch-mo');
         if (c4) charts.mo = new Chart(c4, { type:'bar', data: {
           labels: Object.keys(moByDisc),
-          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(142, 36, 170, 0.85)', borderRadius: 6, maxBarThickness: 50 }]
+          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(139, 92, 246, 0.85)', borderRadius: 4, maxBarThickness: 32, borderSkipped: false }]
         }, options: chartDefaults() });
 
         // NEW Chart 5: Planejado x Realizado por Categoria (Mês Atual)
@@ -308,7 +326,6 @@ window.Dashboard = (() => {
         const catReal = categories.map(c => eqs.filter(e => e.tipo === c && e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataFim || '').startsWith(currentMonthPrefix)).length);
         
         const optCat = chartDefaults();
-        // Categoria tem nomes curtos, podemos rotacionar menos
         optCat.scales.x.ticks.maxRotation = 35;
         optCat.scales.x.ticks.minRotation = 35;
 
@@ -316,8 +333,8 @@ window.Dashboard = (() => {
         if (cCat) charts.catEq = new Chart(cCat, { type:'bar', data: {
           labels: categories,
           datasets: [
-            { label:'Planejado', data: catPlan, backgroundColor:'rgba(33, 150, 243, 0.85)', borderRadius: 6, maxBarThickness: 40 },
-            { label:'Realizado', data: catReal, backgroundColor:'rgba(38, 166, 154, 0.85)', borderRadius: 6, maxBarThickness: 40 }
+            { label:'Planejado', data: catPlan, backgroundColor:'rgba(148, 163, 184, 0.4)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false },
+            { label:'Realizado', data: catReal, backgroundColor:'rgba(16, 185, 129, 0.85)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false }
           ]
         }, options: optCat });
 
@@ -343,14 +360,16 @@ window.Dashboard = (() => {
         const optAnual = chartDefaults();
         optAnual.scales.x.ticks.maxRotation = 0;
         optAnual.scales.x.ticks.minRotation = 0;
-        optAnual.plugins.datalabels.offset = 6;
+        optAnual.scales.y.grace = '10%'; // Little less grace for line chart
+        optAnual.plugins.datalabels.offset = 8;
+        optAnual.plugins.datalabels.font.size = 10;
 
         const cAnual = document.getElementById('ch-ano-eq');
         if (cAnual) charts.anoEq = new Chart(cAnual, { type:'line', data: {
           labels: months,
           datasets: [
-            { label:'Planejado', data: yearPlan, borderColor:'rgba(33, 150, 243, 1)', backgroundColor:'rgba(33, 150, 243, 0.1)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(33, 150, 243, 1)', borderWidth: 3 },
-            { label:'Realizado', data: yearReal, borderColor:'rgba(38, 166, 154, 1)', backgroundColor:'rgba(38, 166, 154, 0.1)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(38, 166, 154, 1)', borderWidth: 3 }
+            { label:'Planejado', data: yearPlan, borderColor:'rgba(148, 163, 184, 1)', backgroundColor:'rgba(148, 163, 184, 0.15)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(148, 163, 184, 1)', borderWidth: 3 },
+            { label:'Realizado', data: yearReal, borderColor:'rgba(59, 130, 246, 1)', backgroundColor:'rgba(59, 130, 246, 0.15)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(59, 130, 246, 1)', borderWidth: 3 }
           ]
         }, options: optAnual });
 
