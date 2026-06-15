@@ -3,7 +3,7 @@
    ============================================================ */
 
 window.Toast = (() => {
-  function show(type, title, message, duration = 4000) {
+  function show(type, title, message, duration = 8000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
