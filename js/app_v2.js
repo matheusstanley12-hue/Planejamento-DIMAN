@@ -474,6 +474,7 @@ function renderShell(session) {
     { route:'worker-manuals', label:'Meus Manuais',      icon:'document-report', perm:'workerPanel', section:'' },
     { route:'d-panel',    label:'D-1 | D | D+1',       icon:'calendar-days',  perm:'dashboard',   section:'OPERACIONAL' },
     { route:'dashboard',  label:'Dashboard',             icon:'squares-2x2',    perm:'dashboard',   section:'' },
+    { route:'labor-analysis', label:'Análise por Mão de Obra', icon:'chart-pie', perm:'dashboard', section:'' },
     { route:'workshop',   label:'Controle de Oficina',  icon:'building-office', perm:'workshop',   section:'' },
     { route:'waiting',    label:'Aguardando Manutenção', icon:'clock',          perm:'dashboard',   section:'' },
     { route:'equipment',  label:'Equipamentos',          icon:'wrench-screwdriver', perm:'equipment', section:'PLANEJAMENTO' },
@@ -687,6 +688,9 @@ function renderShell(session) {
   }
 
   // Register all routes
+  Router.register('dashboard', (p) => Dashboard.render());
+  Router.register('labor-analysis', (p) => LaborAnalysisModule.render());
+  Router.register('workshop', (p) => WorkshopModule.render());
   Router.register('home', () => HomeModule.render());
   Router.register('worker-panel', () => WorkerPanel.render());
   Router.register('worker-parts', () => typeof WorkerParts !== 'undefined' ? WorkerParts.render() : '<div class="page-container">Erro ao carregar módulo de Peças</div>');

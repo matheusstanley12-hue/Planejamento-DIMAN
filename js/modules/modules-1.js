@@ -187,20 +187,12 @@ window.Dashboard = (() => {
       <!-- Charts grid -->
       <div class="charts-grid">
         <div class="chart-card">
-          <div class="card-header"><div class="card-title">Planejado × Realizado por Disciplina</div></div>
-          <canvas id="ch-disc" height="320"></canvas>
-        </div>
-        <div class="chart-card">
           <div class="card-header"><div class="card-title">Status dos Equipamentos</div></div>
           <canvas id="ch-status" height="320"></canvas>
         </div>
         <div class="chart-card">
           <div class="card-header"><div class="card-title">Avanço por Equipamento</div></div>
           <canvas id="ch-eq" height="320"></canvas>
-        </div>
-        <div class="chart-card">
-          <div class="card-header"><div class="card-title">Consumo de Mão de Obra</div></div>
-          <canvas id="ch-mo" height="320"></canvas>
         </div>
       </div>
       
@@ -281,23 +273,22 @@ window.Dashboard = (() => {
         const currentMonthPrefix = new Date().toISOString().slice(0, 7);
         const categories = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Outros Equipamentos'];
         const allTasks = DB.tasks.getAll();
-        const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
-        function discHours(disc, type) {
-          return allTasks.filter(t=>t.disciplina===disc && ((t.createdAt && t.createdAt.startsWith(currentMonthPrefix)) || (t.dataFim && t.dataFim.startsWith(currentMonthPrefix)))).reduce((s,t)=>s+(parseFloat(t[type])||0),0);
-        }
-
-        // Chart 1: Disciplinas Planejado x Realizado
-        const c1 = document.getElementById('ch-disc');
-        if (c1) charts.disc = new Chart(c1, { type:'bar', data: {
-          labels: disciplines,
-          datasets: [
-            { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(148, 163, 184, 0.4)', hoverBackgroundColor:'rgba(148, 163, 184, 0.6)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false },
-            { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(16, 185, 129, 0.85)', hoverBackgroundColor:'rgba(16, 185, 129, 1)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false }
-          ]
-        }, options: chartDefaults() });
 
         // Chart 2: Status doughnut
-        const statusCounts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>eqs.filter(e=>e.status===s).length);
+        const allStatuses = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'];
+        const allColors = ['#3B82F6','#10B981','#EF4444','#F59E0B','#64748B','#8B5CF6'];
+        const activeLabels = [];
+        const activeData = [];
+        const activeColors = [];
+        allStatuses.forEach((s, i) => {
+          const c = eqs.filter(e=>e.status===s).length;
+          if (c > 0) {
+            activeLabels.push(s);
+            activeData.push(c);
+            activeColors.push(allColors[i]);
+          }
+        });
+
         const optStatus = chartDefaults();
         optStatus.layout.padding = { top: 0, bottom: 0, left: 0, right: 0 };
         optStatus.plugins.legend.position = 'right';
@@ -307,16 +298,17 @@ window.Dashboard = (() => {
 
         const c2 = document.getElementById('ch-status');
         if (c2) charts.status = new Chart(c2, { type:'doughnut', data: {
-          labels: ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'],
-          datasets: [{ data: statusCounts, backgroundColor:['#3B82F6','#10B981','#EF4444','#F59E0B','#64748B','#8B5CF6'], borderWidth: 0, borderRadius: 4, hoverOffset: 6, cutout: '75%' }]
+          labels: activeLabels,
+          datasets: [{ data: activeData, backgroundColor: activeColors, borderWidth: 0, borderRadius: 4, hoverOffset: 6, cutout: '75%' }]
         }, options: optStatus });
 
         // Chart 3: Equipment progress bar
         const eqsInProg = eqs.filter(e => e.status !== 'Liberado' && e.status !== 'Backlog');
         const optEq = chartDefaults();
-        optEq.scales.y.max = 100;
-        optEq.scales.y.grace = '0%'; // Don't need grace for percentages
-        optEq.scales.y.ticks.callback = (v)=>v+'%';
+        optEq.indexAxis = 'y';
+        optEq.scales.x.max = 100;
+        optEq.scales.x.grace = '0%';
+        optEq.scales.x.ticks.callback = (v)=>v+'%';
         optEq.plugins.datalabels.formatter = (v) => Math.round(v) + '%';
 
         const c3 = document.getElementById('ch-eq');
@@ -325,26 +317,12 @@ window.Dashboard = (() => {
           datasets: [{ label:'Avanço %', data: eqsInProg.map(e=>e.pctAvanco||0), backgroundColor: eqsInProg.map(e => e.pctAvanco >= 80 ? 'rgba(16, 185, 129, 0.85)' : e.pctAvanco >= 50 ? 'rgba(59, 130, 246, 0.85)' : 'rgba(245, 158, 11, 0.85)'), borderRadius: 4, maxBarThickness: 24, borderSkipped: false }]
         }, options: optEq });
 
-        // Chart 4: MO consumption
-        const ts = DB.timesheets.list().filter(t => t.data && t.data.startsWith(currentMonthPrefix));
-        const moByDisc = {};
-        ts.forEach(t => {
-          const w = DB.workforce.get(t.workerId);
-          if (w) moByDisc[w.disciplina] = (moByDisc[w.disciplina] || 0) + (t.horasTrabalhadas || 0);
-        });
-        const c4 = document.getElementById('ch-mo');
-        if (c4) charts.mo = new Chart(c4, { type:'bar', data: {
-          labels: Object.keys(moByDisc),
-          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(139, 92, 246, 0.85)', borderRadius: 4, maxBarThickness: 32, borderSkipped: false }]
-        }, options: chartDefaults() });
-
         // NEW Chart 5: Planejado x Realizado por Categoria (Mês Atual)
         const catPlan = categories.map(c => eqs.filter(e => e.tipo === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
         const catReal = categories.map(c => eqs.filter(e => e.tipo === c && e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataFim || '').startsWith(currentMonthPrefix)).length);
         
         const optCat = chartDefaults();
-        optCat.scales.x.ticks.maxRotation = 35;
-        optCat.scales.x.ticks.minRotation = 35;
+        optCat.indexAxis = 'y';
 
         const cCat = document.getElementById('ch-cat-eq');
         if (cCat) charts.catEq = new Chart(cCat, { type:'bar', data: {
@@ -377,26 +355,19 @@ window.Dashboard = (() => {
         const optAnual = chartDefaults();
         optAnual.scales.x.ticks.maxRotation = 0;
         optAnual.scales.x.ticks.minRotation = 0;
-        optAnual.scales.y.grace = '10%'; // Little less grace for line chart
-        optAnual.plugins.datalabels.offset = 8;
-        optAnual.plugins.datalabels.font.size = 10;
 
         const cAnual = document.getElementById('ch-ano-eq');
-        if (cAnual) charts.anoEq = new Chart(cAnual, { type:'line', data: {
+        if (cAnual) charts.anoEq = new Chart(cAnual, { type:'bar', data: {
           labels: months,
           datasets: [
-            { label:'Planejado', data: yearPlan, borderColor:'rgba(148, 163, 184, 1)', backgroundColor:'rgba(148, 163, 184, 0.15)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(148, 163, 184, 1)', borderWidth: 3 },
-            { label:'Realizado', data: yearReal, borderColor:'rgba(59, 130, 246, 1)', backgroundColor:'rgba(59, 130, 246, 0.15)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(59, 130, 246, 1)', borderWidth: 3 }
+            { label:'Planejado', data: yearPlan, backgroundColor:'rgba(148, 163, 184, 0.4)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false },
+            { label:'Realizado', data: yearReal, backgroundColor:'rgba(59, 130, 246, 0.85)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false }
           ]
         }, options: optAnual });
 
       } catch(e) { console.warn('Chart.js error:', e); }
 
-      try {
-        if (window.EquipmentModule && window.EquipmentModule.renderLaborComparison) {
-          window.EquipmentModule.renderLaborComparison();
-        }
-      } catch(e) { console.error('Labor comparison error:', e); }
+
 
     }, 100);
 
@@ -946,7 +917,7 @@ window.EquipmentModule = (() => {
     });
   }
 
-  function renderLaborComparison() {
+  function renderLaborComparison(containerId = 'labor-comparison-container') {
     setTimeout(() => {
       try {
         const allTs = DB.timesheets.list().filter(t => t.tipo === 'Trabalho');
@@ -974,7 +945,7 @@ window.EquipmentModule = (() => {
 
         const comparisons = Object.values(laborMap).filter(item => Object.keys(item.workers).length > 1);
         
-        const container = document.getElementById('labor-comparison-container');
+        const container = document.getElementById(containerId);
         if (container) {
           if (comparisons.length === 0) {
             container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Não há dados suficientes para gerar comparativos (é necessário que dois ou mais mecânicos realizem atividades com o mesmo nome).</div>';
