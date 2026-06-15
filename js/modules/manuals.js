@@ -8,9 +8,6 @@ window.ManualsAdmin = (() => {
     const manuals = window.DB.manuals.list() || [];
     const equipments = window.DB.equipment.list() || [];
 
-    setTimeout(() => {
-      document.getElementById('btn-add-manual').addEventListener('click', () => showAddManualModal(equipments));
-    }, 100);
 
     return `
       <div class="page-container" style="animation:fadeIn 0.3s ease;">
