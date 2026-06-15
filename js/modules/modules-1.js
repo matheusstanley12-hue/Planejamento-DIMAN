@@ -17,13 +17,35 @@ window.Dashboard = (() => {
   function chartDefaults() {
     return {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 35, bottom: 10, left: 10, right: 10 } },
       plugins: { 
-        legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#8EACC8', font: { family: 'Inter', size: 11 } } },
+        legend: { 
+          position: 'top',
+          labels: { 
+            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#8EACC8', 
+            font: { family: 'Inter', size: 11, weight: '500' },
+            usePointStyle: true,
+            boxWidth: 8
+          } 
+        },
+        datalabels: {
+          color: '#4B5563',
+          font: { weight: 'bold', size: 11, family: 'Inter' },
+          anchor: 'end',
+          align: 'end',
+          offset: 4
+        }
       },
-      layout: { padding: { top: 20 } },
       scales: {
-        x: { ticks: { color: '#8EACC8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#8EACC8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        x: { 
+          ticks: { color: '#8EACC8', font: { size: 10 }, maxRotation: 45, minRotation: 45 }, 
+          grid: { display: false } 
+        },
+        y: { 
+          ticks: { color: '#8EACC8', font: { size: 10 } }, 
+          grid: { color: 'rgba(0,0,0,0.04)', borderDash: [5, 5] },
+          beginAtZero: true
+        }
       }
     };
   }
@@ -236,26 +258,37 @@ window.Dashboard = (() => {
         if (c1) charts.disc = new Chart(c1, { type:'bar', data: {
           labels: disciplines,
           datasets: [
-            { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(21,101,192,0.7)', borderRadius:4 },
-            { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(0,200,83,0.7)', borderRadius:4 }
+            { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(33, 150, 243, 0.85)', borderRadius: 6, maxBarThickness: 40 },
+            { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(38, 166, 154, 0.85)', borderRadius: 6, maxBarThickness: 40 }
           ]
         }, options: chartDefaults() });
 
         // Chart 2: Status doughnut
         const statusCounts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>eqs.filter(e=>e.status===s).length);
+        const optStatus = chartDefaults();
+        optStatus.layout.padding.top = 10;
+        optStatus.plugins.legend.position = 'right';
+        optStatus.plugins.datalabels = { display: false };
+        optStatus.scales = { x: { display: false }, y: { display: false } };
+
         const c2 = document.getElementById('ch-status');
         if (c2) charts.status = new Chart(c2, { type:'doughnut', data: {
           labels: ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'],
-          datasets: [{ data: statusCounts, backgroundColor:['rgba(30,136,229,0.8)','rgba(0,200,83,0.8)','rgba(244,67,54,0.8)','rgba(255,179,0,0.8)','rgba(107,114,128,0.8)','rgba(139,92,246,0.8)'], borderWidth:0 }]
-        }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:'#8EACC8',font:{family:'Inter',size:10}} } } } });
+          datasets: [{ data: statusCounts, backgroundColor:['#2196F3','#26A69A','#EF5350','#FFA726','#90A4AE','#AB47BC'], borderWidth:2, borderColor:'#ffffff', hoverOffset: 4 }]
+        }, options: optStatus });
 
         // Chart 3: Equipment progress bar
         const eqsInProg = eqs.filter(e => e.status !== 'Liberado' && e.status !== 'Backlog');
+        const optEq = chartDefaults();
+        optEq.scales.y.max = 100;
+        optEq.scales.y.ticks.callback = (v)=>v+'%';
+        optEq.plugins.datalabels.formatter = (v)=>v+'%';
+
         const c3 = document.getElementById('ch-eq');
         if (c3) charts.eq = new Chart(c3, { type:'bar', data: {
           labels: eqsInProg.map(e=>e.codigo),
-          datasets: [{ label:'Avanço %', data: eqsInProg.map(e=>e.pctAvanco||0), backgroundColor: eqsInProg.map(e => e.pctAvanco >= 80 ? 'rgba(0,200,83,0.7)' : e.pctAvanco >= 50 ? 'rgba(30,136,229,0.7)' : 'rgba(255,179,0,0.7)'), borderRadius:4 }]
-        }, options: { ...chartDefaults(), scales: { y: { min:0, max:100, ticks:{color:'#8EACC8',callback:(v)=>v+'%'}, grid:{color:'rgba(255,255,255,0.05)'} }, x:{ticks:{color:'#8EACC8'},grid:{color:'rgba(255,255,255,0.05)'}} } } });
+          datasets: [{ label:'Avanço %', data: eqsInProg.map(e=>e.pctAvanco||0), backgroundColor: eqsInProg.map(e => e.pctAvanco >= 80 ? 'rgba(38, 166, 154, 0.85)' : e.pctAvanco >= 50 ? 'rgba(33, 150, 243, 0.85)' : 'rgba(255, 167, 38, 0.85)'), borderRadius: 6, maxBarThickness: 40 }]
+        }, options: optEq });
 
         // Chart 4: MO consumption
         const ts = DB.timesheets.list().filter(t => t.data && t.data.startsWith(currentMonthPrefix));
@@ -267,21 +300,26 @@ window.Dashboard = (() => {
         const c4 = document.getElementById('ch-mo');
         if (c4) charts.mo = new Chart(c4, { type:'bar', data: {
           labels: Object.keys(moByDisc),
-          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(41,182,246,0.7)', borderRadius:4 }]
+          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(142, 36, 170, 0.85)', borderRadius: 6, maxBarThickness: 50 }]
         }, options: chartDefaults() });
 
         // NEW Chart 5: Planejado x Realizado por Categoria (Mês Atual)
         const catPlan = categories.map(c => eqs.filter(e => e.tipo === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
         const catReal = categories.map(c => eqs.filter(e => e.tipo === c && e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataFim || '').startsWith(currentMonthPrefix)).length);
         
+        const optCat = chartDefaults();
+        // Categoria tem nomes curtos, podemos rotacionar menos
+        optCat.scales.x.ticks.maxRotation = 35;
+        optCat.scales.x.ticks.minRotation = 35;
+
         const cCat = document.getElementById('ch-cat-eq');
         if (cCat) charts.catEq = new Chart(cCat, { type:'bar', data: {
           labels: categories,
           datasets: [
-            { label:'Planejado', data: catPlan, backgroundColor:'rgba(21,101,192,0.7)', borderRadius:4 },
-            { label:'Realizado', data: catReal, backgroundColor:'rgba(0,200,83,0.7)', borderRadius:4 }
+            { label:'Planejado', data: catPlan, backgroundColor:'rgba(33, 150, 243, 0.85)', borderRadius: 6, maxBarThickness: 40 },
+            { label:'Realizado', data: catReal, backgroundColor:'rgba(38, 166, 154, 0.85)', borderRadius: 6, maxBarThickness: 40 }
           ]
-        }, options: { ...chartDefaults(), scales: { y: { beginAtZero: true, ticks:{stepSize:1, color:'#8EACC8'} }, x:{ticks:{color:'#8EACC8'}} } } });
+        }, options: optCat });
 
         // NEW Chart 6: Planejado x Realizado (Visão Anual)
         const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -302,14 +340,19 @@ window.Dashboard = (() => {
           }
         });
 
+        const optAnual = chartDefaults();
+        optAnual.scales.x.ticks.maxRotation = 0;
+        optAnual.scales.x.ticks.minRotation = 0;
+        optAnual.plugins.datalabels.offset = 6;
+
         const cAnual = document.getElementById('ch-ano-eq');
         if (cAnual) charts.anoEq = new Chart(cAnual, { type:'line', data: {
           labels: months,
           datasets: [
-            { label:'Planejado', data: yearPlan, borderColor:'rgba(21,101,192,1)', backgroundColor:'rgba(21,101,192,0.1)', fill:true, tension:0.3 },
-            { label:'Realizado', data: yearReal, borderColor:'rgba(0,200,83,1)', backgroundColor:'rgba(0,200,83,0.1)', fill:true, tension:0.3 }
+            { label:'Planejado', data: yearPlan, borderColor:'rgba(33, 150, 243, 1)', backgroundColor:'rgba(33, 150, 243, 0.1)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(33, 150, 243, 1)', borderWidth: 3 },
+            { label:'Realizado', data: yearReal, borderColor:'rgba(38, 166, 154, 1)', backgroundColor:'rgba(38, 166, 154, 0.1)', fill:true, tension:0.4, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor:'rgba(38, 166, 154, 1)', borderWidth: 3 }
           ]
-        }, options: { ...chartDefaults(), scales: { y: { beginAtZero: true, ticks:{stepSize:1, color:'#8EACC8'} }, x:{ticks:{color:'#8EACC8'}} } } });
+        }, options: optAnual });
 
       } catch(e) { console.warn('Chart.js error:', e); }
     }, 100);
