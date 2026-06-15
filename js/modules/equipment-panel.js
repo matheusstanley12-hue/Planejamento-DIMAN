@@ -742,7 +742,12 @@ window.EquipmentPanel = (() => {
 
     // Populate the Responsável dropdown based on workforce allocated to currentEqId
     const respSelect = document.getElementById('new-task-resp');
-    const wf = DB.workforce.list();
+    let wf = DB.workforce.list();
+    if (typeof AttendanceModule !== 'undefined' && AttendanceModule.isEmFerias) {
+      wf = wf.filter(w => !AttendanceModule.isEmFerias(w));
+    } else {
+      wf = wf.filter(w => w.status !== 'Férias');
+    }
     const filteredWf = wf.filter(w => w.equipmentId === currentEqId);
     
     let selectedName = '';

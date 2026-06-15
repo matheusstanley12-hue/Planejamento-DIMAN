@@ -6,6 +6,11 @@
   <meta name="description" content="PLANEJAMENTO DIMAN-BHZ — Plataforma profissional de Planejamento e Controle de Manutenção (PCM) industrial." />
   <meta name="robots" content="noindex" />
   <title>PLANEJAMENTO DIMAN-BHZ | PCM Industrial</title>
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      document.body.innerHTML = '<div style="padding:20px;color:red;font-size:16px;"><b>Erro:</b> ' + message + '<br><b>Arquivo:</b> ' + source + ':' + lineno + '<br><b>Stack:</b> ' + (error ? error.stack : '') + '</div>';
+    };
+  </script>
 
   <!-- Favicon inline SVG -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>" />
@@ -290,14 +295,16 @@
   <script src="js/modules/released.js"></script>
   <script src="js/modules/services.js"></script>
   <script src="js/modules/waiting.js"></script>
-  <script src="js/modules/equipment-panel.js"></script>
+  <script src="js/modules/equipment-panel.js?v=2"></script>
   <script src="js/modules/checklists.js?v=1"></script>
-  <script src="js/modules/modules-1.js?v=2"></script>
+  <script src="js/modules/equipment-table.js?v=2"></script>
+  <script src="js/modules/modules-1.js?v=4"></script>
   <script src="js/modules/modules-2.js?v=2"></script>
   <script src="js/modules/modules-3.js?v=2"></script>
-  <script src="js/modules/worker-panel.js?v=4"></script>
-  <script src="js/modules/workforce-time.js?v=2"></script>
-  <script src="js/modules/bonus.js?v=1"></script>
+  <script src="js/modules/worker-panel.js?v=5"></script>
+  <script src="js/modules/workforce-time.js?v=3"></script>
+  <script src="js/modules/bonus.js?v=4"></script>
+  <script src="js/modules/attendance.js?v=3"></script>
   <script src="js/modules/manuals.js?v=3"></script>
 
   <!-- D-1 | D | D+1 Panel -->
@@ -308,7 +315,7 @@
   <script src="js/modules/qr-view_v2.js"></script>
 
   <!-- 3. APP BOOTSTRAP -->
-  <script src="js/app_v2.js"></script>
+  <script src="js/app_v2.js?v=4"></script>
 
   <!-- Loading screen removal -->
   <script>
@@ -317,6 +324,38 @@
         const el = document.getElementById('app-loading');
         if (el) { el.style.transition = 'opacity .5s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }
       }, 1400);
+
+      // --- GERADOR DE MASSA DE DADOS DE TESTE ---
+      setTimeout(() => {
+        if (!localStorage.getItem('teste_mock_gerado_v1') && window.DB && window.DB.workforce) {
+          const w = DB.workforce.list();
+          if (w.length >= 3) {
+            const today = new Date().toISOString();
+            
+            // Trabalhador 1: Funcionário Exemplar (100% Trabalho)
+            DB.timesheets.create({ workerId: w[0].id, workerNome: w[0].nome, data: today, horasTrabalhadas: 40, tipo: 'Trabalho', observacao: 'Trabalho normal na semana' });
+
+            // Trabalhador 2: Teve Atraso, Pausa e 1 Falta (-5% de penalidade)
+            DB.timesheets.create({ workerId: w[1].id, workerNome: w[1].nome, data: today, horasTrabalhadas: 20, tipo: 'Trabalho' });
+            DB.timesheets.create({ workerId: w[1].id, workerNome: w[1].nome, data: today, horasTrabalhadas: 5, tipo: 'Pausa' });
+            DB.timesheets.create({ workerId: w[1].id, workerNome: w[1].nome, data: today, horasTrabalhadas: 8, tipo: 'Falta', observacao: 'Não compareceu' });
+            DB.timesheets.create({ workerId: w[1].id, workerNome: w[1].nome, data: today, horasTrabalhadas: 2, tipo: 'Atraso', observacao: 'Chegou atrasado 2h' });
+
+            // Trabalhador 3: Teve Atestado de 2 dias (16h) e o resto Trabalho
+            DB.timesheets.create({ workerId: w[2].id, workerNome: w[2].nome, data: today, horasTrabalhadas: 24, tipo: 'Trabalho' });
+            DB.timesheets.create({ workerId: w[2].id, workerNome: w[2].nome, data: today, horasTrabalhadas: 16, tipo: 'Atestado', observacao: 'Atestado médico de 2 dias' });
+
+            // Trabalhador 4: Em Férias (Não deve aparecer no prêmio)
+            if (w[3]) {
+              DB.workforce.update(w[3].id, { status: 'Férias' });
+            }
+
+            localStorage.setItem('teste_mock_gerado_v1', '1');
+            window.Toast && window.Toast.success('Teste', 'Massa de dados de teste injetada para avaliação!');
+            if (typeof Router !== 'undefined') Router.navigate('bonus', { force: true });
+          }
+        }
+      }, 2000);
     });
   </script>
 </body>

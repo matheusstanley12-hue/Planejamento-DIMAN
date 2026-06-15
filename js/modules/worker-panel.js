@@ -173,7 +173,7 @@ window.WorkerPanel = (() => {
 
     const t = DB.tasks.get(myWorker.currentTaskId);
 
-    const modalHtml = \`
+    const modalHtml = `
       <div class="modal-overlay" id="modal-worker-complete">
         <div class="modal" style="box-shadow:var(--shadow-lg);">
           <div class="modal-header">
@@ -183,7 +183,7 @@ window.WorkerPanel = (() => {
             </button>
           </div>
           <div class="modal-body">
-            <p style="font-size:14px;color:var(--text-primary);font-weight:bold;margin-bottom:10px;">\${t.descricao}</p>
+            <p style="font-size:14px;color:var(--text-primary);font-weight:bold;margin-bottom:10px;">${t.descricao}</p>
             <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Tire uma foto para comprovar a execução do serviço e finalizar a tarefa.</p>
             
             <div style="text-align:center;margin-bottom:20px;">
@@ -207,7 +207,7 @@ window.WorkerPanel = (() => {
           </div>
         </div>
       </div>
-    \`;
+    `;
     const container = document.getElementById('worker-panel-modals') || document.createElement('div');
     if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
     container.innerHTML = modalHtml;
@@ -265,7 +265,7 @@ window.WorkerPanel = (() => {
           horaFim: now.toISOString(),
           horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
           tipo: 'Trabalho',
-          observacao: \`Timer (Automático - Conclusão)\`
+          observacao: 'Timer (Automático - Conclusão)'
         });
 
         if (t) {
@@ -289,7 +289,7 @@ window.WorkerPanel = (() => {
           horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
           tipo: 'Pausa',
           motivoPausa: myWorker.currentPauseReason,
-          observacao: \`Pausa\`
+          observacao: 'Pausa'
         });
       }
 
@@ -298,13 +298,13 @@ window.WorkerPanel = (() => {
         let newObs = t.observacoes || '';
         if (obsText) {
           const dateStr = new Date().toLocaleString('pt-BR');
-          newObs += \`\\n[Atualizado em \${dateStr} por \${session.nome}]: \${obsText}\`;
+          newObs += `\n[Atualizado em ${dateStr} por ${session.nome}]: ${obsText}`;
         }
 
         const attachments = t.anexos ? [...t.anexos] : [];
         attachments.push({
           url: base64Img,
-          nome: \`Foto_\${Date.now()}.jpg\`,
+          nome: `Foto_${Date.now()}.jpg`,
           tipo: 'image/jpeg',
           enviadoPor: session.nome,
           dataEnvio: new Date().toISOString()
@@ -1246,7 +1246,7 @@ window.WorkerPanel = (() => {
     const session = Auth.getSession();
     const myEqs = getMyEquipments(session);
 
-    const activeEqId = equipmentId || (myEqs[0]?.id || '');
+    const activeEqId = equipmentId || (myEqs.length > 0 ? myEqs[0].id : '');
     const tasks = DB.tasks.getAll().filter(t => t.equipmentId === activeEqId);
     
     const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];

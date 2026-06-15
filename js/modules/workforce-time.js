@@ -23,7 +23,12 @@ window.WorkforceTimeModule = (() => {
       return `<div class="page-container"><div class="empty-state"><h3>Acesso Restrito</h3></div></div>`;
     }
 
-    const workers = DB.workforce.list();
+    let workers = DB.workforce.list();
+    if (typeof AttendanceModule !== 'undefined' && AttendanceModule.isEmFerias) {
+      workers = workers.filter(w => !AttendanceModule.isEmFerias(w));
+    } else {
+      workers = workers.filter(w => w.status !== 'Férias');
+    }
     const tasks = DB.tasks.getAll();
     const timesheets = DB.timesheets ? DB.timesheets.list() : [];
 

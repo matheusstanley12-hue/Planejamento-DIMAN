@@ -487,6 +487,7 @@ function renderShell(session) {
     { route:'lessons',    label:'Lições Aprendidas',     icon:'light-bulb',     perm:'lessons',     section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'GESTÃO' },
     { route:'bonus',      label:'Prêmio Produção',       icon:'currency-dollar', perm:'reports', section:'' },
+    { route:'attendance', label:'Controle de Frequência',icon:'users',           perm:'reports', section:'' },
     { route:'users',      label:'Usuários',              icon:'user-group',     perm:'users',       section:'' },
   ];
 
@@ -674,9 +675,10 @@ function renderShell(session) {
   Router.register('released', () => ReleasedModule.render());
   Router.register('workforce-time', () => typeof WorkforceTimeModule !== 'undefined' ? WorkforceTimeModule.render() : '<div class="page-container">Erro ao carregar módulo de Gestão de Horas</div>');
   Router.register('bonus', () => typeof BonusModule !== 'undefined' ? BonusModule.render() : '<div class="page-container">Erro ao carregar módulo de Prêmio Produção</div>');
+  Router.register('attendance', () => typeof AttendanceModule !== 'undefined' ? AttendanceModule.render() : '<div class="page-container">Erro ao carregar módulo de Controle de Frequência</div>');
   if (typeof WaitingModule !== 'undefined') Router.register('waiting', () => WaitingModule.render());
   Router.register('equipment-panel', (p) => EquipmentPanel.render(p));
-  Router.register('checklists', ChecklistsModule.render);
+  if (typeof ChecklistsModule !== 'undefined') Router.register('checklists', ChecklistsModule.render);
   
   if (typeof DPanel !== 'undefined') Router.register('d-panel', () => DPanel.render());
   if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
