@@ -173,7 +173,7 @@ window.WorkerPanel = (() => {
               <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptMissingParts()">⚙️ Falta de Peças</button>
               <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('DSS')">🛡️ DSS</button>
               <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Fim Expediente')">🏠 Fim Expediente</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Outros')">Outros</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptOtherReason()">Outros</button>
             </div>
           </div>
         </div>
@@ -222,6 +222,45 @@ window.WorkerPanel = (() => {
     closeModal('modal-worker-missing-parts');
     pauseWork(reason);
   }
+
+  function promptOtherReason() {
+    closeModal('modal-worker-pause');
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-other-reason">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Justificar Pausa (Outros)</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-other-reason')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, descreva o motivo da pausa da atividade:</p>
+            <div class="form-group" style="margin-bottom:15px;">
+              <textarea id="other-reason-desc" rows="4" placeholder="Descreva o motivo detalhadamente..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitOtherReason()">Confirmar Pausa</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+    container.innerHTML = modalHtml;
+    openModal('modal-worker-other-reason');
+  }
+
+  function submitOtherReason() {
+    const desc = document.getElementById('other-reason-desc').value.trim();
+    if (!desc) {
+      Toast.error('Erro', 'Por favor, descreva o motivo da pausa.');
+      return;
+    }
+    const reason = 'Outros: ' + desc;
+    closeModal('modal-worker-other-reason');
+    pauseWork(reason);
+  }
+
 
   function pauseWork(reason) {
     closeModal('modal-worker-pause');
@@ -1802,9 +1841,10 @@ window.WorkerPanel = (() => {
     resumeWork,
     promptResumeTask,
     submitResumeTask,
-    getMyEquipments,
     promptMissingParts,
     submitMissingParts,
+    promptOtherReason,
+    submitOtherReason,
     promptComplete,
     previewPhoto,
     finalizeTask
