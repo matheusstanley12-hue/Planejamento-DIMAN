@@ -72,7 +72,10 @@ window.WorkerPanel = (() => {
     preds.forEach(pid => {
       const pTask = allTasks.find(t => t.id === pid);
       if (pTask && pTask.status !== 'Concluída') {
-        blockedBy.push(pTask.codigo || pTask.descricao);
+        const pDesc = pTask.descricao || 'Tarefa sem descrição';
+        const pDisc = pTask.disciplina ? `[${pTask.disciplina}] ` : '';
+        const pCod = pTask.codigo ? ` (${pTask.codigo})` : '';
+        blockedBy.push(`${pDisc}${pDesc}${pCod}`);
       }
     });
     return blockedBy;
