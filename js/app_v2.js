@@ -177,13 +177,21 @@ async function initApp() {
 
   // ---- PUBLIC QR VIEW (no login required) ----
   const hash = window.location.hash;
-  if (hash.startsWith('#qrview')) {
+  const search = window.location.search;
+  
+  let qrId = null;
+  if (search.includes('qrview=')) {
+    const urlParams = new URLSearchParams(search);
+    qrId = urlParams.get('qrview');
+  } else if (hash.startsWith('#qrview')) {
     const params = {};
     hash.replace('#qrview', '').replace(/[?&]([^=&]+)=([^&]*)/g, (_, k, v) => { params[k] = decodeURIComponent(v); });
-    if (params.id) {
-      renderPublicQrView(params.id);
-      return true;
-    }
+    qrId = params.id;
+  }
+
+  if (qrId) {
+    renderPublicQrView(qrId);
+    return true;
   }
 
   // LocalStorage wipe removed to prevent erasing Supabase on new devices
