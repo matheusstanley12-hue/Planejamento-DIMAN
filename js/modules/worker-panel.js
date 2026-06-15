@@ -1354,9 +1354,6 @@ window.WorkerPanel = (() => {
   return {
     render,
     setEqFilter,
-    startTimer,
-    stopTimer,
-    quickComplete,
     openCreateTask,
     saveNewTask,
     openEditTask,
