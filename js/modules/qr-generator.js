@@ -123,7 +123,7 @@ window.QrGeneratorModule = (() => {
           jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
         };
         
-        Toast && Toast.show('Gerando PDF...', 'Aguarde um instante...', 'info');
+        Toast && Toast.info('Gerando PDF...', 'Aguarde um instante...');
         
         if (window.html2pdf) {
           window.html2pdf().set(opt).from(wrapper).save().then(() => {
