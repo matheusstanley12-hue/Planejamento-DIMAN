@@ -335,7 +335,7 @@ window.WorkerPanel = (() => {
         horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
         tipo: 'Atraso Tarefa',
         motivoPausa: t.pauseReason || 'Pausada',
-        observacao: \`Fim do atraso. Justificativa: \${desc}\`
+        observacao: `Fim do atraso. Justificativa: ${desc}`
       });
     }
 
@@ -354,7 +354,7 @@ window.WorkerPanel = (() => {
       currentPauseReason: ''
     });
 
-    Toast.success('Retomado!', \`Você voltou a executar a tarefa: "\${t.descricao}"\`);
+    Toast.success('Retomado!', `Você voltou a executar a tarefa: "${t.descricao}"`);
     Router.navigate('worker-panel', { force: true });
   }
 
