@@ -85,162 +85,236 @@ window.Dashboard = (() => {
     
     const parts = DB.parts.getAll();
     const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
-              const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
-              return dateA.localeCompare(dateB);
-            }).slice(0,6).map(e => {
-              const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
-              const days = daysBetween(new Date().toISOString().slice(0,10), datePrev);
-              const cls = days < 0 ? 'danger' : days <= 5 ? 'warning' : 'success';
-              return `<div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);">
-                <div class="avatar avatar-sm" style="background:var(--gradient-primary)">${e.codigo.slice(0,2)}</div>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary)">${e.codigo}</div>
-                  <div style="font-size:var(--text-xs);color:var(--text-muted)">${e.cliente}</div>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-${cls})">${formatDate(datePrev)}</div>
-                  <div style="font-size:10px;color:var(--color-${cls})">${days < 0 ? Math.abs(days)+' dias atrasado' : days === 0 ? 'Hoje!' : days+' dias'}</div>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">⚠️ Alertas Críticos</div></div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-            ${restrictions.filter(r=>r.status==='Aberta').slice(0,5).map(r => `
-              <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-danger-bg);border-radius:var(--radius-md);border-left:2px solid var(--color-danger);">
-                <span style="flex-shrink:0;">🚫</span>
-                <div style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.4">${r.descricao.slice(0,80)}${r.descricao.length>80?'...':''}</div>
-              </div>
-            `).join('')}
-            ${parts.filter(p=>p.critica&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).slice(0,3).map(p => `
-              <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-warning-bg);border-radius:var(--radius-md);border-left:2px solid var(--color-warning);">
-                <span style="flex-shrink:0;">📦</span>
-                <div style="font-size:var(--text-xs);color:var(--text-secondary)">${p.descricao} — <strong>${p.status}</strong></div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
+    
+    // Top 5 Atrasados
+    const atrasadosList = eqs.filter(e => e.status !== 'Liberado' && e.pctAvanco < 100 && e.dataLiberacaoPlanejada < new Date().toISOString().slice(0,10))
+                             .sort((a,b) => (b.pctAvanco || 0) - (a.pctAvanco || 0))
+                             .slice(0, 5);
 
-      <div class="card" style="margin-top:var(--space-5);">
-        <div class="card-header">
-          <div class="card-title" style="display:flex;align-items:center;gap:8px;">
-            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:20px;height:20px;color:var(--brand-primary);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            Inteligência Analítica: Comparativo de Mão de Obra
-          </div>
-        </div>
-        <div id="labor-comparison-container" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:var(--space-4);">
-          <!-- Rendered by JS below -->
-        </div>
-      </div>
-
-    </div>`;
+    const devClass = stats.aderencia >= 90 ? 'success' : (stats.aderencia >= 70 ? 'warning' : 'danger');
 
     setTimeout(() => {
       try {
-        // Helpers for current month calculation
-        const currentMonthPrefix = new Date().toISOString().slice(0, 7);
-        const categories = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Outros Equipamentos'];
-        const allTasks = DB.tasks.getAll();
-
-        // Chart 2: Status doughnut
-        const allStatuses = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'];
-        const allColors = ['#3B82F6','#10B981','#EF4444','#F59E0B','#64748B','#8B5CF6'];
-        const activeLabels = [];
-        const activeData = [];
-        const activeColors = [];
-        allStatuses.forEach((s, i) => {
-          const c = eqs.filter(e=>e.status===s).length;
-          if (c > 0) {
-            activeLabels.push(s);
-            activeData.push(c);
-            activeColors.push(allColors[i]);
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = 'Inter';
+        
+        // 1. Radial Gauge for Global Advance
+        const ctxGauge = document.getElementById('ch-global-gauge');
+        if (ctxGauge) {
+          charts.gauge = new Chart(ctxGauge, {
+            type: 'doughnut',
+            data: {
+              labels: ['Realizado', 'Pendente'],
+              datasets: [{
+                data: [stats.pctAvancoGeral, Math.max(0, 100 - stats.pctAvancoGeral)],
+                backgroundColor: ['#38bdf8', 'rgba(15, 23, 42, 0.5)'],
+                borderWidth: 0,
+                borderRadius: 20,
+              }]
+            },
+            options: {
+              rotation: -90,
+              circumference: 180,
+              cutout: '80%',
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { enabled: false } }
+            }
+          });
+        }
+        
+        // 2. Status dos Equipamentos
+        const allStatuses = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog'];
+        const eqCount = allStatuses.map(s => eqs.filter(e => e.status === s).length);
+        const ctxStatus = document.getElementById('ch-status-pro');
+        if (ctxStatus) {
+           charts.status = new Chart(ctxStatus, {
+             type: 'doughnut',
+             data: {
+               labels: allStatuses,
+               datasets: [{
+                 data: eqCount,
+                 backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                 borderWidth: 2,
+                 borderColor: '#1e293b',
+                 hoverOffset: 4
+               }]
+             },
+             options: {
+               cutout: '70%',
+               maintainAspectRatio: false,
+               plugins: {
+                 legend: { position: 'right', labels: { color: '#f8fafc', usePointStyle: true, padding: 15, font: { size: 11, family: 'Inter' } } }
+               }
+             }
+           });
+        }
+        
+        // 3. Timeline Anual
+        const monthsStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const mPlan = Array(12).fill(0), mReal = Array(12).fill(0);
+        eqs.forEach(e => {
+          if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mPlan[m-1]++; }
+          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) {
+            const m = parseInt((e.dataLiberacaoAtual || e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mReal[m-1]++;
           }
         });
+        const ctxAno = document.getElementById('ch-ano-pro');
+        if (ctxAno) {
+          charts.ano = new Chart(ctxAno, {
+            type: 'line',
+            data: {
+              labels: monthsStr,
+              datasets: [
+                { label: 'Realizado', data: mReal, borderColor: '#34d399', backgroundColor: 'rgba(52, 211, 153, 0.2)', fill: true, tension: 0.4, borderWidth: 3 },
+                { label: 'Planejado', data: mPlan, borderColor: '#94a3b8', borderDash: [5, 5], backgroundColor: 'transparent', fill: false, tension: 0.4, borderWidth: 2 }
+              ]
+            },
+            options: { ...chartDefaults(), maintainAspectRatio: false }
+          });
+        }
 
-        const optStatus = chartDefaults();
-        optStatus.layout.padding = { top: 0, bottom: 0, left: 0, right: 0 };
-        optStatus.plugins.legend.position = 'right';
-        optStatus.plugins.legend.align = 'center';
-        optStatus.plugins.datalabels = { display: false };
-        optStatus.scales = { x: { display: false }, y: { display: false } };
-
-        const c2 = document.getElementById('ch-status');
-        if (c2) charts.status = new Chart(c2, { type:'doughnut', data: {
-          labels: activeLabels,
-          datasets: [{ data: activeData, backgroundColor: activeColors, borderWidth: 0, borderRadius: 4, hoverOffset: 6, cutout: '75%' }]
-        }, options: optStatus });
-
-        // Chart 3: Equipment progress bar
-        const eqsInProg = eqs.filter(e => e.status !== 'Liberado' && e.status !== 'Backlog');
-        const optEq = chartDefaults();
-        optEq.indexAxis = 'y';
-        optEq.scales.x.max = 100;
-        optEq.scales.x.grace = '0%';
-        optEq.scales.x.ticks.callback = (v)=>v+'%';
-        optEq.plugins.datalabels.formatter = (v) => Math.round(v) + '%';
-
-        const c3 = document.getElementById('ch-eq');
-        if (c3) charts.eq = new Chart(c3, { type:'bar', data: {
-          labels: eqsInProg.map(e=>e.codigo),
-          datasets: [{ label:'Avanço %', data: eqsInProg.map(e=>e.pctAvanco||0), backgroundColor: eqsInProg.map(e => e.pctAvanco >= 80 ? 'rgba(16, 185, 129, 0.85)' : e.pctAvanco >= 50 ? 'rgba(59, 130, 246, 0.85)' : 'rgba(245, 158, 11, 0.85)'), borderRadius: 4, maxBarThickness: 24, borderSkipped: false }]
-        }, options: optEq });
-
-        // NEW Chart 5: Planejado x Realizado por Categoria (Mês Atual)
+        // 4. Avanço por Categoria
+        const categories = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Outros Equipamentos'];
         const catPlan = categories.map(c => eqs.filter(e => e.tipo === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
         const catReal = categories.map(c => eqs.filter(e => e.tipo === c && e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataFim || '').startsWith(currentMonthPrefix)).length);
-        
-        const optCat = chartDefaults();
-        optCat.indexAxis = 'y';
+        const ctxCat = document.getElementById('ch-cat-pro');
+        if (ctxCat) {
+          charts.cat = new Chart(ctxCat, {
+            type: 'bar',
+            data: {
+              labels: categories,
+              datasets: [
+                { label: 'Realizado', data: catReal, backgroundColor: '#38bdf8', borderRadius: 4 },
+                { label: 'Planejado', data: catPlan, backgroundColor: 'rgba(148, 163, 184, 0.2)', borderRadius: 4 }
+              ]
+            },
+            options: { ...chartDefaults(), indexAxis: 'y', maintainAspectRatio: false }
+          });
+        }
 
-        const cCat = document.getElementById('ch-cat-eq');
-        if (cCat) charts.catEq = new Chart(cCat, { type:'bar', data: {
-          labels: categories,
-          datasets: [
-            { label:'Planejado', data: catPlan, backgroundColor:'rgba(148, 163, 184, 0.4)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false },
-            { label:'Realizado', data: catReal, backgroundColor:'rgba(16, 185, 129, 0.85)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false }
-          ]
-        }, options: optCat });
-
-        // NEW Chart 6: Planejado x Realizado (Visão Anual)
-        const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-        const currentYear = new Date().getFullYear();
-        const yearPlan = Array(12).fill(0);
-        const yearReal = Array(12).fill(0);
-        
-        // Use all equipment to get full year stats
-        DB.equipment.list().forEach(e => {
-          if (e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentYear.toString())) {
-            const m = parseInt(e.dataLiberacaoPlanejada.slice(5,7)) - 1;
-            yearPlan[m]++;
-          }
-          const dtFim = e.dataLiberacaoAtual || e.dataFim;
-          if (e.status === 'Liberado' && dtFim && dtFim.startsWith(currentYear.toString())) {
-            const m = parseInt(dtFim.slice(5,7)) - 1;
-            yearReal[m]++;
-          }
-        });
-
-        const optAnual = chartDefaults();
-        optAnual.scales.x.ticks.maxRotation = 0;
-        optAnual.scales.x.ticks.minRotation = 0;
-
-        const cAnual = document.getElementById('ch-ano-eq');
-        if (cAnual) charts.anoEq = new Chart(cAnual, { type:'bar', data: {
-          labels: months,
-          datasets: [
-            { label:'Planejado', data: yearPlan, backgroundColor:'rgba(148, 163, 184, 0.4)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false },
-            { label:'Realizado', data: yearReal, backgroundColor:'rgba(59, 130, 246, 0.85)', borderRadius: 4, maxBarThickness: 24, borderSkipped: false }
-          ]
-        }, options: optAnual });
-
-      } catch(e) { console.warn('Chart.js error:', e); }
-
-
-
+      } catch(e) { console.warn('Chart Pro error:', e); }
     }, 100);
+
+    const html = `
+    <div class="dashboard-pro-wrapper">
+      <!-- HEADER -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 32px; flex-wrap:wrap; gap:16px;">
+        <div>
+          <h1 class="section-title">COMMAND CENTER</h1>
+          <p class="section-subtitle">Real-time Global Operations · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
+        </div>
+        <div style="display:flex; gap: 16px; align-items:center;">
+          <div style="display:flex; align-items:center; gap: 8px;">
+            <div style="width:10px;height:10px;background:#ef4444;border-radius:50%;box-shadow: 0 0 10px #ef4444; animation: pulse 2s infinite;"></div>
+            <span style="color:#ef4444; font-weight:700; font-size: 14px; text-transform:uppercase; letter-spacing:0.1em;">Live</span>
+          </div>
+          <button class="btn btn-primary" style="background:#1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff;" onclick="Router.navigate('dashboard',{force:true})">
+            <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="grid-bento-pro">
+        
+        <!-- TOP KPI 1: Avanço Global -->
+        <div class="card-glass col-span-4" style="align-items:center; justify-content:center; padding: 32px 24px;">
+          <div class="card-glass-header" style="width:100%;">
+            <span>Avanço Global do Projeto</span>
+            <svg style="width:16px;color:#38bdf8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </div>
+          <div style="position:relative; width: 220px; height: 110px;">
+            <canvas id="ch-global-gauge"></canvas>
+            <div style="position:absolute; bottom: 0; left: 0; width: 100%; text-align: center;">
+              <div class="metric-value-huge text-neon-blue">${stats.pctAvancoGeral}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TOP KPI 2: Aderência -->
+        <div class="card-glass col-span-4 ${devClass === 'success' ? 'success-accent' : devClass === 'danger' ? 'danger-accent' : ''}">
+          <div class="card-glass-header">
+            <span>Aderência ao Cronograma</span>
+            <span style="padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.1); color:#fff">${stats.aderencia >= 90 ? 'Ótimo' : stats.aderencia >= 70 ? 'Atenção' : 'Crítico'}</span>
+          </div>
+          <div class="metric-value-huge ${devClass === 'success' ? 'text-neon-green' : devClass === 'danger' ? 'text-neon-red' : ''}">${stats.aderencia}%</div>
+          <p style="color:#94a3b8; font-size:13px;">Planejado vs Realizado (Mês Atual)</p>
+        </div>
+
+        <!-- TOP KPI 3: Produtividade -->
+        <div class="card-glass col-span-4">
+          <div class="card-glass-header">
+            <span>Volume de Horas Realizadas</span>
+            <svg style="width:16px;color:#a855f7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div class="metric-value-huge" style="color:#c084fc; text-shadow: 0 0 20px rgba(192,132,252,0.4);">${stats.horasRealizadas.toFixed(0)}h</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 16px;">
+            <span style="color:#94a3b8; font-size: 13px;">Tarefas Concluídas: <strong style="color:#fff">${stats.concluidas}</strong></span>
+            <span style="color:#94a3b8; font-size: 13px;">Restrições: <strong style="color:#ef4444">${stats.restricoesAbertas}</strong></span>
+          </div>
+        </div>
+
+        <!-- CHART: Status dos Equipamentos -->
+        <div class="card-glass col-span-3" style="min-height: 380px;">
+          <div class="card-glass-header"><span>Saúde da Frota (Live)</span></div>
+          <div class="canvas-container">
+            <canvas id="ch-status-pro"></canvas>
+            <!-- Center Total -->
+            <div style="position:absolute; top:50%; left:30%; transform:translate(-50%, -50%); text-align:center; pointer-events:none;">
+              <div style="font-size:32px; font-weight:900; color:#fff; line-height:1;">${eqs.length}</div>
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.1em;">Total</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHART: Timeline Anual -->
+        <div class="card-glass col-span-6" style="min-height: 380px;">
+          <div class="card-glass-header"><span>Projeção e Execução Anual</span></div>
+          <div class="canvas-container">
+            <canvas id="ch-ano-pro"></canvas>
+          </div>
+        </div>
+
+        <!-- LIST: Top 5 Gargalos -->
+        <div class="card-glass col-span-3 danger-accent" style="min-height: 380px;">
+          <div class="card-glass-header"><span style="color:#f87171;">⚠️ Equipamentos Críticos</span></div>
+          <div class="ranking-list" style="overflow-y:auto; flex:1; padding-right:8px;">
+            ${atrasadosList.length === 0 ? '<div style="text-align:center;color:#94a3b8;margin-top:20px;">Nenhum equipamento crítico.</div>' : ''}
+            ${atrasadosList.map(e => `
+              <div class="ranking-item">
+                <div>
+                  <div class="ranking-item-title">${e.codigo}</div>
+                  <div class="ranking-item-meta">${e.tipo}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div class="ranking-item-value text-neon-red">${Math.round(e.pctAvanco || 0)}%</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:12px; color:#94a3b8;">
+              <span>Falta de Peças (Pendentes)</span>
+              <strong style="color:#fff">${pendingParts}</strong>
+            </div>
+            <div style="background:rgba(255,255,255,0.1); height:6px; border-radius:3px; overflow:hidden;">
+              <div style="background:#ef4444; width:${Math.min(100, (pendingParts/10)*100)}%; height:100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHART: Categoria -->
+        <div class="card-glass col-span-12" style="min-height: 340px;">
+          <div class="card-glass-header"><span>Entrega Estratégica por Categoria (Mês Atual)</span></div>
+          <div class="canvas-container small">
+            <canvas id="ch-cat-pro"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    `;
 
     return html;
   }
