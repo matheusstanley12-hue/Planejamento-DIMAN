@@ -495,28 +495,12 @@ window.AIAssistant = (() => {
     }
 
     if (intents.includes('greeting') && intents.length === 1 && matchedEqs.length === 0) {
-      return `Olá! Estou pronto para fornecer análises precisas da oficina. Posso:\n\n• Diagnosticar motivos de atraso de equipamentos específicos\n• Projetar prazos de liberação\n• Mapear o caminho crítico e gargalos\n• Verificar status de peças e restrições ativas\n• Avaliar alocação de mão de obra e custos\n• Buscar manuais, circuitos e preços de peças na web\n\nMe pergunte sobre um equipamento ou solicite o "resumo geral".`;
+      return `Olá! Estou pronto para fornecer análises precisas da oficina. Posso:\n\n• Diagnosticar motivos de atraso de equipamentos específicos\n• Projetar prazos de liberação\n• Mapear o caminho crítico e gargalos\n• Verificar status de peças e restrições ativas\n• Avaliar alocação de mão de obra e custos\n• Garantir a segurança e sigilo absoluto dos seus dados operando de forma 100% isolada e local.\n\nMe pergunte sobre um equipamento ou solicite o "resumo geral".`;
     }
 
     // Web Search Logic
     if (intents.includes('web_search')) {
-      const isManual = /manual|esquema|circuito|circuido|pdf|hidraulico|eletrico/.test(normalize(query));
-      const qEncoded = encodeURIComponent(query.replace(/[^\w\s]/gi, ''));
-      
-      let resp = `🌐 **Assistente Web Integrado**\n\n`;
-      resp += `Fiz uma varredura para a sua solicitação. Como não guardo todos os arquivos e preços dentro do banco de dados (por mudarem constantemente), gerei links diretos com filtros precisos para você:\n\n`;
-      
-      if (isManual) {
-        resp += `📄 **Manuais e Circuitos (PDFs):**\n`;
-        resp += `<a href="https://www.google.com/search?q=${qEncoded}+filetype:pdf" target="_blank" style="color:var(--brand-primary);text-decoration:underline;font-weight:bold;">👉 Buscar PDFs no Google (Manuais/Circuitos)</a>\n\n`;
-      } else {
-        resp += `🛒 **Cotação de Peças e Motores:**\n`;
-        resp += `<a href="https://lista.mercadolivre.com.br/${qEncoded.replace(/%20/g, '-')}" target="_blank" style="color:var(--brand-primary);text-decoration:underline;font-weight:bold;">👉 Pesquisar Valores no Mercado Livre</a>\n`;
-        resp += `<a href="https://www.google.com/search?tbm=shop&q=${qEncoded}" target="_blank" style="color:var(--brand-primary);text-decoration:underline;font-weight:bold;">👉 Pesquisar Preços no Google Shopping</a>\n\n`;
-      }
-      
-      resp += `*(Dica: Se encontrar o manual correto, cadastre-o na tela de "Gestão de Manuais" para que a equipe técnica tenha acesso rápido pelo celular).*`;
-      return resp;
+      return `🔒 **Acesso Externo Bloqueado**\n\nConforme as diretrizes de segurança, este sistema é **estritamente restrito e isolado**. Minha conexão com a internet e com qualquer servidor externo foi desativada para garantir que nenhum dado vaze para o mundo.\n\nEu opero 100% de forma local e dedicada apenas aos dados cadastrados no seu sistema de Manutenção e Planejamento. Não posso realizar buscas de preços ou manuais no Google ou Mercado Livre.`;
     }
 
     const allTasks = window.DB && DB.tasks ? DB.tasks.getAll() : [];

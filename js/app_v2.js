@@ -19,6 +19,9 @@ window.Router = (() => {
   function register(name, moduleFn) { routes[name] = moduleFn; }
 
   async function navigate(name, params = {}) {
+    // Prevent frozen screen if navigating away with open modals
+    document.body.style.overflow = '';
+    
     if (window.closeMobileSidebar) window.closeMobileSidebar();
     if (current === name && !params.force) return;
 
@@ -179,13 +182,14 @@ async function initApp() {
     hash.replace('#qrview', '').replace(/[?&]([^=&]+)=([^&]*)/g, (_, k, v) => { params[k] = decodeURIComponent(v); });
     if (params.id) {
       renderPublicQrView(params.id);
-      return;
+      return true;
     }
   }
 
   // LocalStorage wipe removed to prevent erasing Supabase on new devices
 
   Auth.init();
+  return false;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -193,7 +197,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const savedTheme = localStorage.getItem('diman_theme') || 'light';
     document.documentElement.dataset.theme = savedTheme;
 
-    await initApp();
+    const isPublic = await initApp();
+    if (isPublic) return; // Halt bootstrap if public route handled
 
     // Check session
     if (!Auth.isLoggedIn()) {
@@ -466,8 +471,7 @@ function renderShell(session) {
     { route:'equipment',  label:'Equipamentos',          icon:'wrench-screwdriver', perm:'equipment', section:'PLANEJAMENTO' },
     { route:'released',   label:'Equip. Liberados',      icon:'check-circle',   perm:'dashboard',   section:'' },
     { route:'tasks',      label:'Tarefas',               icon:'clipboard-list', perm:'tasks',       section:'' },
-    { route:'gantt',      label:'Cronograma Gantt',      icon:'chart-bar',      perm:'gantt',       section:'' },
-    { route:'critical',   label:'Caminho Crítico',       icon:'exclamation-triangle', perm:'criticalPath', section:'' },
+
     { route:'services',   label:'Serviços / Aprovações', icon:'clipboard-document-check', perm:'dashboard', section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
     { route:'parts',      label:'Falta de Peças',   icon:'cube',           perm:'parts',       section:'' },

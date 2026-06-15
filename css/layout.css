@@ -102,10 +102,24 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-3) var(--space-2);
-  scrollbar-width: none;
+  /* Scrollbar estilizda */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
-.sidebar-nav::-webkit-scrollbar { display: none; }
 
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: rgba(255,255,255,0.2);
+  border-radius: 10px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255,255,255,0.4);
+}
 .sidebar-section-label {
   font-size: 10px;
   font-weight: var(--font-semibold);

@@ -42,7 +42,7 @@ window.ChecklistsModule = (() => {
           name: file.name,
           date: dateStr,
           size: sizeMb,
-          user: window.Auth && Auth.getCurrentUser() ? Auth.getCurrentUser().nome : 'Usuário'
+          user: window.Auth && Auth.getSession() ? Auth.getSession().nome : 'Usuário'
         });
       }
       

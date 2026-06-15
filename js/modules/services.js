@@ -7,7 +7,7 @@ window.ServicesModule = (() => {
 
   function render() {
     const session = Auth.getSession();
-    const isPCM = ['Administrador', 'Planejador', 'Gerente'].includes(session.perfil);
+    const isPCM = ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente'].includes(session.perfil);
     const isEncarregado = ['Supervisor', 'Encarregado'].includes(session.perfil);
     
     if (!isPCM && !isEncarregado) {

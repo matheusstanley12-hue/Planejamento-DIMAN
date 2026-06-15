@@ -587,12 +587,18 @@ window.EquipmentModule = (() => {
           </select>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row cols-3">
         <div class="form-group"><label>🔒 Data Planejada de Liberação ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
             ${['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Etapa Atual</label>
+          <select id="eq-etapa-atual" class="form-control">
+            ${['Nenhuma','Lavador','Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -662,6 +668,7 @@ window.EquipmentModule = (() => {
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
       status: document.getElementById('eq-status').value,
+      etapaAtual: document.getElementById('eq-etapa-atual').value,
       pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
       prioridade: document.getElementById('eq-prioridade').value,
       urgencia: document.getElementById('eq-prioridade').value,
@@ -678,6 +685,32 @@ window.EquipmentModule = (() => {
       }
     };
     if (!data.codigo || !data.os) { Toast.error('Erro', 'Código e O.S. são obrigatórios.'); return; }
+    
+    // Check if status is Liberado and validate pending tasks
+    if (data.status === 'Liberado') {
+      const eqTasks = id ? DB.tasks.getByEquipment(id) : [];
+      const pendingTasks = eqTasks.filter(t => t.status !== 'Concluída');
+      if (pendingTasks.length > 0) {
+        Toast.error('Erro', `Existem ${pendingTasks.length} tarefa(s) pendente(s). Não é possível liberar o equipamento.`);
+        return;
+      }
+      
+      const existingEq = id ? DB.equipment.get(id) : null;
+      if (!existingEq || existingEq.status !== 'Liberado') {
+        data.dataLiberacaoAtual = new Date().toISOString().slice(0, 10);
+        if (window.DB && window.DB.timeline) {
+          window.DB.timeline.create({
+            equipmentId: id || data.codigo,
+            tipo: 'LIBERAÇÃO',
+            titulo: 'Equipamento Liberado',
+            descricao: 'Equipamento foi liberado para operação.',
+            timestamp: new Date().toISOString(),
+            responsavel: window.Auth && window.Auth.getSession() ? window.Auth.getSession().nome : 'Sistema'
+          });
+        }
+      }
+    }
+
     if (id) { DB.equipment.update(id, data); Toast.success('Equipamento atualizado!', data.codigo); }
     else { data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; DB.equipment.create(data); Toast.success('Equipamento criado!', data.codigo); }
     closeModal('modal-equipment');

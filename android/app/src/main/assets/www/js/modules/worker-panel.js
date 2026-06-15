@@ -118,7 +118,11 @@ window.WorkerPanel = (() => {
     });
 
     if (t) {
-      DB.tasks.update(t.id, { horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100) });
+      let updatePayload = { horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100) };
+      if (reason === 'Falta de Peças' || reason === 'Falta de Peça') {
+        updatePayload.status = 'Aguardando Peça';
+      }
+      DB.tasks.update(t.id, updatePayload);
     }
 
     DB.workforce.update(myWorker.id, {
@@ -161,6 +165,10 @@ window.WorkerPanel = (() => {
       currentPauseReason: '',
       currentActionStartTime: now.toISOString()
     });
+
+    if (t && t.status !== 'Em Andamento') {
+      DB.tasks.update(t.id, { status: 'Em Andamento' });
+    }
 
     Toast.success('Retomado!', 'O cronômetro de trabalho voltou a rodar.');
     Router.navigate('worker-panel', { force: true });
@@ -345,13 +353,24 @@ window.WorkerPanel = (() => {
     return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
   }
 
+  function formatTimeDiff(isoStart) {
+    if (!isoStart) return '00:00:00';
+    const s = new Date(isoStart);
+    const n = new Date();
+    const diff = Math.floor((n - s) / 1000); // seconds
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const secs = diff % 60;
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  }
+
   function render() {
     const session = Auth.getSession();
     if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso Restrito</div>`;
 
     window.GlobalEqFilter = '';
     const myWorker = getMyWorker(session);
-    if (!myWorker) return `<div class="page-container"><h3>Erro</h3><p>Seu cadastro não foi encontrado na base de mão de obra. Avise o planejador.</p></div>`;
+    if (!myWorker) return `<div class="page-container"><h3>Erro</h3><p>Seu cadastro não foi encontrado na base de mão de obra. Avise o PCM.</p></div>`;
 
     const eqs = DB.equipment.list();
     const tasks = DB.tasks.getAll();
@@ -368,7 +387,7 @@ window.WorkerPanel = (() => {
     // Auto-update timer display
     if (!window.workerTimerInterval && state !== 'Ocioso') {
       window.workerTimerInterval = setInterval(() => {
-        const el = document.getElementById('live-timer');
+        const el = document.getElementById('live-timer-wp');
         if (el && myWorker.currentActionStartTime) {
           el.innerText = formatTimeDiff(myWorker.currentActionStartTime);
         }
@@ -380,55 +399,69 @@ window.WorkerPanel = (() => {
 
     if (state === 'Trabalhando') {
       const currentT = tasks.find(t => t.id === myWorker.currentTaskId);
+      const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
       statusPanelHtml = `
-        <div style="background:var(--color-success-bg);border:2px solid var(--color-success);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
-          <h2 style="color:var(--color-success);margin:0;font-size:24px;font-weight:900;">EM EXECUÇÃO</h2>
-          <div style="margin:10px 0;font-size:16px;color:var(--text-primary);">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
-          <div id="live-timer" style="font-size:36px;font-family:monospace;font-weight:bold;color:var(--color-success);margin:15px 0;">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
+        <div class="active-task-card working">
+          <div class="pulse-indicator"></div>
+          <div class="task-state">EM EXECUÇÃO</div>
+          <div class="task-timer" id="live-timer-wp">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
+          <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
+          <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
           
-          <div style="display:flex;gap:10px;justify-content:center;">
-            <button class="btn btn-warning btn-xl" onclick="WorkerPanel.promptPause()" style="flex:1;max-width:200px;font-weight:bold;">⏸ PAUSAR</button>
-            <button class="btn btn-primary btn-xl" onclick="WorkerPanel.promptComplete()" style="flex:1;max-width:200px;font-weight:bold;">✔ CONCLUIR</button>
+          <div class="action-buttons">
+            <button class="btn-action pause" onclick="WorkerPanel.promptPause()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              PAUSAR
+            </button>
+            <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              CONCLUIR
+            </button>
           </div>
         </div>
       `;
     } else if (state === 'Em Pausa') {
       const currentT = tasks.find(t => t.id === myWorker.currentTaskId);
+      const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
       statusPanelHtml = `
-        <div style="background:var(--color-warning-bg);border:2px solid var(--color-warning);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
-          <h2 style="color:var(--color-warning);margin:0;font-size:24px;font-weight:900;">EM PAUSA</h2>
-          <div style="margin:5px 0;font-weight:bold;color:var(--text-primary);">Motivo: ${myWorker.currentPauseReason}</div>
-          <div style="margin:5px 0;font-size:14px;color:var(--text-muted);">Tarefa pausada: ${currentT ? currentT.descricao : ''}</div>
-          <div id="live-timer" style="font-size:36px;font-family:monospace;font-weight:bold;color:var(--color-warning);margin:15px 0;">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
+        <div class="active-task-card paused">
+          <div class="task-state">EM PAUSA: ${myWorker.currentPauseReason}</div>
+          <div class="task-timer" id="live-timer-wp">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
+          <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
+          <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
           
-          <div style="display:flex;gap:10px;justify-content:center;">
-            <button class="btn btn-success btn-xl" onclick="WorkerPanel.resumeWork()" style="flex:1;max-width:300px;font-weight:bold;height:60px;font-size:18px;">▶ RETOMAR TRABALHO</button>
+          <div class="action-buttons">
+            <button class="btn-action resume" onclick="WorkerPanel.resumeWork()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              RETOMAR TRABALHO
+            </button>
+            <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              CONCLUIR
+            </button>
           </div>
         </div>
       `;
     } else {
       statusPanelHtml = `
-        <div style="background:var(--bg-card);border:2px dashed var(--border-card);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
-          <h2 style="color:var(--text-muted);margin:0;font-size:20px;font-weight:900;">OCIOSO</h2>
-          <p style="color:var(--text-secondary);font-size:14px;">Você não possui tarefas em andamento. Inicie uma atividade abaixo.</p>
+        <div class="active-task-card idle">
+          <div class="task-state" style="color:var(--text-muted);font-weight:700;">OCIOSO</div>
+          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Você não possui atividades ativas no momento. Inicie uma atividade abaixo para começar a contar o tempo.</p>
         </div>
       `;
     }
 
     // Horizontal Machines List
     const machinesHtml = `
-      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;margin-bottom:20px;">
+      <div class="machines-scroll">
         ${myEqs.map(e => `
-          <div class="card hover-lift" style="min-width:280px;background:var(--bg-card);border:1px solid var(--border-card);padding:15px;border-radius:12px;cursor:pointer;" onclick="WorkerPanel.setEqFilter('${e.id}')">
-            <div style="display:flex;justify-content:space-between;">
-              <strong style="font-size:16px;color:${eqFilter===e.id ? 'var(--brand-primary)' : 'var(--text-primary)'}">${e.codigo}</strong>
-              <span class="badge badge-ghost">${e.pctAvanco || 0}%</span>
-            </div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${e.nome || ''}</div>
+          <div class="machine-chip ${eqFilter === e.id ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('${e.id}')">
+            <strong>${e.codigo}</strong>
+            <span>${e.pctAvanco || 0}%</span>
           </div>
         `).join('')}
-        <div class="card hover-lift" style="min-width:150px;background:${!eqFilter ? 'var(--brand-primary-light)' : 'var(--bg-card)'};border:1px solid var(--border-card);padding:15px;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:${!eqFilter ? '#000' : 'var(--text-primary)'};font-weight:bold;" onclick="WorkerPanel.setEqFilter('')">
-          VER TODAS
+        <div class="machine-chip ${!eqFilter ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('')">
+          <strong>TODAS AS MÁQUINAS</strong>
         </div>
       </div>
     `;
@@ -444,42 +477,144 @@ window.WorkerPanel = (() => {
       let actionBtn = '';
       if (state === 'Ocioso') {
         if (isBlocked) {
-          actionBtn = `<span style="color:var(--color-danger);font-size:11px;font-weight:bold;"> BLOQUEADA POR: ${blockedBy.join(', ')}</span>`;
+          actionBtn = `<div class="task-card-blocked">Bloqueada por: ${blockedBy.join(', ')}</div>`;
         } else {
-          actionBtn = `<button class="btn btn-outline btn-sm" onclick="WorkerPanel.startTask('${t.id}')" style="font-weight:bold;color:var(--brand-primary);border-color:var(--brand-primary);">▶ INICIAR</button>`;
+          actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startTask('${t.id}')">INICIAR AGORA</button>`;
+        }
+      } else {
+         if (isBlocked) {
+          actionBtn = `<div class="task-card-blocked">Bloqueada por: ${blockedBy.join(', ')}</div>`;
         }
       }
 
+      const priorityClass = t.prioridade === 'Crítica' ? 'prio-crit' : (t.prioridade === 'Alta' ? 'prio-high' : 'prio-med');
+
       return `
-        <div class="card hover-lift" style="padding:15px;background:var(--bg-card);border:1px solid var(--border-card);border-radius:12px;margin-bottom:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:start;">
-            <div style="flex:1;">
-              <div style="font-weight:bold;font-size:15px;color:var(--text-primary);margin-bottom:4px;">${t.descricao}</div>
-              <div style="font-size:12px;color:var(--text-muted);">
-                Máquina: ${eq ? eq.codigo : '—'} &nbsp;|&nbsp; ${t.disciplina}
-              </div>
-            </div>
-            <div style="margin-left:10px;">${actionBtn}</div>
+        <div class="task-card-v4">
+          <div class="task-card-header">
+            <span class="task-discipline">${t.disciplina || 'Geral'}</span>
+            <span class="task-prio ${priorityClass}">${t.prioridade || 'Média'}</span>
+          </div>
+          <div class="task-card-title">${t.descricao}</div>
+          <div class="task-card-eq">${eq ? eq.codigo + ' - ' + eq.nome : 'Sem equipamento'}</div>
+          <div class="task-card-footer">
+            ${actionBtn}
           </div>
         </div>
       `;
     }).join('');
 
     return `
-      <div class="page-container" style="padding-bottom:100px;">
+      <style>
+        .wp-container { padding-bottom: 100px; animation: fadeIn 0.3s ease; }
+        
+        .active-task-card {
+          margin-bottom: 24px; border-radius: 20px; padding: 24px; position: relative; overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.05); color: #fff;
+        }
+        .active-task-card.working {
+          background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        .active-task-card.paused {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        .active-task-card.idle {
+          background: var(--bg-card); color: var(--text-primary); border: 2px dashed var(--border-card);
+          box-shadow: none; text-align: center; padding: 30px 20px;
+        }
+        
+        .pulse-indicator {
+          position: absolute; top: 24px; right: 24px; width: 12px; height: 12px; border-radius: 50%;
+          background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); animation: pulseGreen 2s infinite;
+        }
+        @keyframes pulseGreen {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        
+        .task-state { font-size: 13px; font-weight: 800; letter-spacing: 1px; opacity: 0.9; margin-bottom: 8px; }
+        .active-task-card.working .task-state { color: #38bdf8; }
+        .active-task-card.paused .task-state { color: #fff; }
+        
+        .task-timer { font-size: 48px; font-weight: 900; font-family: 'Inter', sans-serif; letter-spacing: -1px; margin-bottom: 12px; line-height: 1; }
+        .active-task-card.working .task-timer { color: #10b981; }
+        .active-task-card.paused .task-timer { color: #fff; }
+        
+        .task-desc { font-size: 18px; font-weight: 600; line-height: 1.3; margin-bottom: 6px; }
+        .task-meta { font-size: 14px; opacity: 0.7; margin-bottom: 24px; }
+        
+        .action-buttons { display: flex; gap: 12px; }
+        .btn-action {
+          flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+          padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 800; border: none; cursor: pointer;
+          transition: transform 0.1s, filter 0.1s;
+        }
+        .btn-action:active { transform: scale(0.96); }
+        .btn-action svg { width: 20px; height: 20px; }
+        
+        .btn-action.pause { background: #f59e0b; color: #fff; }
+        .btn-action.complete { background: #10b981; color: #fff; }
+        .btn-action.resume { background: #0f172a; color: #fff; }
+        
+        .machines-scroll {
+          display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; margin-bottom: 8px; scrollbar-width: none;
+        }
+        .machines-scroll::-webkit-scrollbar { display: none; }
+        .machine-chip {
+          flex-shrink: 0; padding: 12px 20px; background: var(--bg-card); border: 1px solid var(--border-card);
+          border-radius: 100px; display: flex; gap: 12px; align-items: center; cursor: pointer; transition: all 0.2s;
+        }
+        .machine-chip strong { color: var(--text-primary); font-size: 14px; }
+        .machine-chip span { background: var(--brand-primary-light); color: var(--brand-primary); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+        .machine-chip.active { background: var(--brand-primary); border-color: var(--brand-primary); }
+        .machine-chip.active strong, .machine-chip.active span { color: #fff; }
+        .machine-chip.active span { background: rgba(255,255,255,0.2); }
+        
+        .task-card-v4 {
+          background: var(--bg-card); border: 1px solid var(--border-card); border-radius: 16px; padding: 20px;
+          margin-bottom: 16px; transition: transform 0.2s;
+        }
+        .task-card-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .task-discipline { font-size: 12px; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; }
+        .task-prio { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
+        .task-prio.prio-crit { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
+        .task-prio.prio-high { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+        .task-prio.prio-med  { background: rgba(148, 163, 184, 0.1); color: #64748b; }
+        
+        .task-card-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; line-height: 1.4; }
+        .task-card-eq { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+        .task-card-eq::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--brand-primary); }
+        
+        .task-card-footer { display: flex; justify-content: flex-end; }
+        .btn-start-task {
+          background: transparent; color: var(--brand-primary); border: 2px solid var(--brand-primary);
+          padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; width: 100%; transition: 0.2s;
+        }
+        .btn-start-task:active { background: var(--brand-primary); color: #fff; }
+        
+        .task-card-blocked {
+          background: rgba(220, 38, 38, 0.05); color: #dc2626; padding: 10px 16px; border-radius: 8px;
+          font-size: 12px; font-weight: 700; width: 100%; text-align: center; border: 1px dashed rgba(220, 38, 38, 0.3);
+        }
+      </style>
+
+      <div class="wp-container">
         ${statusPanelHtml}
 
-        <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Suas Máquinas</h3>
+        <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;margin-top:8px;">Suas Máquinas</h3>
         ${machinesHtml}
 
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-          <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin:0;">Fila de Tarefas</h3>
-          <button class="btn btn-ghost btn-sm" onclick="WorkerPanel.openCreateTask()">+ Nova Tarefa</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:24px;">
+          <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin:0;">Fila de Tarefas Pendentes</h3>
+          <button class="btn btn-ghost btn-sm" onclick="WorkerPanel.openCreateTask()" style="color:var(--brand-primary);font-weight:700;">+ Adicionar Extra</button>
         </div>
         
         ${listTasks.length > 0 ? tasksHtml : `
-          <div style="text-align:center;padding:30px;color:var(--text-muted);background:rgba(255,255,255,0.02);border-radius:12px;">
-            Nenhuma tarefa pendente encontrada.
+          <div style="text-align:center;padding:40px 20px;background:var(--bg-card);border:1px dashed var(--border-card);border-radius:16px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:48px;height:48px;margin:0 auto 16px;color:#cbd5e1;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <div style="color:var(--text-primary);font-weight:700;font-size:16px;margin-bottom:4px;">Tudo limpo!</div>
+            <div style="color:var(--text-secondary);font-size:14px;">Você não tem mais tarefas pendentes para hoje.</div>
           </div>
         `}
       </div>
@@ -1354,9 +1489,6 @@ window.WorkerPanel = (() => {
   return {
     render,
     setEqFilter,
-    startTimer,
-    stopTimer,
-    quickComplete,
     openCreateTask,
     saveNewTask,
     openEditTask,

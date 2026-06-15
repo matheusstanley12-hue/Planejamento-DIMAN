@@ -226,12 +226,9 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('restricoes', `RESTRIÇÕES <span class="badge badge-${openRestr>0?'danger':'success'}" style="margin-left:8px;">${openRestr} abertas</span>`, 'exclamation-triangle', renderRestricoes(restrictions))}
           
-          ${renderAccordion('ddd1', 'D-1 | D | D+1', 'calendar-days', renderDDD1(tasks))}
-          
           ${renderAccordion('cronograma', 'CRONOGRAMA & CAMINHO CRÍTICO', 'calendar', renderCronograma(tasks, eq))}
           
           ${renderAccordion('historico', 'HISTÓRICO & REPLANEJAMENTOS', 'clock', renderHistorico(eq))}
-          ${renderAccordion('anexos', 'ANEXOS', 'document-report', renderAnexos())}
 
         </div>
       </div>
@@ -729,8 +726,17 @@ window.EquipmentPanel = (() => {
   function openTaskModal(disciplina, taskId = null) {
     editingTaskId = taskId;
     openModal('eq-task-modal');
-    document.getElementById('new-task-disc').value = disciplina;
-    document.getElementById('new-task-disc-label').textContent = disciplina.toUpperCase();
+    
+    const discInput = document.getElementById('new-task-disc');
+    if (discInput) discInput.value = disciplina;
+    
+    const labelEl = document.getElementById('new-task-disc-label');
+    if (labelEl) {
+      labelEl.textContent = disciplina.toUpperCase();
+    } else {
+      const h3 = document.querySelector('#eq-task-modal h3');
+      if (h3) h3.innerHTML = `Nova Atividade - <span id="new-task-disc-label" style="color:var(--brand-primary-light);">${disciplina.toUpperCase()}</span>`;
+    }
     
     // Fetch all other tasks of the current equipment (excluding the task being edited to avoid self-dependency)
     const allTasks = DB.tasks.getByEquipment(currentEqId);
