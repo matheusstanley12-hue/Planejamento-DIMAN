@@ -44,16 +44,26 @@ window.ServicesModule = (() => {
           </div>
         </div>
 
-        <div class="tabs" style="margin-bottom:var(--space-4);">
-          <button class="tab ${activeTab === 'pendentes' ? 'active' : ''}" onclick="window.ServicesModule.setTab('pendentes')">
-            Pendentes (${pendentes.length})
-          </button>
-          <button class="tab ${activeTab === 'andamento' ? 'active' : ''}" onclick="window.ServicesModule.setTab('andamento')">
-            Em Andamento (${andamento.length})
-          </button>
-          <button class="tab ${activeTab === 'concluidas' ? 'active' : ''}" onclick="window.ServicesModule.setTab('concluidas')">
-            Histórico (${concluidas.length})
-          </button>
+        <div class="card" style="margin-bottom:var(--space-5);background:linear-gradient(135deg,rgba(21,101,192,0.08) 0%,var(--bg-card) 100%);border-color:var(--border-hover);">
+          <div class="card-header"><div class="card-title">📊 Visão Geral: ${pageSubtitle}</div></div>
+          <div style="display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap;padding-bottom:var(--space-2)">
+            
+            <div onclick="window.ServicesModule.setTab('pendentes')" class="hover-lift" style="cursor:pointer;flex:1;min-width:150px;text-align:center;padding:var(--space-4) var(--space-6);background:var(--bg-base);border-radius:var(--radius-lg);border:2px solid ${activeTab === 'pendentes' ? 'var(--brand-primary-light)' : 'transparent'};box-shadow:${activeTab === 'pendentes' ? '0 0 0 2px rgba(59,130,246,0.2)' : 'none'};transition:all 0.2s;">
+              <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-1)">Pendentes</div>
+              <div style="font-size:3rem;font-weight:800;color:var(--color-warning);line-height:1">${pendentes.length}</div>
+            </div>
+
+            <div onclick="window.ServicesModule.setTab('andamento')" class="hover-lift" style="cursor:pointer;flex:1;min-width:150px;text-align:center;padding:var(--space-4) var(--space-6);background:var(--bg-base);border-radius:var(--radius-lg);border:2px solid ${activeTab === 'andamento' ? 'var(--brand-primary-light)' : 'transparent'};box-shadow:${activeTab === 'andamento' ? '0 0 0 2px rgba(59,130,246,0.2)' : 'none'};transition:all 0.2s;">
+              <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-1)">Em Andamento</div>
+              <div style="font-size:3rem;font-weight:800;color:var(--brand-primary-light);line-height:1">${andamento.length}</div>
+            </div>
+
+            <div onclick="window.ServicesModule.setTab('concluidas')" class="hover-lift" style="cursor:pointer;flex:1;min-width:150px;text-align:center;padding:var(--space-4) var(--space-6);background:var(--bg-base);border-radius:var(--radius-lg);border:2px solid ${activeTab === 'concluidas' ? 'var(--brand-primary-light)' : 'transparent'};box-shadow:${activeTab === 'concluidas' ? '0 0 0 2px rgba(59,130,246,0.2)' : 'none'};transition:all 0.2s;">
+              <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-1)">Histórico</div>
+              <div style="font-size:3rem;font-weight:800;color:var(--color-success);line-height:1">${concluidas.length}</div>
+            </div>
+
+          </div>
         </div>
 
         <div class="table-container">
