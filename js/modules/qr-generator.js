@@ -67,90 +67,14 @@ window.QrGeneratorModule = (() => {
   function downloadDirectPDF(id, codigo, nome) {
     const url = window.location.origin + window.location.pathname + '#qrview?id=' + id;
     
-    // Create an overlay that shows the PDF being generated (fixes all blank/invisible html2canvas bugs)
-    const overlay = document.createElement('div');
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100vw';
-    overlay.style.height = '100vh';
-    overlay.style.zIndex = '999999';
-    overlay.style.background = 'rgba(248, 250, 252, 0.95)';
-    overlay.style.display = 'flex';
-    overlay.style.flexDirection = 'column';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    
-    const loadingText = document.createElement('div');
-    loadingText.innerText = 'Gerando PDF, aguarde...';
-    loadingText.style.fontSize = '20px';
-    loadingText.style.fontWeight = 'bold';
-    loadingText.style.color = '#334155';
-    loadingText.style.marginBottom = '20px';
-    loadingText.style.fontFamily = 'Arial, sans-serif';
-    overlay.appendChild(loadingText);
-
-    const wrapper = document.createElement('div');
-    wrapper.style.width = '600px';
-    wrapper.style.background = '#ffffff';
-    wrapper.style.padding = '40px';
-    wrapper.style.boxSizing = 'border-box';
-    wrapper.style.fontFamily = 'Arial, sans-serif';
-    wrapper.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
-    overlay.appendChild(wrapper);
-    document.body.appendChild(overlay);
-
-    const contentBox = document.createElement('div');
-    contentBox.style.background = 'white';
-    contentBox.style.padding = '40px';
-    contentBox.style.borderRadius = '16px';
-    contentBox.style.textAlign = 'center';
-    contentBox.style.border = '2px solid #e2e8f0';
-    wrapper.appendChild(contentBox);
-
-    const title = document.createElement('div');
-    title.style.fontSize = '32px';
-    title.style.fontWeight = '900';
-    title.style.color = '#0f172a';
-    title.style.marginBottom = '20px';
-    title.style.textTransform = 'uppercase';
-    title.innerText = nome || codigo;
-    contentBox.appendChild(title);
-
-    const qrBorder = document.createElement('div');
-    qrBorder.style.background = 'white';
-    qrBorder.style.padding = '20px';
-    qrBorder.style.display = 'inline-block';
-    qrBorder.style.borderRadius = '12px';
-    qrBorder.style.border = '1px solid #cbd5e1';
-    contentBox.appendChild(qrBorder);
-
-    const qrContainer = document.createElement('div');
-    qrContainer.style.width = '250px';
-    qrContainer.style.height = '250px';
-    qrContainer.style.display = 'flex';
-    qrContainer.style.justifyContent = 'center';
-    qrContainer.style.alignItems = 'center';
-    qrBorder.appendChild(qrContainer);
-
-    const footer1 = document.createElement('div');
-    footer1.style.fontSize = '16px';
-    footer1.style.color = '#64748b';
-    footer1.style.marginTop = '20px';
-    footer1.innerText = 'Escaneie a etiqueta para acessar o histórico e solicitar serviços';
-    contentBox.appendChild(footer1);
-
-    const footer2 = document.createElement('div');
-    footer2.style.marginTop = '30px';
-    footer2.style.fontSize = '12px';
-    footer2.style.color = '#94a3b8';
-    footer2.style.borderTop = '1px solid #e2e8f0';
-    footer2.style.paddingTop = '20px';
-    footer2.innerHTML = 'Gerado por Planejamento Geosol &bull; DIMAN-BHZ';
-    contentBox.appendChild(footer2);
+    // Create a temporary container just to run QRCode.js
+    const tempQrContainer = document.createElement('div');
+    tempQrContainer.style.position = 'absolute';
+    tempQrContainer.style.left = '-9999px';
+    document.body.appendChild(tempQrContainer);
 
     if (typeof QRCode !== 'undefined') {
-      new QRCode(qrContainer, {
+      new QRCode(tempQrContainer, {
         text: url,
         width: 250,
         height: 250,
@@ -159,39 +83,129 @@ window.QrGeneratorModule = (() => {
         correctLevel : QRCode.CorrectLevel.H
       });
       
-      // Give QRCode.js time to draw and DOM to paint
+      // Wait for QRCode.js to draw the canvas
       setTimeout(() => {
-        const canvas = qrContainer.querySelector('canvas');
+        const canvas = tempQrContainer.querySelector('canvas');
         if (!canvas) {
-          document.body.removeChild(overlay);
+          document.body.removeChild(tempQrContainer);
           return alert('Falha ao gerar QR Code interno.');
         }
 
-        const opt = {
-          margin:       0.5,
-          filename:     `QR_Code_${codigo}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+        const dataUrl = canvas.toDataURL("image/png");
+        document.body.removeChild(tempQrContainer);
+
+        // Now build the visible overlay for html2canvas
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.zIndex = '999999';
+        overlay.style.background = 'rgba(248, 250, 252, 0.95)';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        
+        const loadingText = document.createElement('div');
+        loadingText.innerText = 'Gerando PDF, aguarde...';
+        loadingText.style.fontSize = '20px';
+        loadingText.style.fontWeight = 'bold';
+        loadingText.style.color = '#334155';
+        loadingText.style.marginBottom = '20px';
+        loadingText.style.fontFamily = 'Arial, sans-serif';
+        overlay.appendChild(loadingText);
+
+        const wrapper = document.createElement('div');
+        wrapper.style.width = '600px';
+        wrapper.style.background = '#ffffff';
+        wrapper.style.padding = '40px';
+        wrapper.style.boxSizing = 'border-box';
+        wrapper.style.fontFamily = 'Arial, sans-serif';
+        wrapper.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+        overlay.appendChild(wrapper);
+        document.body.appendChild(overlay);
+
+        const contentBox = document.createElement('div');
+        contentBox.style.background = 'white';
+        contentBox.style.padding = '40px';
+        contentBox.style.borderRadius = '16px';
+        contentBox.style.textAlign = 'center';
+        contentBox.style.border = '2px solid #e2e8f0';
+        wrapper.appendChild(contentBox);
+
+        const title = document.createElement('div');
+        title.style.fontSize = '32px';
+        title.style.fontWeight = '900';
+        title.style.color = '#0f172a';
+        title.style.marginBottom = '20px';
+        title.style.textTransform = 'uppercase';
+        title.innerText = nome || codigo;
+        contentBox.appendChild(title);
+
+        const qrBorder = document.createElement('div');
+        qrBorder.style.background = 'white';
+        qrBorder.style.padding = '20px';
+        qrBorder.style.display = 'inline-block';
+        qrBorder.style.borderRadius = '12px';
+        qrBorder.style.border = '1px solid #cbd5e1';
+        contentBox.appendChild(qrBorder);
+
+        const qrImg = document.createElement('img');
+        qrImg.style.width = '250px';
+        qrImg.style.height = '250px';
+        qrImg.style.display = 'block';
+        qrBorder.appendChild(qrImg);
+
+        const footer1 = document.createElement('div');
+        footer1.style.fontSize = '16px';
+        footer1.style.color = '#64748b';
+        footer1.style.marginTop = '20px';
+        footer1.innerText = 'Escaneie a etiqueta para acessar o histórico e solicitar serviços';
+        contentBox.appendChild(footer1);
+
+        const footer2 = document.createElement('div');
+        footer2.style.marginTop = '30px';
+        footer2.style.fontSize = '12px';
+        footer2.style.color = '#94a3b8';
+        footer2.style.borderTop = '1px solid #e2e8f0';
+        footer2.style.paddingTop = '20px';
+        footer2.innerHTML = 'Gerado por Planejamento Geosol &bull; DIMAN-BHZ';
+        contentBox.appendChild(footer2);
+
+        // Load the image completely before taking the snapshot
+        qrImg.onload = () => {
+          setTimeout(() => {
+            const opt = {
+              margin:       0.5,
+              filename:     `QR_Code_${codigo}.pdf`,
+              image:        { type: 'jpeg', quality: 0.98 },
+              html2canvas:  { scale: 2, useCORS: true },
+              jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            
+            if (window.html2pdf) {
+              window.html2pdf().set(opt).from(wrapper).save().then(() => {
+                document.body.removeChild(overlay);
+                Toast && Toast.success('PDF Gerado', 'O download foi concluído!');
+              }).catch(e => {
+                document.body.removeChild(overlay);
+                console.error("html2pdf error:", e);
+                Toast && Toast.error('Erro', 'Não foi possível gerar o PDF.');
+              });
+            } else {
+              document.body.removeChild(overlay);
+              alert("A biblioteca html2pdf não está disponível.");
+            }
+          }, 100);
         };
         
-        if (window.html2pdf) {
-          window.html2pdf().set(opt).from(wrapper).save().then(() => {
-            document.body.removeChild(overlay);
-            Toast && Toast.success('PDF Gerado', 'O download foi concluído!');
-          }).catch(e => {
-            document.body.removeChild(overlay);
-            console.error("html2pdf error:", e);
-            Toast && Toast.error('Erro', 'Não foi possível gerar o PDF.');
-          });
-        } else {
-          document.body.removeChild(overlay);
-          alert("A biblioteca html2pdf não está disponível.");
-        }
-      }, 500); // 500ms for safety
+        qrImg.src = dataUrl;
+
+      }, 150);
       
     } else {
-      document.body.removeChild(overlay);
       alert("A biblioteca QRCode.js não está carregada.");
     }
   }
