@@ -6,7 +6,7 @@ window.MeetingsModule = (() => {
   let selectedMeetingDate = '';
 
   function getMeetingDates() {
-    const startDate = new Date(2026, 5, 16); // 16/06/2026
+    const startDate = new Date(2026, 5, 9); // 09/06/2026
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30); // Up to ~4 weeks ahead
     const dates = [];
