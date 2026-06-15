@@ -161,57 +161,49 @@ window.QrGeneratorModule = (() => {
         correctLevel : QRCode.CorrectLevel.H
       });
       
-      // Wait for QRCode.js to draw the canvas visibly
-      setTimeout(() => {
-        const canvas = qrContainer.querySelector('canvas');
-        if (!canvas) {
-          document.body.removeChild(overlay);
-          return alert('Falha ao gerar QR Code interno.');
+      // Poll until QRCode.js finishes setting the base64 src on its generated <img> tag
+      let attempts = 0;
+      const checkInterval = setInterval(() => {
+        attempts++;
+        const generatedImg = qrContainer.querySelector('img');
+        
+        // Timeout after 5 seconds (50 attempts)
+        if (attempts > 50) {
+            clearInterval(checkInterval);
+            document.body.removeChild(overlay);
+            return alert('Tempo limite excedido ao gerar o código QR interno.');
         }
 
-        // Extract the drawn pixels (it won't be empty because it was visible)
-        const dataUrl = canvas.toDataURL("image/png");
-        
-        // Remove the canvas and QRCode.js generated img to prevent html2canvas conflicts
-        qrContainer.innerHTML = '';
-
-        const finalImg = new Image();
-        finalImg.style.width = '250px';
-        finalImg.style.height = '250px';
-        finalImg.style.display = 'block';
-
-        // Wait for the browser to decode the base64 string
-        finalImg.onload = () => {
-          qrContainer.appendChild(finalImg);
-          
-          setTimeout(() => {
-            const opt = {
-              margin:       0.5,
-              filename:     `QR_Code_${codigo}.pdf`,
-              image:        { type: 'jpeg', quality: 0.98 },
-              html2canvas:  { scale: 2, useCORS: true },
-              jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
+        // QRCode.js inserts an <img> tag and assigns it a data URI when finished rendering
+        if (generatedImg && generatedImg.src && generatedImg.src.startsWith('data:image')) {
+            clearInterval(checkInterval);
             
-            if (window.html2pdf) {
-              window.html2pdf().set(opt).from(wrapper).save().then(() => {
+            // Give the browser 100ms to actually paint the generatedImg to the screen just in case
+            setTimeout(() => {
+              const opt = {
+                margin:       0.5,
+                filename:     `QR_Code_${codigo}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+              };
+              
+              if (window.html2pdf) {
+                window.html2pdf().set(opt).from(wrapper).save().then(() => {
+                  document.body.removeChild(overlay);
+                  Toast && Toast.success('PDF Gerado', 'O download foi concluído!');
+                }).catch(e => {
+                  document.body.removeChild(overlay);
+                  console.error("html2pdf error:", e);
+                  Toast && Toast.error('Erro', 'Não foi possível gerar o PDF.');
+                });
+              } else {
                 document.body.removeChild(overlay);
-                Toast && Toast.success('PDF Gerado', 'O download foi concluído!');
-              }).catch(e => {
-                document.body.removeChild(overlay);
-                console.error("html2pdf error:", e);
-                Toast && Toast.error('Erro', 'Não foi possível gerar o PDF.');
-              });
-            } else {
-              document.body.removeChild(overlay);
-              alert("A biblioteca html2pdf não está disponível.");
-            }
-          }, 100); // Tiny delay after appending img just to be 100% sure
-        };
-        
-        finalImg.src = dataUrl;
-
-      }, 250); // 250ms is plenty of time for the visible canvas to be drawn
+                alert("A biblioteca html2pdf não está disponível.");
+              }
+            }, 100);
+        }
+      }, 100);
       
     } else {
       document.body.removeChild(overlay);
