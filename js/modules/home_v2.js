@@ -22,7 +22,7 @@ window.HomeModule = (() => {
   }
 
   function render() {
-    const eqs = [...window.DB.equipment.list()];
+    const eqs = [...window.DB.equipment.list()].filter(e => e.status !== 'Liberado');
     // Sort equipment by estimated release date ascending (soonest to leave first)
     eqs.sort((a, b) => {
       const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada || '9999-12-31';
