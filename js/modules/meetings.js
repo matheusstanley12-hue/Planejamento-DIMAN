@@ -93,31 +93,31 @@ window.MeetingsModule = (() => {
 
       <!-- Nova Tarefa Modal -->
       <div id="meeting-task-modal" class="modal-overlay">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal" style="max-width: 600px; box-shadow:var(--shadow-lg);">
           <div class="modal-header">
-            <h3>Nova Tarefa de Reunião</h3>
-            <button class="close-btn" onclick="MeetingsModule.closeModal()">&times;</button>
+            <div class="modal-title">Nova Tarefa de Reunião</div>
+            <button class="modal-close" onclick="MeetingsModule.closeModal()">&times;</button>
           </div>
           <div class="modal-body">
             <div class="form-group">
               <label>Descrição da Tarefa *</label>
               <textarea id="mt-desc" class="form-control" rows="3" required></textarea>
             </div>
-            <div class="form-row">
-              <div class="form-group">
+            <div style="display:flex; gap:15px;">
+              <div class="form-group" style="flex:1;">
                 <label>Responsável *</label>
                 <select id="mt-resp" class="form-control" required>
                   <option value="">Selecione...</option>
                   ${wf.map(w => `<option value="${w.nome}">${w.nome}</option>`).join('')}
                 </select>
               </div>
-              <div class="form-group">
+              <div class="form-group" style="flex:1;">
                 <label>Data para Concluir *</label>
                 <input type="date" id="mt-due" class="form-control" required />
               </div>
             </div>
-            <div class="form-row">
-              <div class="form-group">
+            <div style="display:flex; gap:15px;">
+              <div class="form-group" style="flex:1;">
                 <label>Prioridade *</label>
                 <select id="mt-prio" class="form-control" required>
                   <option value="Urgente">Urgente</option>
