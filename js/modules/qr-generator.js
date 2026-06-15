@@ -36,7 +36,7 @@ window.QrGeneratorModule = (() => {
             </div>
             <div style="display:flex;gap:var(--space-2);">
               <button class="btn btn-secondary" onclick="window.open('#qrview?id=${eq.id}', '_blank')">Visualizar Prévia</button>
-              <button class="btn btn-primary" onclick="QrGeneratorModule.downloadDirectPDF('${eq.id}', '${eq.codigo}')">
+              <button class="btn btn-primary" onclick="QrGeneratorModule.downloadDirectPDF('${eq.id}', '${eq.codigo}', \`${eq.nome ? eq.nome.replace(/`/g, '') : ''}\`)">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                 Baixar QR Code (PDF)
               </button>
@@ -64,13 +64,15 @@ window.QrGeneratorModule = (() => {
     `;
   }
 
-  function downloadDirectPDF(id, codigo) {
+  function downloadDirectPDF(id, codigo, nome) {
     const url = window.location.origin + window.location.pathname + '#qrview?id=' + id;
     
     // Create a temporary hidden container for the QR Code
     const tempQrContainer = document.createElement('div');
-    tempQrContainer.style.position = 'absolute';
-    tempQrContainer.style.left = '-9999px';
+    tempQrContainer.style.position = 'fixed';
+    tempQrContainer.style.left = '0';
+    tempQrContainer.style.top = '0';
+    tempQrContainer.style.zIndex = '-9999';
     document.body.appendChild(tempQrContainer);
 
     if (typeof QRCode !== 'undefined') {
@@ -95,20 +97,22 @@ window.QrGeneratorModule = (() => {
         
         // Create the PDF wrapper
         const wrapper = document.createElement('div');
-        wrapper.style.position = 'absolute';
-        wrapper.style.left = '-9999px';
+        wrapper.style.position = 'fixed';
+        wrapper.style.left = '0';
         wrapper.style.top = '0';
+        wrapper.style.zIndex = '-9999';
         wrapper.style.width = '600px'; 
-        wrapper.style.background = '#f8fafc';
+        wrapper.style.background = '#ffffff';
         wrapper.style.padding = '40px';
         wrapper.style.boxSizing = 'border-box';
         wrapper.innerHTML = `
             <div style="background: white; padding: 40px; border-radius: 16px; text-align: center; border: 2px solid #e2e8f0; font-family: 'Inter', sans-serif;">
-              <div style="font-size: 28px; font-weight: 900; color: #0f172a; margin-bottom: 20px;">Ativo: ${codigo}</div>
+              <div style="font-size: 32px; font-weight: 900; color: #0f172a; margin-bottom: 10px;">${nome || codigo}</div>
+              <div style="font-size: 20px; font-weight: 600; color: #64748b; margin-bottom: 30px;">Ativo: ${codigo}</div>
               <div style="background: white; padding: 20px; display: inline-block; border-radius: 12px; border: 1px solid #cbd5e1;">
                 <img src="${dataUrl}" style="width: 250px; height: 250px; display: block;" />
               </div>
-              <div style="font-size: 16px; color: #64748b; margin-top: 20px;">Escaneie a etiqueta para acompanhar o status em tempo real</div>
+              <div style="font-size: 16px; color: #64748b; margin-top: 20px;">Escaneie a etiqueta para acessar o histórico e solicitar serviços</div>
               <div style="margin-top: 30px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px;">Gerado por Planejamento Geosol &bull; DIMAN-BHZ</div>
             </div>
         `;
