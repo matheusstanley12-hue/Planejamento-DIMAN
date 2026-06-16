@@ -85,9 +85,9 @@ window.HomeModule = (() => {
       const prioridade = e.prioridade || 'Normal';
       let prioBadge = '';
       if (prioridade === 'Urgente') {
-        prioBadge = `<span class="badge badge-danger" style="margin-left: 6px;">Urgente</span>`;
+        prioBadge = `<span class="badge badge-danger">Urgente</span>`;
       } else if (prioridade === 'Alta') {
-        prioBadge = `<span class="badge badge-orange" style="margin-left: 6px;">Alta</span>`;
+        prioBadge = `<span class="badge badge-orange">Alta</span>`;
       }
 
       const cardHtml = `
@@ -104,12 +104,12 @@ window.HomeModule = (() => {
            onclick="window.Router.navigate('equipment-panel', {id: '${e.id}'})" 
            style="cursor:grab;display:flex;flex-direction:column;padding:var(--space-4);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'}; margin-bottom: 2px; flex-shrink: 0; min-height: fit-content; height: auto;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2);">
-          <div>
-            <div style="display:flex;align-items:center;">
-              <div style="font-size:1.15rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;">${e.codigo}</div>
+          <div style="min-width: 0; flex: 1; padding-right: 8px;">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+              <div style="font-size:1.15rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;white-space:nowrap;">${e.codigo}</div>
               ${prioBadge}
             </div>
-            <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:2px;">O.S.: ${e.os || '—'} &middot; Cliente: ${e.cliente || '—'}</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-secondary);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">O.S.: ${e.os || '—'} &middot; Cliente: ${e.cliente || '—'}</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
             ${isAdmin ? `
