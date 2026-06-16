@@ -94,9 +94,9 @@ window.Dashboard = (() => {
            const sts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog'];
            const counts = sts.map(s => eqs.filter(e => e.status === s).length);
            charts.status = new Chart(ctxStatus, {
-             type: 'doughnut',
-             data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 0, hoverOffset: 4 }] },
-             options: { cutout: '80%', maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, padding: 15 } } } }
+             type: 'bar',
+             data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderRadius: 4, barThickness: 24 }] },
+             options: { layout: { padding: { right: 30 } }, indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false, grid: { display: false } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '600' } } } } }
            });
         }
         
@@ -148,9 +148,9 @@ window.Dashboard = (() => {
           const tAnd = tasks.filter(t => t.pctExecutado > 0 && t.pctExecutado < 100).length;
           const tFim = tasks.filter(t => t.pctExecutado >= 100).length;
           charts.tasksChart = new Chart(ctxTasks, {
-            type: 'doughnut',
-            data: { labels: ['Não iniciada', 'Andamento', 'Concluída'], datasets: [{ data: [tNao, tAnd, tFim], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderWidth:0, hoverOffset: 4 }] },
-            options: { cutout: '80%', maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, padding: 15 } } } }
+            type: 'bar',
+            data: { labels: ['Não iniciada', 'Andamento', 'Concluída'], datasets: [{ data: [tNao, tAnd, tFim], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderRadius: 4, barThickness: 24 }] },
+            options: { layout: { padding: { right: 30 } }, indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false, grid: { display: false } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '600' } } } } }
           });
         }
 
@@ -162,9 +162,9 @@ window.Dashboard = (() => {
           const pTra = parts.filter(p => p.status === 'Em Transporte').length;
           const pEnt = parts.filter(p => p.status === 'Entregue').length;
           charts.partsChart = new Chart(ctxParts, {
-            type: 'doughnut',
-            data: { labels: ['Solicitada', 'Comprada', 'Em Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'], borderWidth:0, hoverOffset: 4 }] },
-            options: { cutout: '80%', maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, padding: 15 } } } }
+            type: 'bar',
+            data: { labels: ['Solicitada', 'Comprada', 'Em Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'], borderRadius: 4, barThickness: 24 }] },
+            options: { layout: { padding: { right: 30 } }, indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false, grid: { display: false } }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '600' } } } } }
           });
         }
 
@@ -342,7 +342,7 @@ window.Dashboard = (() => {
       <div class="mega-charts-grid">
         
         <!-- Row 1 -->
-        <div style="grid-column: span 3;">${chartCard('Saúde da Frota', 'mega-ch-status')}</div>
+        <div style="grid-column: span 3;">${chartCard('Saúde dos Equipamentos', 'mega-ch-status')}</div>
         <div style="grid-column: span 3;">${chartCard('Status das Tarefas', 'mega-ch-tasks')}</div>
         <div style="grid-column: span 6;">${chartCard('Volume de Entregas por Categoria', 'mega-ch-cat')}</div>
 
