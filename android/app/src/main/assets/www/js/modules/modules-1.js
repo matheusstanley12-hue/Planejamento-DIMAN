@@ -338,6 +338,10 @@ window.EquipmentModule = (() => {
           <button class="btn btn-outline" style="border-color:var(--border-hover);color:var(--text-secondary);" onclick="EquipmentModule.toggleLiberados()">
             ${showLiberados ? 'Esconder Liberados' : 'Mostrar Liberados'}
           </button>
+          <button class="btn btn-outline" style="border-color:var(--color-danger);color:var(--color-danger);" onclick="EquipmentModule.openTrash()">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+            Lixeira
+          </button>
           <button class="btn btn-primary" onclick="EquipmentModule.openCreate()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Novo Equipamento
@@ -424,7 +428,18 @@ window.EquipmentModule = (() => {
           <div class="modal-title" id="eq-detail-title">Detalhes</div>
           <button class="modal-close" onclick="closeModal('modal-eq-detail')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
+        </div>
         <div class="modal-body" id="eq-detail-body"></div>
+      </div>
+    </div>
+    <!-- Modal Lixeira -->
+    <div class="modal-overlay" id="modal-trash">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <div class="modal-title">Lixeira de Equipamentos</div>
+          <button class="modal-close" onclick="closeModal('modal-trash')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+        </div>
+        <div class="modal-body" id="trash-body"></div>
       </div>
     </div>`;
   }
@@ -805,11 +820,37 @@ window.EquipmentModule = (() => {
       Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir equipamentos.');
       return;
     }
-    confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Todas as tarefas e dados associados serão removidos.`, () => {
+    confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? O equipamento e suas tarefas serão movidos para a Lixeira.`, () => {
       try {
+        const eq = DB.equipment.get(id);
+        const eqTasks = DB.tasks.getByEquipment(id);
+        const ts = DB.timesheets.getAll().filter(t => t.equipmentId === id);
+        const re = DB.replannings ? DB.replannings.getAll().filter(r => r.equipmentId === id) : [];
+        const rest = DB.restrictions ? DB.restrictions.getAll().filter(r => r.equipmentId === id) : [];
+        
+        const trashBundle = {
+          deletedAt: new Date().toISOString(),
+          deletedBy: session.nome,
+          equipment: eq,
+          tasks: eqTasks,
+          timesheets: ts,
+          replannings: re,
+          restrictions: rest
+        };
+        
+        let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
+        trash.push(trashBundle);
+        localStorage.setItem('diman_lixeira', JSON.stringify(trash));
+
         window.DB.equipment.delete(id);
+        
+        eqTasks.forEach(t => DB.tasks.remove(t.id));
+        ts.forEach(t => DB.timesheets.remove(t.id));
+        if (DB.replannings) re.forEach(r => DB.replannings.remove(r.id));
+        if (DB.restrictions) rest.forEach(r => DB.restrictions.remove(r.id));
+        
         window.Router.navigate('equipment', { force: true });
-        window.Toast.success('Equipamento excluído', nome);
+        window.Toast.success('Movido para a Lixeira', nome);
       } catch(e) {
         alert('Erro ao excluir: ' + e.message);
       }
@@ -895,7 +936,85 @@ window.EquipmentModule = (() => {
     }, 100);
   }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados };
+  function openTrash() {
+    let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
+    const body = document.getElementById('trash-body');
+    if (!body) return;
+    
+    if (trash.length === 0) {
+      body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:var(--space-6);">A Lixeira está vazia.</div>';
+    } else {
+      body.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Equipamento</th><th>Excluído por</th><th>Data</th><th>Tarefas</th><th>Ações</th></tr></thead>
+            <tbody>
+              ${trash.map((t, index) => `
+                <tr>
+                  <td><strong>${t.equipment.codigo}</strong> - ${t.equipment.nome}</td>
+                  <td>${t.deletedBy || '—'}</td>
+                  <td>${formatDate(t.deletedAt)}</td>
+                  <td><span class="badge badge-warning">${t.tasks.length} tarefas</span></td>
+                  <td><button class="btn btn-secondary btn-sm" onclick="EquipmentModule.restoreTrash(${index})">Restaurar</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+    openModal('modal-trash');
+  }
+
+  function restoreTrash(index) {
+    let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
+    if (!trash[index]) return;
+    
+    const bundle = trash[index];
+    
+    // Restore equipment
+    let eqs = JSON.parse(localStorage.getItem('diman_equipment')||'[]');
+    if (!eqs.find(e => e.id === bundle.equipment.id)) {
+      eqs.push(bundle.equipment);
+      localStorage.setItem('diman_equipment', JSON.stringify(eqs));
+      if (window.events && window.events.emit) window.events.emit('equipment:created', bundle.equipment);
+    }
+    
+    // Restore tasks
+    let tasks = JSON.parse(localStorage.getItem('diman_tasks')||'[]');
+    bundle.tasks.forEach(t => {
+      if (!tasks.find(tk => tk.id === t.id)) tasks.push(t);
+    });
+    localStorage.setItem('diman_tasks', JSON.stringify(tasks));
+    
+    // Restore timesheets
+    let ts = JSON.parse(localStorage.getItem('diman_timesheets')||'[]');
+    bundle.timesheets.forEach(t => {
+      if (!ts.find(tk => tk.id === t.id)) ts.push(t);
+    });
+    localStorage.setItem('diman_timesheets', JSON.stringify(ts));
+    
+    // Restore replannings and restrictions if they exist
+    if (bundle.replannings && bundle.replannings.length > 0) {
+      let rpl = JSON.parse(localStorage.getItem('diman_replannings')||'[]');
+      bundle.replannings.forEach(r => { if (!rpl.find(rk => rk.id === r.id)) rpl.push(r); });
+      localStorage.setItem('diman_replannings', JSON.stringify(rpl));
+    }
+    if (bundle.restrictions && bundle.restrictions.length > 0) {
+      let rst = JSON.parse(localStorage.getItem('diman_restrictions')||'[]');
+      bundle.restrictions.forEach(r => { if (!rst.find(rk => rk.id === r.id)) rst.push(r); });
+      localStorage.setItem('diman_restrictions', JSON.stringify(rst));
+    }
+    
+    trash.splice(index, 1);
+    localStorage.setItem('diman_lixeira', JSON.stringify(trash));
+    
+    closeModal('modal-trash');
+    window.Router.navigate('equipment', { force: true });
+    window.Toast.success('Restaurado!', `Equipamento ${bundle.equipment.codigo} foi restaurado.`);
+  }
+
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, openTrash, restoreTrash };
 })();
 
 // ================================================================
