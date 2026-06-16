@@ -601,9 +601,9 @@ function renderShell(session) {
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
         <div class="sidebar-footer" style="margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);">
-          <div class="nav-item" onclick="window.Auth.logout()" style="color:var(--text-secondary);margin:0;">
-            <span class="nav-icon" style="color:rgba(255,255,255,0.4);">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <div class="nav-item" onclick="window.Auth.logout(); location.reload();" style="color:var(--color-danger);margin:0;font-weight:700;">
+            <span class="nav-icon" style="color:var(--color-danger);">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
               </svg>
             </span>
