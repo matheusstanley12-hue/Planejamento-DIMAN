@@ -704,14 +704,17 @@ function renderShell(session) {
   Router.register('attendance', () => typeof AttendanceModule !== 'undefined' ? AttendanceModule.render() : '<div class="page-container">Erro ao carregar módulo de Controle de Frequência</div>');
   if (typeof WaitingModule !== 'undefined') Router.register('waiting', () => WaitingModule.render());
   Router.register('equipment-panel', (p) => EquipmentPanel.render(p));
-  if (typeof ChecklistsModule !== 'undefined') Router.register('checklists', ChecklistsModule.render);
+  if (typeof ChecklistsModule !== 'undefined') Router.register('checklists', () => ChecklistsModule.render());
   if (typeof MeetingsModule !== 'undefined') Router.register('meetings', () => MeetingsModule.render());
   
   if (typeof DPanel !== 'undefined') Router.register('d-panel', () => DPanel.render());
-  if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
   if (typeof Dashboard !== 'undefined') Router.register('dashboard', () => Dashboard.render());
-  if (typeof WorkshopModule !== 'undefined') Router.register('workshop', () => WorkshopModule.render());
+  if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
+  if (typeof ReleasedModule !== 'undefined') Router.register('equipment-released', () => ReleasedModule.render());
   if (typeof TasksModule !== 'undefined') Router.register('tasks', () => TasksModule.render());
+  if (typeof TasksOngoingModule !== 'undefined') Router.register('tasks-ongoing', () => TasksOngoingModule.render());
+  if (typeof ServicesModule !== 'undefined') Router.register('services', () => ServicesModule.render());
+  if (typeof WorkshopModule !== 'undefined') Router.register('workshop', () => WorkshopModule.render());
   if (typeof GanttModule !== 'undefined') Router.register('gantt', () => GanttModule.render());
   if (typeof CriticalPath !== 'undefined') Router.register('critical', () => CriticalPath.render());
   if (typeof PlanningModule !== 'undefined') Router.register('planning', () => PlanningModule.render());
