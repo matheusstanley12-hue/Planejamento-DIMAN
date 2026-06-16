@@ -733,7 +733,8 @@ window.WorkerPanel = (() => {
           pctExecutado: 100,
           dataRealTermino: new Date().toISOString().slice(0,10),
           observacoes: newObs,
-          anexos: attachments
+          anexos: attachments,
+          fotoComprovacao: base64Img || t.fotoComprovacao
         });
       }
 

@@ -1109,6 +1109,9 @@ window.TasksModule = (() => {
 
     const selectedEq = eqs.find(e => e.id === currentEqId) || {codigo: 'N/A', nome: 'Desconhecido'};
     
+    // Fallback for photos that were saved in anexos array before fix
+    const fotoConclusaoFinal = t?.fotoComprovacao || (t?.anexos && t.anexos.length > 0 ? t.anexos[t.anexos.length - 1].url : null);
+    
     // Obter apontamentos desta tarefa
     const tTimesheets = (window.DB.timesheets ? window.DB.timesheets.list() : []).filter(ts => ts.taskId === t?.id && ts.tipo === 'Trabalho');
     let executores = '';
@@ -1253,7 +1256,7 @@ window.TasksModule = (() => {
       <div style="background:var(--bg-base); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--border-default);">
         <h4 style="margin:0 0 12px; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Evidências (Fotos)</h4>
         
-        ${(!t?.fotoPeca && !t?.fotoComprovacao) ? '<p style="font-size:0.8rem; color:var(--text-muted);">Nenhuma foto anexada a esta tarefa.</p>' : `
+        ${(!t?.fotoPeca && !fotoConclusaoFinal) ? '<p style="font-size:0.8rem; color:var(--text-muted);">Nenhuma foto anexada a esta tarefa.</p>' : `
         <div style="display:flex; gap:20px; overflow-x:auto;">
           
           ${t?.fotoPeca ? `
@@ -1262,10 +1265,10 @@ window.TasksModule = (() => {
             <img src="${t.fotoPeca}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--border-hover); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open(this.src)" />
           </div>` : ''}
 
-          ${t?.fotoComprovacao ? `
+          ${fotoConclusaoFinal ? `
           <div style="flex:0 0 auto; width:220px;">
             <p style="margin:0 0 6px; font-size:0.8rem; font-weight:700; color:var(--brand-primary-light);">Foto da Conclusão</p>
-            <img src="${t.fotoComprovacao}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--brand-primary); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open(this.src)" />
+            <img src="${fotoConclusaoFinal}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--brand-primary); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="window.open(this.src)" />
           </div>` : ''}
 
         </div>`}
