@@ -123,11 +123,14 @@ window.WorkerPanel = (() => {
           </div>
           <div class="modal-body" style="padding-top:10px;">
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai executar essa tarefa?</p>
-            <div class="form-group" style="margin-bottom:15px;">
-              <label>Matrícula do Executante (deixe o seu se for você mesmo):</label>
-              <input type="text" id="start-task-matricula" value="${myWorker ? myWorker.matricula : ''}" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"/>
+            <div id="start-task-executors-list">
+              <div class="form-group executor-item" style="margin-bottom:15px;">
+                <label style="text-transform:uppercase;font-size:10px;font-weight:700;color:var(--text-muted);">Matrícula do Executante (deixe o seu se for você mesmo):</label>
+                <input type="text" class="start-task-matricula-input" value="${myWorker ? myWorker.matricula : ''}" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);margin-top:5px;"/>
+              </div>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.startTask('${taskId}')">Iniciar Tarefa</button>
+            <button class="btn btn-ghost" style="width:100%;margin-bottom:15px;border:1px dashed var(--border-card);color:var(--brand-primary);" onclick="WorkerPanel.addExecutorInput()">+ Adicionar executante</button>
+            <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.startTask('${taskId}')">Iniciar Tarefa</button>
           </div>
         </div>
       </div>
@@ -138,48 +141,145 @@ window.WorkerPanel = (() => {
     openModal('modal-worker-start-task');
   }
 
-  function startTask(taskId) {
-    const matriculaInput = document.getElementById('start-task-matricula')?.value.trim() || '';
-    if (document.getElementById('modal-worker-start-task')) closeModal('modal-worker-start-task');
+  function addExecutorInput() {
+    const list = document.getElementById('start-task-executors-list');
+    if (!list) return;
+    const div = document.createElement('div');
+    div.className = 'form-group executor-item';
+    div.style.marginBottom = '15px';
+    div.innerHTML = `
+      <label style="text-transform:uppercase;font-size:10px;font-weight:700;color:var(--text-muted);">Matrícula do Ajudante:</label>
+      <div style="display:flex;gap:8px;margin-top:5px;">
+        <input type="text" class="start-task-matricula-input" placeholder="Digite a matrícula..." style="flex:1;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"/>
+        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);font-weight:bold;padding:0 12px;border:1px solid var(--border-card);" onclick="this.parentElement.parentElement.remove()">X</button>
+      </div>
+    `;
+    list.appendChild(div);
+  }
 
+  function confirmStartTaskWithJustification(taskId, matriculasStr) {
+    const just = document.getElementById('start-task-justification').value.trim();
+    if (!just) return Toast.error('Erro', 'A justificativa é obrigatória.');
+    
     const session = Auth.getSession();
-    let targetWorker = null;
-
-    if (matriculaInput) {
-      targetWorker = DB.workforce.list().find(w => String(w.matricula) === String(matriculaInput));
-      if (!targetWorker) return Toast.error('Erro', 'Matrícula não encontrada no sistema.');
-    } else {
-      targetWorker = getMyWorker(session);
-      if (!targetWorker) return Toast.error('Erro', 'Seu cadastro não foi encontrado.');
-    }
-
     const t = DB.tasks.get(taskId);
     if (!t) return;
 
-    // Check allocation blocking
-    if (targetWorker.equipmentId && targetWorker.equipmentId !== t.equipmentId) {
-      const eqWorker = DB.equipment.get(targetWorker.equipmentId);
-      const eqName = eqWorker ? eqWorker.codigo : 'Outro Equipamento';
-      return Toast.error('Acesso Negado', `Ei ${targetWorker.nome}, você está alocado na sonda/equipamento ${eqName}. Por gentileza, procure o seu gestor e solicite a troca de alocação.`);
-    }
+    const obsObj = {
+      id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      text: \`Justificativa de alocação (Executantes de outra sonda/equipamento): \${just}\`,
+      user: session.nome,
+      userId: session.userId,
+      createdAt: new Date().toISOString()
+    };
+    const obsArray = t.observacoes ? JSON.parse(t.observacoes) : [];
+    obsArray.push(obsObj);
+    DB.tasks.update(taskId, { observacoes: JSON.stringify(obsArray) });
 
-    if (targetWorker.currentState && targetWorker.currentState !== 'Ocioso') {
-      return Toast.error('Atenção', `${targetWorker.nome}, você já tem uma atividade ou pausa em andamento. Por gentileza, finalize sua tarefa atual primeiro.`);
-    }
+    closeModal('modal-worker-justification');
+    
+    let matriculas = matriculasStr.split(',');
+    let targetWorkers = matriculas.map(m => DB.workforce.list().find(wk => String(wk.matricula) === String(m))).filter(Boolean);
+    
+    startTaskForWorkers(taskId, targetWorkers);
+  }
 
-    DB.workforce.update(targetWorker.id, {
-      currentState: 'Trabalhando',
-      currentTaskId: taskId,
-      currentActionStartTime: new Date().toISOString(),
-      currentPauseReason: ''
+  function startTaskForWorkers(taskId, targetWorkers) {
+    const t = DB.tasks.get(taskId);
+    if (!t) return;
+    
+    targetWorkers.forEach(w => {
+      DB.workforce.update(w.id, {
+        currentState: 'Trabalhando',
+        currentTaskId: taskId,
+        currentActionStartTime: new Date().toISOString(),
+        currentPauseReason: ''
+      });
     });
 
     if (t.status !== 'Em Andamento') {
       DB.tasks.update(taskId, { status: 'Em Andamento' });
     }
 
-    Toast.success('Iniciado!', `A tarefa "${t.descricao}" foi iniciada para ${targetWorker.nome}.`);
+    Toast.success('Iniciado!', \`A tarefa "\${t.descricao}" foi iniciada para os executantes selecionados.\`);
+    if (document.getElementById('modal-worker-start-task')) closeModal('modal-worker-start-task');
     Router.navigate('worker-panel', { force: true });
+  }
+
+  function startTask(taskId) {
+    const inputs = document.querySelectorAll('.start-task-matricula-input');
+    let matriculas = [];
+    if (inputs.length > 0) {
+      inputs.forEach(inp => {
+        const val = inp.value.trim();
+        if (val && !matriculas.includes(val)) matriculas.push(val);
+      });
+    }
+
+    const session = Auth.getSession();
+    const myWorker = getMyWorker(session);
+    
+    if (matriculas.length === 0) {
+      if (myWorker) matriculas.push(String(myWorker.matricula));
+      else return Toast.error('Erro', 'Nenhum executante informado.');
+    }
+
+    const t = DB.tasks.get(taskId);
+    if (!t) return;
+
+    let targetWorkers = [];
+    for (let mat of matriculas) {
+      let w = DB.workforce.list().find(wk => String(wk.matricula) === String(mat));
+      if (!w) return Toast.error('Erro', \`Matrícula \${mat} não encontrada no sistema.\`);
+      targetWorkers.push(w);
+    }
+
+    // Check busy status
+    for (let w of targetWorkers) {
+      if (w.currentState && w.currentState !== 'Ocioso') {
+        return Toast.error('Atenção', \`\${w.nome} já tem uma atividade ou pausa em andamento. Finalize a tarefa atual primeiro.\`);
+      }
+    }
+
+    // Check allocation blocking
+    let divergingWorkers = targetWorkers.filter(w => w.equipmentId && w.equipmentId !== t.equipmentId);
+    if (divergingWorkers.length > 0) {
+      const names = divergingWorkers.map(w => w.nome).join(', ');
+      const matriculasStr = matriculas.join(',');
+      const jModalHtml = \`
+        <div class="modal-overlay" id="modal-worker-justification" style="z-index:9999;">
+          <div class="modal" style="box-shadow:var(--shadow-lg);">
+            <div class="modal-header">
+              <div class="modal-title">Atenção: Desvio de Alocação</div>
+              <button class="modal-close" onclick="closeModal('modal-worker-justification')">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="modal-body" style="padding-top:10px;">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">
+                Os executantes a seguir estão alocados em outros equipamentos:<br><strong style="color:var(--color-danger);font-size:14px;">\${names}</strong>
+              </p>
+              <div class="form-group" style="margin-bottom:15px;">
+                <label>Justificativa do Desvio *</label>
+                <textarea id="start-task-justification" rows="3" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;background:var(--bg-base);" placeholder="Informe o motivo para alocá-los nesta tarefa..."></textarea>
+              </div>
+              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.confirmStartTaskWithJustification('\${taskId}', '\${matriculasStr}')">Confirmar e Iniciar</button>
+            </div>
+          </div>
+        </div>
+      \`;
+      const container = document.getElementById('worker-panel-modals');
+      container.insertAdjacentHTML('beforeend', jModalHtml);
+      document.getElementById('modal-worker-start-task').style.display = 'none';
+      document.querySelector('#modal-worker-justification .modal-close').onclick = function() {
+        closeModal('modal-worker-justification');
+        document.getElementById('modal-worker-start-task').style.display = 'flex';
+      };
+      openModal('modal-worker-justification');
+      return;
+    }
+
+    startTaskForWorkers(taskId, targetWorkers);
   }
 
   function promptPause() {
@@ -1900,6 +2000,8 @@ window.WorkerPanel = (() => {
     saveRestriction,
     startTask,
     startPromptTask,
+    addExecutorInput,
+    confirmStartTaskWithJustification,
     promptPause,
     pauseWork,
     resumeWork,
