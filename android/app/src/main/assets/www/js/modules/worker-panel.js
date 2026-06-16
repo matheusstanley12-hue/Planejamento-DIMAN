@@ -524,19 +524,11 @@ window.WorkerPanel = (() => {
 
     const fileInput = document.getElementById('task-photo-upload');
     const hasFile = fileInput.files && fileInput.files.length > 0;
-    
-    // Require photo!
-    if (!hasFile) {
-      Toast.error('Atenção', 'É obrigatório anexar uma foto para comprovar a conclusão da tarefa.');
-      return;
-    }
 
     const obsText = document.getElementById('task-complete-obs').value.trim();
     const t = DB.tasks.get(myWorker.currentTaskId);
     
-    // Process photo as base64
-    const file = fileInput.files[0];
-    compressImage(file, function(base64Img) {
+    const processSave = function(base64Img) {
       
       // If working, stop and save time
       if (myWorker.currentState === 'Trabalhando') {
@@ -591,13 +583,15 @@ window.WorkerPanel = (() => {
         }
 
         const attachments = t.anexos ? [...t.anexos] : [];
-        attachments.push({
-          url: base64Img,
-          nome: `Foto_${Date.now()}.jpg`,
-          tipo: 'image/jpeg',
-          enviadoPor: session.nome,
-          dataEnvio: new Date().toISOString()
-        });
+        if (base64Img) {
+          attachments.push({
+            url: base64Img,
+            nome: `Foto_${Date.now()}.jpg`,
+            tipo: 'image/jpeg',
+            enviadoPor: session.nome,
+            dataEnvio: new Date().toISOString()
+          });
+        }
 
         DB.tasks.update(t.id, {
           status: 'Concluída',
@@ -617,9 +611,15 @@ window.WorkerPanel = (() => {
       });
 
       closeModal('modal-worker-complete');
-      Toast.success('Sucesso', 'Tarefa concluída e foto anexada!');
+      Toast.success('Sucesso', 'Tarefa concluída com sucesso!');
       Router.navigate('worker-panel', { force: true });
-    });
+    };
+
+    if (hasFile) {
+      compressImage(fileInput.files[0], processSave);
+    } else {
+      processSave(null);
+    }
   }
 
   function formatTimeDiff(isoStart) {
