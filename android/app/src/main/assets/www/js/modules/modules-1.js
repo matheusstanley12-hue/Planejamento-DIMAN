@@ -97,8 +97,8 @@ window.Dashboard = (() => {
           charts.ano = new Chart(ctxAno, {
             type: 'bar',
             data: { labels: mStr, datasets: [
-              { label: 'Qtd de Falhas (Realizado)', data: mR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 16 },
-              { label: 'Qtd OS Planejadas', data: mP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 16 }
+              { label: 'Liberações Realizadas', data: mR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 16 },
+              { label: 'Liberações Planejadas', data: mP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 16 }
             ]},
             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0', font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8' } }, y: { display: false } } }
           });
@@ -211,13 +211,13 @@ window.Dashboard = (() => {
       <div class="mega-charts-grid">
         
         <!-- Row 1 -->
-        <div style="grid-column: span 8;">${chartCard('Qtd de Ordem de Serviço por Mês', 'mega-ch-ano')}</div>
-        <div style="grid-column: span 4;">${chartCard('Qtd de OS por Status', 'mega-ch-status')}</div>
+        <div style="grid-column: span 8;">${chartCard('Qtd de Liberações por Mês', 'mega-ch-ano')}</div>
+        <div style="grid-column: span 4;">${chartCard('Qtd de Equipamentos por Status', 'mega-ch-status')}</div>
 
         <!-- Row 2 -->
         <div style="grid-column: span 4;">${chartCard('Tarefas por Equipamento', 'mega-ch-tasks')}</div>
         <div style="grid-column: span 4;">${chartCard('Avanço por Equipamento', 'mega-ch-avanco')}</div>
-        <div style="grid-column: span 4;">${chartCard('OS por Categoria', 'mega-ch-cat')}</div>
+        <div style="grid-column: span 4;">${chartCard('Liberações por Categoria', 'mega-ch-cat')}</div>
 
       </div>
 
