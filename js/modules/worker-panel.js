@@ -933,6 +933,12 @@ window.WorkerPanel = (() => {
 
     // Tasks List
     let listTasks = myTasks.filter(t => t.status !== 'Concluída' && t.id !== myWorker.currentTaskId);
+    
+    listTasks.sort((a, b) => {
+      const aCanExec = canExecuteTask(session, a) ? 1 : 0;
+      const bCanExec = canExecuteTask(session, b) ? 1 : 0;
+      return bCanExec - aCanExec;
+    });
 
     const tasksHtml = listTasks.map(t => {
       const eq = eqs.find(e => e.id === t.equipmentId);
