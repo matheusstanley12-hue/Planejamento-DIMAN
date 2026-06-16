@@ -782,8 +782,9 @@ window.EquipmentModule = (() => {
           </select>
         </div>
       </div>
-      <div class="form-row cols-3">
-        <div class="form-group"><label>🔒 Data Planejada de Liberação ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
+      <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
+        <div class="form-group"><label>🔒 Data Planejada ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
+        <div class="form-group"><label>Data Real Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
@@ -862,6 +863,7 @@ window.EquipmentModule = (() => {
       numeroSerie: '',
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
+      dataLiberacaoAtual: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
       status: document.getElementById('eq-status').value,
       etapaAtual: document.getElementById('eq-etapa-atual').value,
       pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
@@ -905,7 +907,7 @@ window.EquipmentModule = (() => {
       
       const existingEq = id ? DB.equipment.get(id) : null;
       if (!existingEq || existingEq.status !== 'Liberado') {
-        data.dataLiberacaoAtual = new Date().toISOString().slice(0, 10);
+        data.dataLiberacaoAtual = data.dataLiberacaoAtual || new Date().toISOString().slice(0, 10);
         if (window.DB && window.DB.timeline) {
           window.DB.timeline.create({
             equipmentId: id || data.codigo,
