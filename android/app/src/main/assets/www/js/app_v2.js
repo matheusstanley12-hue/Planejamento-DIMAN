@@ -278,7 +278,7 @@ function showLoginPage() {
         
         <!-- Logo -->
         <div style="text-align:center;margin-bottom:var(--space-6)">
-          <div style="display:inline-flex;align-items:center;justify-content:center;margin-bottom:var(--space-4);padding:8px;background:white;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:glow-pulse 3s ease-in-out infinite;">
+          <div style="display:inline-flex;align-items:center;justify-content:center;margin-bottom:var(--space-4);animation:glow-pulse 3s ease-in-out infinite;">
             <img src="logo.png?v=${window.CACHE_VERSION || Date.now()}" style="width:110px;height:110px;object-fit:contain;" alt="Logo GEOSOL" />
           </div>
           <h1 style="font-size:var(--text-2xl);font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">Central de Planejamento e Controle DIMAN</h1>
