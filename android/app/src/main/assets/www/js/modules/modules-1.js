@@ -1103,7 +1103,7 @@ window.TasksModule = (() => {
       } catch (e) {}
       
       if (!isJson) {
-        obsTextValue = t.observacoes;
+        obsHistoryHtml = `<div style="max-height: 120px; overflow-y: auto; font-size: 12px; margin-bottom: 12px; border: 1px solid var(--border-default); padding: 8px; border-radius: 6px; background: var(--bg-base); white-space:pre-wrap;">${t.observacoes}</div>`;
       }
     }
 
@@ -1262,13 +1262,13 @@ window.TasksModule = (() => {
           ${t?.fotoPeca ? `
           <div style="flex:0 0 auto; width:220px;">
             <p style="margin:0 0 6px; font-size:0.8rem; font-weight:700; color:var(--text-secondary);">Foto da Solicitação</p>
-            <img src="${t.fotoPeca}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--border-hover); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:99999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" />
+            <img src="${t.fotoPeca}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--border-hover); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:99999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const x = document.createElement('div'); x.innerHTML='&times;'; x.style.cssText='position:absolute;top:20px;right:30px;color:white;font-size:40px;font-weight:bold;cursor:pointer;line-height:1;'; d.appendChild(x); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" />
           </div>` : ''}
 
           ${fotoConclusaoFinal ? `
           <div style="flex:0 0 auto; width:220px;">
             <p style="margin:0 0 6px; font-size:0.8rem; font-weight:700; color:var(--brand-primary-light);">Foto da Conclusão</p>
-            <img src="${fotoConclusaoFinal}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--brand-primary); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:99999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" />
+            <img src="${fotoConclusaoFinal}" style="width:100%; height:160px; object-fit:cover; border-radius:8px; border:2px solid var(--brand-primary); cursor:pointer; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:99999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const x = document.createElement('div'); x.innerHTML='&times;'; x.style.cssText='position:absolute;top:20px;right:30px;color:white;font-size:40px;font-weight:bold;cursor:pointer;line-height:1;'; d.appendChild(x); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" />
           </div>` : ''}
 
         </div>`}

@@ -711,11 +711,27 @@ window.WorkerPanel = (() => {
 
       if (t) {
         // Add attachment and observation
-        let newObs = t.observacoes || '';
-        if (obsText) {
-          const dateStr = new Date().toLocaleString('pt-BR');
-          newObs += `\n[Atualizado em ${dateStr} por ${session.nome}]: ${obsText}`;
+        let comments = [];
+        if (t.observacoes) {
+          try {
+            const parsed = JSON.parse(t.observacoes);
+            if (Array.isArray(parsed)) comments = parsed;
+            else comments = [{ id: 'legacy', text: t.observacoes, user: 'Sistema', createdAt: new Date().toISOString() }];
+          } catch(e) {
+            comments = [{ id: 'legacy', text: t.observacoes, user: 'Sistema', createdAt: new Date().toISOString() }];
+          }
         }
+        
+        if (obsText) {
+          comments.push({
+            id: 'c-end-' + Date.now(),
+            text: obsText,
+            user: session.nome,
+            userId: session.userId,
+            createdAt: new Date().toISOString()
+          });
+        }
+        const newObs = comments.length > 0 ? JSON.stringify(comments) : '';
 
         const attachments = t.anexos ? [...t.anexos] : [];
         if (base64Img) {
