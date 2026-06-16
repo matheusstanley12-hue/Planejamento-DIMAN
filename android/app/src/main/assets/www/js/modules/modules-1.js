@@ -70,7 +70,9 @@ window.Dashboard = (() => {
 
     setTimeout(() => {
       try {
-        Chart.defaults.color = '#94a3b8';
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#94a3b8';
+        const titleColor = getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#e2e8f0';
+        Chart.defaults.color = textColor;
         Chart.defaults.font.family = 'Inter';
         
         // 1. Status Geral (Doughnut)
@@ -81,7 +83,7 @@ window.Dashboard = (() => {
            charts.status = new Chart(ctxStatus, {
              type: 'bar',
              data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#10b981', '#eab308', '#f97316', '#ef4444', '#a855f7'], borderRadius: 4, barThickness: 24 }] },
-             options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, layout: { padding: 10 }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }, y: { display: false } } }
+             options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, layout: { padding: 10 }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 10 } } }, y: { display: false } } }
            });
         }
         
@@ -94,13 +96,16 @@ window.Dashboard = (() => {
             if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
           });
+          const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : 0);
+
           charts.ano = new Chart(ctxAno, {
             type: 'bar',
             data: { labels: mStr, datasets: [
-              { label: 'Liberações Realizadas', data: mR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 16 },
-              { label: 'Liberações Planejadas', data: mP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 16 }
+              { type: 'line', label: 'Aderência (%)', data: aderenciaArr, borderColor: '#eab308', backgroundColor: '#eab308', borderWidth: 2, tension: 0.3, yAxisID: 'y1' },
+              { type: 'bar', label: 'Liberações Realizadas', data: mR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 16, yAxisID: 'y' },
+              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 16, yAxisID: 'y' }
             ]},
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0', font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8' } }, y: { display: false } } }
+            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor } }, y: { display: false, position: 'left' }, y1: { display: false, position: 'right', min: 0, max: 100 } } }
           });
         }
 
@@ -116,7 +121,7 @@ window.Dashboard = (() => {
               { label: 'Realizado (h)', data: tR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 8 },
               { label: 'Planejado (h)', data: tP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 8 }
             ]},
-            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0' } } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } } } }
+            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: titleColor } } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 10 } } } } }
           });
         }
 
@@ -129,11 +134,11 @@ window.Dashboard = (() => {
           charts.avanco = new Chart(ctxAvanco, {
             type: 'bar',
             data: { labels: eqAvNames, datasets: [{ label: 'Avanço (%)', data: eqAvVals, backgroundColor: '#a855f7', borderRadius: 4, barThickness: 10 }] },
-            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } } } }
+            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 10 } } } } }
           });
         }
 
-        // 5. Gráficos Setores Plan x Real (Horizontal Bar)
+        // 5. Gráficos Setores Plan x Real (Column Bar)
         const ctxCat = document.getElementById('mega-ch-cat');
         if (ctxCat) {
           const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
@@ -143,10 +148,10 @@ window.Dashboard = (() => {
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
             data: { labels: catsLabels, datasets: [
-              { label: 'Realizado', data: cR, backgroundColor: '#10b981', borderRadius: 4, barThickness: 8 },
-              { label: 'Planejado', data: cP, backgroundColor: '#a855f7', borderRadius: 4, barThickness: 8 }
+              { label: 'Realizado', data: cR, backgroundColor: '#10b981', borderRadius: 4, barThickness: 12 },
+              { label: 'Planejado', data: cP, backgroundColor: '#a855f7', borderRadius: 4, barThickness: 12 }
             ]},
-            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0' } } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } } } }
+            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: titleColor } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 10 } } }, y: { display: false } } }
           });
         }
 
@@ -154,16 +159,16 @@ window.Dashboard = (() => {
     }, 100);
 
     const microCard = (title, val, subtitle = '') => `
-      <div style="flex: 1; background: #2a2a3c; border: 1px solid #3f3f5a; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-        <div style="font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; text-align: center;">${title}</div>
-        <div style="font-size: 38px; font-weight: 700; color: #ffffff; line-height: 1.1;">${val}</div>
-        ${subtitle ? `<div style="font-size: 11px; color: #64748b; margin-top: 4px;">${subtitle}</div>` : ''}
+      <div style="flex: 1; background: var(--bg-surface); border: 1px solid var(--border-card); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-align: center;">${title}</div>
+        <div style="font-size: 38px; font-weight: 700; color: var(--text-primary); line-height: 1.1;">${val}</div>
+        ${subtitle ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${subtitle}</div>` : ''}
       </div>
     `;
     
     const chartCard = (title, id) => `
-      <div style="background:#252533; border:1px solid #3f3f5a; border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 280px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
-        <div style="font-size:14px; font-weight:700; color:#f8fafc; margin-bottom:12px; flex-shrink: 0;">${title}</div>
+      <div style="background:var(--bg-surface); border:1px solid var(--border-card); border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 280px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; flex-shrink: 0;">${title}</div>
         <div style="flex:1; position:relative; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;">
            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
              <canvas id="${id}"></canvas>
@@ -173,17 +178,17 @@ window.Dashboard = (() => {
     `;
 
     const html = `
-    <div style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: #1a1a24;">
+    <div style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: var(--bg-base);">
       
       <!-- HEADER -->
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
         <div style="display:flex; align-items:center; gap: 16px;">
           <div>
-            <h1 style="font-size:24px; font-weight:800; color:#ffffff; margin:0; letter-spacing: 1px; text-transform: uppercase;">DASHBOARD MANUTENÇÃO</h1>
-            <p style="font-size:12px; color:#94a3b8; margin:4px 0 0 0; font-weight:600;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
+            <h1 style="font-size:24px; font-weight:800; color:var(--text-primary); margin:0; letter-spacing: 1px; text-transform: uppercase;">DASHBOARD MANUTENÇÃO</h1>
+            <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 0 0; font-weight:600;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
           </div>
         </div>
-        <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid #3f3f5a; color: white;" onclick="Router.navigate('dashboard',{force:true})">
+        <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid var(--border-card); color: var(--text-primary);" onclick="Router.navigate('dashboard',{force:true})">
           <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Atualizar Dados
         </button>
@@ -217,7 +222,7 @@ window.Dashboard = (() => {
         <!-- Row 2 -->
         <div style="grid-column: span 4;">${chartCard('Tarefas por Equipamento', 'mega-ch-tasks')}</div>
         <div style="grid-column: span 4;">${chartCard('Avanço por Equipamento', 'mega-ch-avanco')}</div>
-        <div style="grid-column: span 4;">${chartCard('Liberações por Categoria', 'mega-ch-cat')}</div>
+        <div style="grid-column: span 4;">${chartCard('Planejado x Realizado por Setores', 'mega-ch-cat')}</div>
 
       </div>
 
