@@ -128,6 +128,85 @@ window.DPanel = (() => {
     return alerts.slice(0, 4);
   }
 
+  function getTopPerformers() {
+    const today = new Date();
+    const currentMonthPrefix = today.toISOString().slice(0, 7); // "YYYY-MM"
+    const ts = window.DB.timesheets ? window.DB.timesheets.list().filter(t => t.data && t.data.startsWith(currentMonthPrefix) && t.tipo === 'Trabalho') : [];
+    
+    const workerCounts = {};
+    ts.forEach(t => {
+      if (t.workerId) {
+        workerCounts[t.workerId] = (workerCounts[t.workerId] || 0) + 1;
+      }
+    });
+
+    const ranking = [];
+    Object.keys(workerCounts).forEach(wId => {
+      const w = window.DB.workforce ? window.DB.workforce.get(wId) : null;
+      if (w) {
+        ranking.push({
+          id: wId,
+          nome: w.nome,
+          count: workerCounts[wId]
+        });
+      }
+    });
+
+    ranking.sort((a, b) => b.count - a.count);
+    return ranking.slice(0, 5); // Top 5
+  }
+
+  function renderTopPerformersTicker() {
+    const top = getTopPerformers();
+    if (top.length === 0) return '';
+    
+    const emojis = ['🏆 1º', '🥈 2º', '🥉 3º', '🏅 4º', '🏅 5º'];
+    const items = top.map((t, idx) => `<span style="margin: 0 40px;">${emojis[idx] || '🏅'} <strong>${t.nome}</strong> (${t.count} tarefas executadas)</span>`).join('');
+
+    return `
+      <style>
+        .ticker-wrap {
+          width: 100%;
+          overflow: hidden;
+          background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(139, 92, 246, 0.15) 50%, rgba(16, 185, 129, 0.1) 100%);
+          border-top: 2px solid var(--brand-primary-light);
+          border-bottom: 2px solid var(--brand-primary-light);
+          padding: 8px 0;
+          position: sticky;
+          bottom: 0;
+          z-index: 50;
+          box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+          margin-top: var(--space-6);
+          margin-left: calc(var(--space-6) * -1);
+          margin-right: calc(var(--space-6) * -1);
+          margin-bottom: calc(var(--space-6) * -1);
+          width: calc(100% + var(--space-6) * 2);
+        }
+        .ticker-move {
+          display: inline-block;
+          white-space: nowrap;
+          padding-right: 100%;
+          box-sizing: content-box;
+          animation: ticker 25s linear infinite;
+        }
+        .ticker-move:hover {
+          animation-play-state: paused;
+        }
+        @keyframes ticker {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-100%, 0, 0); }
+        }
+      </style>
+      <div class="ticker-wrap">
+        <div class="ticker-move" style="font-size: 1.1rem; color: var(--text-primary);">
+          <span style="font-weight: 800; color: var(--brand-primary-light); margin-right: 40px; text-transform: uppercase;">🚀 TOP EXECUTANTES DO MÊS:</span>
+          ${items}
+          <span style="font-weight: 800; color: var(--brand-primary-light); margin-left: 40px; margin-right: 40px; text-transform: uppercase;">🚀 PARABÉNS PELO EMPENHO!</span>
+        </div>
+      </div>
+    `;
+  }
+
   function renderD1Section(tasks) {
     const d1 = dateOf(-1);
     const planned = tasks.length;
@@ -475,6 +554,9 @@ window.DPanel = (() => {
 
         <!-- AI Alerts -->
         ${renderAIAlerts()}
+
+        <!-- Top Performers Ticker -->
+        ${window.Router && window.Router.current === 'presentation' ? renderTopPerformersTicker() : renderTopPerformersTicker()}
       </div>
 
       <!-- Meeting mode overlay (rendered separately by MeetingMode module) -->

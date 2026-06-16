@@ -473,6 +473,7 @@ function renderShell(session) {
     { route:'worker-services', label:'Solicitar Serviços', icon:'clipboard-document-check', perm:'workerPanel', section:'' },
     { route:'worker-manuals', label:'Meus Manuais',      icon:'document-report', perm:'workerPanel', section:'' },
     { route:'d-panel',    label:'D-1 | D | D+1',       icon:'calendar-days',  perm:'dashboard',   section:'OPERACIONAL' },
+    { route:'presentation', label:'Apresentação (TV)',   icon:'presentation-chart-bar', perm:'dashboard', section:'' },
     { route:'dashboard',  label:'Dashboard',             icon:'squares-2x2',    perm:'dashboard',   section:'' },
     { route:'labor-analysis', label:'Análise por Mão de Obra', icon:'chart-pie', perm:'dashboard', section:'' },
     { route:'workshop',   label:'Controle de Oficina',  icon:'building-office', perm:'workshop',   section:'' },
@@ -712,7 +713,10 @@ function renderShell(session) {
   if (typeof ChecklistsModule !== 'undefined') Router.register('checklists', () => ChecklistsModule.render());
   if (typeof MeetingsModule !== 'undefined') Router.register('meetings', () => MeetingsModule.render());
   
-  if (typeof DPanel !== 'undefined') Router.register('d-panel', () => DPanel.render());
+  if (typeof DPanel !== 'undefined') {
+    Router.register('d-panel', () => DPanel.render());
+    Router.register('presentation', () => DPanel.render());
+  }
   if (typeof Dashboard !== 'undefined') Router.register('dashboard', () => Dashboard.render());
   if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
   if (typeof ReleasedModule !== 'undefined') Router.register('equipment-released', () => ReleasedModule.render());
