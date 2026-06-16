@@ -33,7 +33,7 @@ window.DB = (() => {
   };
 
   window.GlobalEqFilter = '';
-  window.setGlobalEqFilter = function(id) {
+  function setGlobalEqFilter(id) {
     window.GlobalEqFilter = id;
     const selectEl = document.getElementById('global-eq-select');
     if (selectEl) {
@@ -43,7 +43,8 @@ window.DB = (() => {
       const current = window.Router.getCurrent();
       if (current) window.Router.navigate(current, { force: true });
     }
-  };
+  }
+  window.setGlobalEqFilter = setGlobalEqFilter;
 
   function now() { return new Date().toISOString(); }
 

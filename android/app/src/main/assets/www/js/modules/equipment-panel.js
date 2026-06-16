@@ -212,7 +212,7 @@ window.EquipmentPanel = (() => {
               `${disc.toUpperCase()} 
                <span class="badge badge-ghost" style="margin-left:8px;">${discTasks.length} ativ.</span> 
                <span class="badge badge-${badgeColor}" style="margin-left:8px;font-size:10px;">Aderência: ${discAderencia}%</span>
-               <span style="font-size:11px;color:var(--text-muted);margin-left:8px;font-weight:normal;">${discHPlan}h plan / ${discHReal}h real</span>`, 
+               <span style="font-size:11px;color:var(--text-muted);margin-left:8px;font-weight:normal;">${Number(discHPlan).toFixed(1).replace('.0', '')}h plan / ${Number(discHReal).toFixed(1).replace('.0', '')}h real</span>`, 
               'wrench-screwdriver', 
               renderDisciplina(discTasks, eq, disc)
             );

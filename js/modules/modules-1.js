@@ -171,8 +171,8 @@ window.Dashboard = (() => {
         // 6. Esforço HH
         const ctxEffort = document.getElementById('mega-ch-effort');
         if (ctxEffort) {
-          const hhP = catsFull.map(c => tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasPlanejadas||0),0));
-          const hhR = catsFull.map(c => tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasRealizadas||0),0));
+          const hhP = catsFull.map(c => Math.round(tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasPlanejadas||0),0)));
+          const hhR = catsFull.map(c => Math.round(tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasRealizadas||0),0)));
           charts.effort = new Chart(ctxEffort, {
             type: 'bar',
             data: { labels: catsLabels, datasets: [
