@@ -983,7 +983,7 @@ window.EquipmentPanel = (() => {
     }
   }
 
-  function saveTask(eqId) {
+  async function saveTask(eqId) {
     const desc = document.getElementById('new-task-desc').value.trim();
     if (!desc) { Toast.error('Erro', 'Descrição é obrigatória.'); return; }
 
