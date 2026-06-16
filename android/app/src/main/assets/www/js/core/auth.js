@@ -212,7 +212,18 @@ window.Auth = (() => {
 
   function getSession() {
     try {
-      return JSON.parse(sessionStorage.getItem(SESSION_KEY));
+      const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+      if (!session) return null;
+      
+      // Validação em tempo real: se o usuário foi deletado ou inativado, derruba a sessão
+      const users = getUsers();
+      const user = users.find(u => u.matricula === session.matricula);
+      if (!user || user.status === 'Inativo') {
+        sessionStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      
+      return session;
     } catch { return null; }
   }
 
