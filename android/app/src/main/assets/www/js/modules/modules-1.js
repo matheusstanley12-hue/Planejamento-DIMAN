@@ -56,50 +56,36 @@ window.Dashboard = (() => {
     const wf = window.DB && DB.workforce ? DB.workforce.list() : [];
 
     // 1. Calculations for micro-cards
-    const emManutencao = eqs.filter(e => e.status === 'Em Manutenção' || e.status === 'Backlog').length;
-    const liberados = eqs.filter(e => e.status === 'Liberado' && (e.dataLiberacaoAtual || '').startsWith(currentMonthPrefix)).length;
-    const atrasados = eqs.filter(e => e.status !== 'Liberado' && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada < todayStr).length;
-    const aguardandoPecas = eqs.filter(e => e.status === 'Falta de Peças').length;
-    const paralisados = eqs.filter(e => e.status === 'Paralisado').length;
+    const allWorkers = wf;
+    const faltasHj = timesheets.filter(t => (t.tipo === 'Falta' || t.tipo === 'Atestado') && t.data === todayStr).length;
+    const trabalhando = allWorkers.length - faltasHj;
     
+    // Mão de obra disponível (Não alocada hoje em equipamentos)
+    const alocadosHj = [...new Set(timesheets.filter(t => t.data === todayStr && t.equipmentId && t.tipo !== 'Falta' && t.tipo !== 'Atestado').map(t => t.workerId))].length;
+    const disponiveis = trabalhando - alocadosHj;
+
     const tarefasTotal = tasks.length;
     const tarefasConcluidas = tasks.filter(t => t.pctExecutado >= 100).length;
-    const tarefasCriticas = tasks.filter(t => t.critico || (t.dataPlanejadaTermino && t.dataPlanejadaTermino < todayStr && t.pctExecutado < 100)).length;
-    
-    const restrAbertas = restrictions.filter(r => r.status === 'Aberta').length;
-    
     const avancoGeral = Math.round(stats.pctAvancoGeral || 0);
-    const horasRealizadas = Math.round(stats.horasRealizadas || 0);
-    const aderencia = Math.round(stats.aderencia || 0);
-    
-    // Curva de avanço
-    const desvio = aderencia - 100;
-    const avancoPlan = 100;
-    const avancoReal = avancoGeral;
-    const statusColor = aderencia >= 90 ? '#10b981' : (aderencia >= 70 ? '#f59e0b' : '#ef4444');
-
-    // Listas
-    const proximasLibs = eqs.filter(e => e.status !== 'Liberado' && e.dataLiberacaoPlanejada).sort((a,b) => a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada)).slice(0, 5);
-    const alertas = eqs.filter(e => e.status !== 'Liberado' && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada < todayStr).sort((a,b) => a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada)).slice(0, 5);
 
     setTimeout(() => {
       try {
-        const textColor = getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#64748b';
-        Chart.defaults.color = textColor;
+        Chart.defaults.color = '#94a3b8';
         Chart.defaults.font.family = 'Inter';
-            // 1. Status Geral (Saúde dos Equipamentos)
+        
+        // 1. Status Geral (Doughnut)
         const ctxStatus = document.getElementById('mega-ch-status');
         if (ctxStatus) {
            const sts = ['Operando', 'Liberado', 'Em Manutenção', 'Aguardando Peça', 'Paralisado'];
            const counts = sts.map(s => eqs.filter(e => e.status === s).length);
            charts.status = new Chart(ctxStatus, {
-             type: 'bar',
-             data: { labels: sts, datasets: [{ data: counts, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 24 }] },
-             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 10, weight: '600' }, color: '#64748b' } }, y: { display: false, grid: { display: false } } } }
+             type: 'doughnut',
+             data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#10b981', '#eab308', '#f97316', '#ef4444', '#a855f7'], borderWidth:0, cutout:'75%' }] },
+             options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, color: '#cbd5e1' } } }, layout: { padding: 10 } }
            });
         }
         
-        // 2. Anual
+        // 2. Anual - Planejado x Realizado de entrega (Column)
         const ctxAno = document.getElementById('mega-ch-ano');
         if (ctxAno) {
           const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -108,121 +94,76 @@ window.Dashboard = (() => {
             if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
           });
-          
-          let gradientR = ctxAno.getContext('2d').createLinearGradient(0, 0, 0, 400);
-          gradientR.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
-          gradientR.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
-
           charts.ano = new Chart(ctxAno, {
             type: 'bar',
             data: { labels: mStr, datasets: [
-              { type: 'line', label: 'Realizado', data: mR, borderColor: '#2563eb', backgroundColor: gradientR, fill: true, tension: 0.4, borderWidth: 3, pointBackgroundColor: '#fff', pointBorderColor: '#2563eb', pointBorderWidth: 2, pointRadius: 4 },
-              { type: 'bar', label: 'Planejado', data: mP, backgroundColor: 'rgba(203, 213, 225, 0.5)', borderRadius: 6, borderSkipped: false, barPercentage: 0.6 }
+              { label: 'Qtd de Falhas (Realizado)', data: mR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 16 },
+              { label: 'Qtd OS Planejadas', data: mP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 16 }
             ]},
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#475569', font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#64748b' } }, y: { display: false } } }
+            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0', font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8' } }, y: { display: false } } }
           });
         }
 
-        // 3. Categoria (Volume por Categoria)
-        const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
-        const catsLabels = ['Sondas Pesq', 'Bombas Pesq', 'Sondas Poço', 'Bombas Poço', 'Subconjuntos', 'Almoxarifado'];
+        // 3. Tarefas por Equipamento Plan x Real (Horizontal Bar)
+        const ctxTasks = document.getElementById('mega-ch-tasks');
+        if (ctxTasks) {
+          const eqNames = eqs.slice(0, 8).map(e => e.codigo);
+          const tP = eqs.slice(0, 8).map(e => Math.round(tasks.filter(t => t.equipmentId === e.id).reduce((s,t) => s+(t.horasPlanejadas||0),0)));
+          const tR = eqs.slice(0, 8).map(e => Math.round(tasks.filter(t => t.equipmentId === e.id).reduce((s,t) => s+(t.horasRealizadas||0),0)));
+          charts.tasksChart = new Chart(ctxTasks, {
+            type: 'bar',
+            data: { labels: eqNames, datasets: [
+              { label: 'Realizado (h)', data: tR, backgroundColor: '#ef4444', borderRadius: 4, barThickness: 8 },
+              { label: 'Planejado (h)', data: tP, backgroundColor: '#3b82f6', borderRadius: 4, barThickness: 8 }
+            ]},
+            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0' } } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } } } }
+          });
+        }
+
+        // 4. Avanço por Equipamento (Horizontal Bar)
+        const ctxAvanco = document.getElementById('mega-ch-avanco');
+        if (ctxAvanco) {
+          const eqSort = [...eqs].sort((a,b) => (b.pctAvanco||0) - (a.pctAvanco||0)).slice(0, 8);
+          const eqAvNames = eqSort.map(e => e.codigo);
+          const eqAvVals = eqSort.map(e => e.pctAvanco||0);
+          charts.avanco = new Chart(ctxAvanco, {
+            type: 'bar',
+            data: { labels: eqAvNames, datasets: [{ label: 'Avanço (%)', data: eqAvVals, backgroundColor: '#a855f7', borderRadius: 4, barThickness: 10 }] },
+            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } } } }
+          });
+        }
+
+        // 5. Gráficos Setores Plan x Real (Horizontal Bar)
         const ctxCat = document.getElementById('mega-ch-cat');
         if (ctxCat) {
+          const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+          const catsLabels = ['Sondas Pesq', 'Bombas Pesq', 'Sondas Poço', 'Bombas Poço', 'Subconjuntos', 'Almoxarifado'];
           const cP = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
           const cR = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix)).length);
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
             data: { labels: catsLabels, datasets: [
-              { label: 'Realizado', data: cR, backgroundColor: '#2563eb', borderRadius: 6, borderSkipped: false },
-              { label: 'Planejado', data: cP, backgroundColor: '#93c5fd', borderRadius: 6, borderSkipped: false }
+              { label: 'Realizado', data: cR, backgroundColor: '#10b981', borderRadius: 4, barThickness: 8 },
+              { label: 'Planejado', data: cP, backgroundColor: '#a855f7', borderRadius: 4, barThickness: 8 }
             ]},
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#475569', font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#64748b' } }, y: { display: false } } }
+            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#e2e8f0' } } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } } } }
           });
         }
 
-        // 4. Peças (Pipeline de Peças)
-        const ctxParts = document.getElementById('mega-ch-parts');
-        if (ctxParts) {
-          const pSol = parts.filter(p => p.status === 'Solicitada').length;
-          const pCom = parts.filter(p => p.status === 'Comprada').length;
-          const pTra = parts.filter(p => p.status === 'Em Transporte').length;
-          const pEnt = parts.filter(p => p.status === 'Entregue').length;
-          charts.partsChart = new Chart(ctxParts, {
-            type: 'bar',
-            data: { labels: ['Solicitada', 'Comprada', 'Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#93c5fd', '#60a5fa', '#3b82f6', '#1d4ed8'], borderRadius: 4, barThickness: 24 }] },
-            options: { indexAxis: 'y', layout: { padding: { right: 30 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '600' }, color: '#475569' } } } }
-          });
-        }
-
-        // 5. Status das Tarefas
-        const ctxTasks = document.getElementById('mega-ch-tasks');
-        if (ctxTasks) {
-          const tA = tasks.filter(t => t.status === 'Aberta').length;
-          const tE = tasks.filter(t => t.status === 'Em Andamento').length;
-          const tC = tasks.filter(t => t.status === 'Concluída').length;
-          charts.tasksChart = new Chart(ctxTasks, {
-            type: 'bar',
-            data: { labels: ['Aberta', 'Em Andamento', 'Concluída'], datasets: [{ data: [tA, tE, tC], backgroundColor: ['#94a3b8', '#60a5fa', '#2563eb'], borderRadius: 4, barThickness: 32 }] },
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#64748b', font: { weight: '600' } } }, y: { display: false } } }
-          });
-        }
-
-        // 6. Mapa de Atrasos
-        const ctxDelay = document.getElementById('mega-ch-delay');
-        if (ctxDelay) {
-          const del = [0,0,0,0];
-          eqs.forEach(e => {
-            if (e.status !== 'Liberado' && e.dataLiberacaoPlanejada) {
-              const d = window.daysBetween ? window.daysBetween(todayStr, e.dataLiberacaoPlanejada) : 0;
-              if (d >= 0) del[0]++; else if (d >= -3) del[1]++; else if (d >= -7) del[2]++; else del[3]++;
-            }
-          });
-          charts.delay = new Chart(ctxDelay, {
-            type: 'bar',
-            data: { labels: ['No Prazo', '1-3 Dias', '4-7 Dias', '> 7 Dias'], datasets: [{ label: 'Qtd', data: del, backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7f1d1d'], borderRadius: 6, borderSkipped: false }] },
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend:{display:false} }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#64748b' } }, y: { display: false } } }
-          });
-        }
-
-        // 7. Esforço HH
-        const ctxEffort = document.getElementById('mega-ch-effort');
-        if (ctxEffort) {
-          const hhP = catsFull.map(c => Math.round(tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasPlanejadas||0),0)));
-          const hhR = catsFull.map(c => Math.round(tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasRealizadas||0),0)));
-          charts.effort = new Chart(ctxEffort, {
-            type: 'bar',
-            data: { labels: catsLabels, datasets: [
-              { label: 'Real (h)', data: hhR, backgroundColor: '#2563eb', borderRadius: 4, barThickness: 12 },
-              { label: 'Plan (h)', data: hhP, backgroundColor: '#93c5fd', borderRadius: 4, barThickness: 12 }
-            ]},
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 10, color: '#475569', font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#64748b' } }, y: { display: false } } }
-          });
-        }
-
-        // 8. Mão de Obra
-        const ctxWorker = document.getElementById('mega-ch-worker');
-        if (ctxWorker) {
-          const roles = ['Mecânico', 'Eletricista', 'Soldador', 'Ajudante', 'Técnico'];
-          const roleCount = roles.map(r => wf.filter(w => (w.cargo||'').includes(r)).length);
-          charts.worker = new Chart(ctxWorker, {
-            type: 'polarArea',
-            data: { labels: roles, datasets: [{ data: roleCount, backgroundColor: ['rgba(59,130,246,0.7)', 'rgba(16,185,129,0.7)', 'rgba(245,158,11,0.7)', 'rgba(239,68,68,0.7)', 'rgba(139,92,246,0.7)'], borderWidth:0 }] },
-            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } }, scales: { r: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { display: false } } } }
-          });
-        }
       } catch(e) { console.warn('Mega Chart Error', e); }
     }, 100);
 
-    const microCard = (title, val) => `
-      <div style="flex: 1; background: rgba(255,255,255,0.7); border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(37,99,235,0.05); backdrop-filter: blur(4px);">
-        <div style="font-size: 38px; font-weight: 500; color: #2563eb; line-height: 1.1;">${val}</div>
-        <div style="font-size: 13px; font-weight: 600; color: #475569; margin-top: 8px; text-align: center;">${title}</div>
+    const microCard = (title, val, subtitle = '') => `
+      <div style="flex: 1; background: #2a2a3c; border: 1px solid #3f3f5a; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+        <div style="font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 8px; text-align: center;">${title}</div>
+        <div style="font-size: 38px; font-weight: 700; color: #ffffff; line-height: 1.1;">${val}</div>
+        ${subtitle ? `<div style="font-size: 11px; color: #64748b; margin-top: 4px;">${subtitle}</div>` : ''}
       </div>
     `;
     
     const chartCard = (title, id) => `
-      <div style="background:rgba(255,255,255,0.6); border:1px solid #bfdbfe; border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 280px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(37,99,235,0.05); backdrop-filter: blur(4px);">
-        <div style="font-size:15px; font-weight:700; color:#334155; margin-bottom:12px; flex-shrink: 0;">${title}</div>
+      <div style="background:#252533; border:1px solid #3f3f5a; border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 280px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+        <div style="font-size:14px; font-weight:700; color:#f8fafc; margin-bottom:12px; flex-shrink: 0;">${title}</div>
         <div style="flex:1; position:relative; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;">
            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
              <canvas id="${id}"></canvas>
@@ -232,20 +173,17 @@ window.Dashboard = (() => {
     `;
 
     const html = `
-    <div style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+    <div style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: #1a1a24;">
       
       <!-- HEADER -->
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
         <div style="display:flex; align-items:center; gap: 16px;">
-          <div style="width: 48px; height: 48px; background: #2563eb; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);">
-            <svg style="width:24px;height:24px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-          </div>
           <div>
-            <h1 style="font-size:24px; font-weight:800; color:#1e293b; margin:0; letter-spacing: -0.02em;">Dashboard Executivo</h1>
-            <p style="font-size:12px; color:#64748b; margin:4px 0 0 0; font-weight:600;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
+            <h1 style="font-size:24px; font-weight:800; color:#ffffff; margin:0; letter-spacing: 1px; text-transform: uppercase;">DASHBOARD MANUTENÇÃO</h1>
+            <p style="font-size:12px; color:#94a3b8; margin:4px 0 0 0; font-weight:600;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
           </div>
         </div>
-        <button class="btn btn-primary" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: #2563eb; border: none; color: white;" onclick="Router.navigate('dashboard',{force:true})">
+        <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid #3f3f5a; color: white;" onclick="Router.navigate('dashboard',{force:true})">
           <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Atualizar Dados
         </button>
@@ -253,69 +191,16 @@ window.Dashboard = (() => {
 
       <!-- SECTION 1: 5 KPIs Topo (Grid) -->
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
-        ${microCard('Total de Equipamentos', eqs.length)}
+        ${microCard('Total Equipamentos', eqs.length)}
+        ${microCard('Mão de Obra Total', allWorkers.length, 'Ativos na base')}
+        ${microCard('Mão de Obra Hoje', trabalhando, `Faltaram: ${faltasHj}`)}
+        ${microCard('Disponíveis p/ Alocar', disponiveis, 'Sem equipamento')}
         ${microCard('Avanço Geral', avancoGeral + '%')}
-        ${microCard('Tarefas Concluídas', tarefasConcluidas)}
-        ${microCard('Horas Realizadas', Number(horasRealizadas).toFixed(1).replace('.0','') + 'h')}
-        ${microCard('Taxa de Aderência', aderencia + '%')}
       </div>
 
-      <!-- SECTION 2: Curva de Avanço -->
-      <div style="background:rgba(255,255,255,0.6); border:1px solid #bfdbfe; border-radius:8px; padding:32px; display:flex; flex-direction:column; box-shadow:0 4px 12px rgba(37,99,235,0.05); backdrop-filter: blur(4px);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 32px;">
-          <div style="font-size:16px; font-weight:700; color:#334155; display:flex; align-items:center; gap:12px;">
-            <div style="width:32px;height:32px;border-radius:8px;background:rgba(37, 99, 235, 0.1);display:flex;align-items:center;justify-content:center;">
-              <svg style="width:18px;color:#2563eb" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            </div>
-            Curva de Avanço Real
-          </div>
-          <div style="background:${desvio > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; color:${desvio > 0 ? '#10b981' : '#ef4444'}; font-weight:800; padding:6px 16px; border-radius:20px; font-size:12px; letter-spacing:0.5px;">${desvio > 0 ? '+' : ''}${desvio}% DE DESVIO</div>
-        </div>
-
-        <div style="display:flex; align-items:center; gap: 40px; width:100%; flex-wrap: wrap;">
-          
-          <div style="display:flex; gap: 16px; flex: 0 0 auto;">
-            <div style="background: var(--bg-surface); padding: 16px 32px; border-radius: 16px; text-align:center;">
-              <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Planejado</div>
-              <div style="font-size:40px; font-weight:900; color:#0ea5e9; line-height:1; margin-top:8px;">${avancoPlan}%</div>
-            </div>
-            <div style="display:flex; align-items:center; font-weight:800; color:var(--text-muted); font-size:18px;">VS</div>
-            <div style="background: var(--bg-surface); padding: 16px 32px; border-radius: 16px; text-align:center;">
-              <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">Realizado</div>
-              <div style="font-size:40px; font-weight:900; color:${statusColor}; line-height:1; margin-top:8px;">${avancoReal}%</div>
-            </div>
-          </div>
-
-          <div style="flex:1; display:flex; flex-direction:column; gap: 24px; min-width:300px;">
-            <!-- Line 1: Plan -->
-            <div style="display:flex; align-items:center; gap:20px;">
-              <div style="width:70px; font-size:12px; color:var(--text-muted); font-weight:700;">Planejado</div>
-              <div style="flex:1; height:8px; background:var(--bg-surface); border-radius:4px; position:relative;">
-                <div style="position:absolute; top:0; left:0; height:100%; width:100%; background:linear-gradient(90deg, #38bdf8, #0ea5e9); border-radius:4px;"></div>
-              </div>
-              <div style="width:40px; font-size:12px; font-weight:800; text-align:right;">100%</div>
-            </div>
-            <!-- Line 2: Real -->
-            <div style="display:flex; align-items:center; gap:20px;">
-              <div style="width:70px; font-size:12px; color:var(--text-muted); font-weight:700;">Realizado</div>
-              <div style="flex:1; height:8px; background:var(--bg-surface); border-radius:4px; position:relative;">
-                <div style="position:absolute; top:0; left:0; height:100%; width:${avancoReal}%; background:${statusColor}; border-radius:4px; transition:width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px ${statusColor}40;"></div>
-              </div>
-              <div style="width:40px; font-size:12px; font-weight:800; text-align:right;">${avancoReal}%</div>
-            </div>
-          </div>
-
-          <div style="display:flex; flex-direction:column; gap: 12px; border-left:1px solid var(--border-card); padding-left: 32px; flex: 0 0 auto;">
-            <div style="display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; color:var(--text-secondary);"><div style="width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 8px rgba(239,68,68,0.5);"></div> Crítico (< 70%)</div>
-            <div style="display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; color:var(--text-secondary);"><div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;box-shadow:0 0 8px rgba(245,158,11,0.5);"></div> Atenção (70% - 89%)</div>
-            <div style="display:flex; align-items:center; gap:10px; font-size:12px; font-weight:600; color:var(--text-secondary);"><div style="width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.5);"></div> OK (≥ 90%)</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION 3: 8 Charts in Grid -->
+      <!-- SECTION 2: 5 Charts in Grid -->
       <style>
-        .mega-charts-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+        .mega-charts-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
         @media (max-width: 1200px) {
           .mega-charts-grid > div { grid-column: span 6 !important; }
         }
@@ -326,75 +211,13 @@ window.Dashboard = (() => {
       <div class="mega-charts-grid">
         
         <!-- Row 1 -->
-        <div style="grid-column: span 3;">${chartCard('Saúde dos Equipamentos', 'mega-ch-status')}</div>
-        <div style="grid-column: span 3;">${chartCard('Status das Tarefas', 'mega-ch-tasks')}</div>
-        <div style="grid-column: span 6;">${chartCard('Volume de Entregas por Categoria', 'mega-ch-cat')}</div>
+        <div style="grid-column: span 8;">${chartCard('Qtd de Ordem de Serviço por Mês', 'mega-ch-ano')}</div>
+        <div style="grid-column: span 4;">${chartCard('Qtd de OS por Status', 'mega-ch-status')}</div>
 
         <!-- Row 2 -->
-        <div style="grid-column: span 8;">${chartCard('Projeção vs Execução Anual', 'mega-ch-ano')}</div>
-        <div style="grid-column: span 4;">${chartCard('Pipeline de Peças', 'mega-ch-parts')}</div>
-
-        <!-- Row 3 -->
-        <div style="grid-column: span 4;">${chartCard('Mapa de Atrasos', 'mega-ch-delay')}</div>
-        <div style="grid-column: span 4;">${chartCard('Apropriação de Esforço (HH)', 'mega-ch-effort')}</div>
-        <div style="grid-column: span 4;">${chartCard('Especialidades Alocadas', 'mega-ch-worker')}</div>
-
-      </div>
-
-      <!-- SECTION 4: Lists -->
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:24px;">
-        
-        <!-- Próximas Liberações -->
-        <div style="background:rgba(255,255,255,0.6); border:1px solid #bfdbfe; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(37,99,235,0.05); backdrop-filter: blur(4px); min-height:250px; display:flex; flex-direction:column;">
-          <div style="font-size:15px; font-weight:700; color:#334155; margin-bottom:20px; display:flex; align-items:center; gap:12px; letter-spacing:-0.02em;">
-            <div style="width:28px;height:28px;border-radius:8px;background:rgba(37, 99, 235, 0.1);display:flex;align-items:center;justify-content:center;font-size:14px;">🚀</div>
-            Próximas Liberações
-          </div>
-          <div style="display:flex; flex-direction:column; gap:12px; flex:1; overflow-y:auto; padding-right:8px;">
-            ${proximasLibs.length === 0 ? '<div style="color:#64748b;font-size:13px;text-align:center;margin-top:30px;font-weight:500;">Nenhum equipamento agendado.</div>' : ''}
-            ${proximasLibs.map(e => {
-              const d = window.daysBetween ? window.daysBetween(todayStr, e.dataLiberacaoPlanejada) : 0;
-              return `
-              <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.8); border: 1px solid #e2e8f0; border-radius:8px; padding:16px; transition:transform 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
-                <div style="display:flex; align-items:center; gap:16px;">
-                  <div style="width:36px;height:36px;border-radius:8px;background:#38bdf8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">${(e.codigo||'').substring(0,2)}</div>
-                  <div>
-                    <div style="font-size:14px;font-weight:700;color:#1e293b;">${e.codigo}</div>
-                    <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:600;margin-top:2px;">${e.cliente || 'Sem cliente'}</div>
-                  </div>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:12px;font-weight:700;color:#f59e0b;">${e.dataLiberacaoPlanejada ? e.dataLiberacaoPlanejada.split('-').reverse().join('/') : ''}</div>
-                  <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px;">${d} dias</div>
-                </div>
-              </div>
-            `}).join('')}
-          </div>
-        </div>
-
-        <!-- Alertas Críticos -->
-        <div style="background:rgba(255,255,255,0.6); border:1px solid #bfdbfe; border-radius:8px; padding:24px; box-shadow:0 4px 12px rgba(37,99,235,0.05); backdrop-filter: blur(4px); min-height:250px; display:flex; flex-direction:column;">
-          <div style="font-size:15px; font-weight:700; color:#334155; margin-bottom:20px; display:flex; align-items:center; gap:12px; letter-spacing:-0.02em;">
-            <div style="width:28px;height:28px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;">⚠️</div>
-            Alertas Críticos
-          </div>
-          <div style="display:flex; flex-direction:column; gap:12px; flex:1; overflow-y:auto; padding-right:8px;">
-            ${alertas.length === 0 ? '<div style="color:#64748b;font-size:13px;text-align:center;margin-top:30px;font-weight:500;">Nenhum equipamento crítico.</div>' : ''}
-            ${alertas.map(e => {
-              const d = window.daysBetween ? window.daysBetween(e.dataLiberacaoPlanejada, todayStr) : 0;
-              return `
-              <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.8); border: 1px solid #e2e8f0; border-radius:8px; padding:16px; border-left:4px solid #ef4444; transition:transform 0.2s; cursor:pointer;" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='translateX(0)'">
-                <div>
-                  <div style="font-size:14px;font-weight:700;color:#1e293b;">${e.codigo}</div>
-                  <div style="font-size:11px;color:#ef4444;text-transform:uppercase;font-weight:700;margin-top:2px;">Atrasado</div>
-                </div>
-                <div style="text-align:right;">
-                  <div style="font-size:18px;font-weight:700;color:#ef4444;line-height:1;">${d} dias</div>
-                </div>
-              </div>
-            `}).join('')}
-          </div>
-        </div>
+        <div style="grid-column: span 4;">${chartCard('Tarefas por Equipamento', 'mega-ch-tasks')}</div>
+        <div style="grid-column: span 4;">${chartCard('Avanço por Equipamento', 'mega-ch-avanco')}</div>
+        <div style="grid-column: span 4;">${chartCard('OS por Categoria', 'mega-ch-cat')}</div>
 
       </div>
 
