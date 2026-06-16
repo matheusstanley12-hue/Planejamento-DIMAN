@@ -648,6 +648,10 @@ function renderShell(session) {
           </div>
           
           <div class="topbar-actions" style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;">
+            <button class="btn btn-ghost btn-sm" onclick="location.reload()" title="Atualizar dados da tela" style="display:flex;align-items:center;gap:4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+              Atualizar
+            </button>
             <div class="topbar-profile" onclick="showUserMenu()" style="display:flex;align-items:center;gap:var(--space-2);cursor:pointer;padding:4px var(--space-2);border-radius:var(--radius-md);transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
               <div class="avatar avatar-sm">${avatarInitials(session.nome)}</div>
               <div class="topbar-user-name" style="font-size:var(--text-xs);color:var(--text-secondary);">${session.nome.split(' ')[0]}</div>

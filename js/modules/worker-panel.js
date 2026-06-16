@@ -463,6 +463,37 @@ window.WorkerPanel = (() => {
     Router.navigate('worker-panel', { force: true });
   }
 
+  function cancelWork() {
+    if (!confirm('Tem certeza que deseja cancelar este apontamento em andamento? As horas decorridas não serão registradas.')) return;
+    const session = Auth.getSession();
+    const myWorker = getMyWorker(session);
+    if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
+
+    const t = DB.tasks.get(myWorker.currentTaskId);
+
+    DB.workforce.update(myWorker.id, {
+      currentState: 'Ocioso',
+      currentTaskId: null,
+      currentActionStartTime: null,
+      currentPauseReason: ''
+    });
+
+    if (t) {
+      // Check if there are other workers executing this task or past timesheets
+      const workers = DB.workforce.list() || [];
+      const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId === t.id);
+      const timesheets = DB.timesheets.list() || [];
+      const hasTimesheets = timesheets.some(ts => ts.taskId === t.id);
+      
+      if (!otherActive && !hasTimesheets) {
+        DB.tasks.update(t.id, { status: 'Não Iniciada' });
+      }
+    }
+
+    Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
+    Router.navigate('worker-panel', { force: true });
+  }
+
   function promptComplete() {
     const session = Auth.getSession();
     const myWorker = getMyWorker(session);
@@ -720,6 +751,10 @@ window.WorkerPanel = (() => {
             </div>
           ` : `
           <div class="action-buttons">
+            <button class="btn-action cancel" onclick="WorkerPanel.cancelWork()" style="background-color: var(--color-danger); color: white;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              CANCELAR
+            </button>
             <button class="btn-action pause" onclick="WorkerPanel.promptPause()">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               PAUSAR
@@ -756,9 +791,13 @@ window.WorkerPanel = (() => {
             </div>
           ` : `
           <div class="action-buttons">
+            <button class="btn-action cancel" onclick="WorkerPanel.cancelWork()" style="background-color: var(--color-danger); color: white;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              CANCELAR
+            </button>
             <button class="btn-action resume" onclick="WorkerPanel.resumeWork()">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              RETOMAR TRABALHO
+              RETOMAR
             </button>
             <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
               <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -1864,6 +1903,7 @@ window.WorkerPanel = (() => {
     promptPause,
     pauseWork,
     resumeWork,
+    cancelWork,
     promptResumeTask,
     submitResumeTask,
     promptMissingParts,

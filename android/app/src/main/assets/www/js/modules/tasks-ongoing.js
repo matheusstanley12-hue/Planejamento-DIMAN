@@ -260,7 +260,7 @@ window.TasksOngoingModule = (() => {
         clearInterval(_interval);
         clearInterval(_liveInterval);
       }
-    }, 30000); 
+    }, 1800000); 
 
     // Live update DOM timers
     _liveInterval = setInterval(() => {
