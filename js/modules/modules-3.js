@@ -1618,6 +1618,7 @@ window.UsersModule = (() => {
               <div class="table-actions">
                 ${u.id !== 'u-superadmin' ? `
                   <button class="btn btn-secondary btn-sm" onclick="UsersModule.openEditUser('${u.id}')">Editar</button>
+                  <button class="btn btn-secondary btn-sm" onclick="UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
                   <button class="btn btn-danger btn-sm" onclick="UsersModule.deleteUser('${u.id}')">Excluir</button>
                 ` : ''}
               </div>
@@ -1796,7 +1797,29 @@ window.UsersModule = (() => {
     Router.navigate('users', { force: true });
   }
 
-  return { render, saveUser, deleteUser, openEditUser, saveEditUser };
+  function resetPassword(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem resetar senhas.');
+      return;
+    }
+    window.uiConfirm('Tem certeza que deseja resetar a senha deste usuário para 123456?', (res) => {
+      if (!res) return;
+      let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      const userIndex = users.findIndex(u => u.id === id);
+      if(userIndex === -1) return;
+      
+      Auth.hashPassword('123456').then(hash => {
+        users[userIndex].senhaHash = hash;
+        users[userIndex].senhaInicial = true;
+        localStorage.setItem('diman_users', JSON.stringify(users));
+        if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+        Toast && Toast.success('Sucesso', 'Senha resetada para 123456.');
+      });
+    });
+  }
+
+  return { render, saveUser, deleteUser, openEditUser, saveEditUser, resetPassword };
 })();
 // ================================================================
 // ACTION PLAN MODULE — AI-generated action plans for release blockers
