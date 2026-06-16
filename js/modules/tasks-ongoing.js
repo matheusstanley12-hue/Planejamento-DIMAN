@@ -48,6 +48,24 @@ window.TasksOngoingModule = (() => {
     if (_eqFilter) {
       activeTasks = activeTasks.filter(t => t.equipmentId === _eqFilter);
     }
+
+    const timesheets = (DB.timesheets ? DB.timesheets.list() : []) || [];
+    const restrictions = (DB.restrictions ? DB.restrictions.getAll() : []) || [];
+    
+    // Sort logic: Em Andamento first, then others. Inside Em Andamento, active timesheets first.
+    activeTasks.sort((a, b) => {
+      if (a.status === 'Em Andamento' && b.status !== 'Em Andamento') return -1;
+      if (b.status === 'Em Andamento' && a.status !== 'Em Andamento') return 1;
+      
+      // If both are Em Andamento, sort by executing vs paused
+      if (a.status === 'Em Andamento' && b.status === 'Em Andamento') {
+        const aActive = timesheets.some(ts => ts.taskId === a.id && !ts.endTime);
+        const bActive = timesheets.some(ts => ts.taskId === b.id && !ts.endTime);
+        if (aActive && !bActive) return -1;
+        if (!aActive && bActive) return 1;
+      }
+      return 0;
+    });
     
     const eqs = DB.equipment.list() || [];
     const equipMap = {};
@@ -56,9 +74,6 @@ window.TasksOngoingModule = (() => {
     const workers = (DB.workforce ? DB.workforce.list() : []) || [];
     const workerMap = {};
     workers.forEach(w => { workerMap[w.id] = w; });
-
-    const timesheets = (DB.timesheets ? DB.timesheets.list() : []) || [];
-    const restrictions = (DB.restrictions ? DB.restrictions.getAll() : []) || [];
 
     if (activeTasks.length === 0) {
       return '<div class="empty-state"><p>Nenhuma tarefa em andamento ou bloqueada no momento.</p></div>';
@@ -76,9 +91,16 @@ window.TasksOngoingModule = (() => {
     const now = new Date().getTime();
     let diffMins = Math.floor((now - start) / 60000);
     if (diffMins < 0) diffMins = 0;
-    const h = Math.floor(diffMins / 60);
-    const m = diffMins % 60;
-    return `${h}h ${m}m`;
+    
+    const days = Math.floor(diffMins / 1440);
+    const hours = Math.floor((diffMins % 1440) / 60);
+    const mins = diffMins % 60;
+    
+    let str = '';
+    if (days > 0) str += `${days}d `;
+    if (hours > 0 || days > 0) str += `${hours}h `;
+    str += `${mins}m`;
+    return str;
   }
 
   function renderCard(t, equipMap, workerMap, timesheets, restrictions) {
@@ -103,28 +125,40 @@ window.TasksOngoingModule = (() => {
         detailsHtml = activeTs.map(ts => {
           const wName = workerMap[ts.workerId]?.nome || 'Desconhecido';
           const timeStr = formatTimeDiff(ts.startTime);
-          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:2px 8px;border-radius:12px;">🏃 ${wName} (${timeStr})</span>`;
+          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:12px;">🏃 ${wName} (${timeStr})</span>`;
         }).join(' ');
       } else {
         borderColor = 'var(--color-warning)';
         statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Pausada</span>`;
-        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:12px;">⏸️ Nenhum apontamento ativo</span>`;
+        
+        let pauseTimeStr = 'Desconhecido';
+        if (taskTimesheets.length > 0) {
+          const closedTs = taskTimesheets.filter(ts => ts.endTime).sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
+          if (closedTs.length > 0) {
+            pauseTimeStr = formatTimeDiff(closedTs[0].endTime);
+          }
+        } else if (t.dataReplanejada || t.dataPlanejadaInicio) {
+           // Fallback to planned date if no timesheet ever existed
+           pauseTimeStr = formatTimeDiff(t.dataReplanejada || t.dataPlanejadaInicio);
+        }
+
+        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">⏸️ Pausada há ${pauseTimeStr}</span>`;
       }
     } else if (t.status === 'Bloqueada') {
       borderColor = 'var(--color-danger)';
       statusHtml = `<span class="badge badge-danger" style="font-size:11px;">Bloqueada</span>`;
       if (openRests.length > 0) {
-        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-danger);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);padding:2px 8px;border-radius:12px;">🔒 Motivo: ${r.descricao}</span>`).join(' ');
+        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-danger);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);padding:4px 8px;border-radius:12px;">🔒 Há ${formatTimeDiff(r.createdAt)} - Motivo: ${r.descricao}</span>`).join(' ');
       } else {
-        detailsHtml = `<span style="font-size:11px;color:var(--color-danger);font-weight:600;background:rgba(239,68,68,0.1);padding:2px 8px;border-radius:12px;">🔒 Motivo não especificado</span>`;
+        detailsHtml = `<span style="font-size:11px;color:var(--color-danger);font-weight:600;background:rgba(239,68,68,0.1);padding:4px 8px;border-radius:12px;">🔒 Motivo não especificado</span>`;
       }
     } else if (t.status === 'Aguardando Peça') {
       borderColor = 'var(--color-warning)';
       statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Aguardando Peça</span>`;
       if (openRests.length > 0) {
-        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-warning);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:12px;">📦 Peça/Falta: ${r.descricao}</span>`).join(' ');
+        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-warning);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">📦 Há ${formatTimeDiff(r.createdAt)} - Falta: ${r.descricao}</span>`).join(' ');
       } else {
-        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:12px;">📦 Aguardando Peça</span>`;
+        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">📦 Aguardando Peça</span>`;
       }
     }
 
