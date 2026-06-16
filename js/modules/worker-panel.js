@@ -46,7 +46,7 @@ window.WorkerPanel = (() => {
       if (Object.values(map).includes(myWorkerName) || Object.values(map).includes(session.nome) || e.id === myDirectEqId) return true;
       
       const eqTasks = allTasks.filter(t => t.equipmentId === e.id && t.status !== 'Concluída');
-      return eqTasks.some(t => canExecuteTask(session, t));
+      return eqTasks.some(t => t.responsavel && (t.responsavel === myWorkerName || t.responsavel === session.nome));
     });
   }
 
@@ -1872,7 +1872,8 @@ window.WorkerPanel = (() => {
     submitOtherReason,
     promptComplete,
     previewPhoto,
-    finalizeTask
+    finalizeTask,
+    getMyEquipments
   };
 })();
 
