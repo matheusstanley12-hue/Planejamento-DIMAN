@@ -1061,7 +1061,7 @@ window.ReportsModule = (() => {
       doc.setFont('Helvetica', 'bold');
       doc.setFontSize(14);
       doc.setTextColor(255, 255, 255);
-      doc.text("DIMAN-BHZ | PLANEJAMENTO OPERACIONAL", 15, 13);
+      doc.text("DIMAN | SISTEMA INTELIGENTE DA MANUTENÇÃO", 15, 13);
       
       doc.setFont('Helvetica', 'normal');
       doc.setFontSize(11);

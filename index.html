@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="PLANEJAMENTO DIMAN-BHZ — Plataforma profissional de Planejamento e Controle de Manutenção (PCM) industrial." />
+  <meta name="description" content="DIMAN — Sistema inteligente da manutenção." />
   <meta name="robots" content="noindex" />
-  <title>PLANEJAMENTO DIMAN-BHZ | PCM Industrial</title>
+  <title>DIMAN | Sistema inteligente da manutenção</title>
   <script>
     window.onerror = function(message, source, lineno, colno, error) {
       document.body.innerHTML = '<div style="padding:20px;color:red;font-size:16px;"><b>Erro:</b> ' + message + '<br><b>Arquivo:</b> ' + source + ':' + lineno + '<br><b>Stack:</b> ' + (error ? error.stack : '') + '</div>';
@@ -28,7 +28,7 @@
   <script src="js/supabase.js"></script>
 
   <script>
-    const CACHE_VERSION = '123';
+    const CACHE_VERSION = '124';
     const noCacheUrls = [
       'css/index.css',
       'js/core/auth.js',
@@ -84,7 +84,7 @@
   <!-- Modules -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/layout.css?v=123" />
+  <link rel="stylesheet" href="css/layout.css?v=124" />
   <link rel="stylesheet" href="css/pro-dashboard.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/gantt.css" />
@@ -305,8 +305,8 @@
       </svg>
     </div>
     <div style="text-align:center;">
-      <div style="font-family:'Inter',sans-serif;font-size:1.4rem;font-weight:900;color:white;letter-spacing:-.02em;">DIMAN-BHZ</div>
-      <div style="font-family:'Inter',sans-serif;font-size:.7rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.15em;margin-top:4px;">Carregando sistema PCM...</div>
+      <div style="font-family:'Inter',sans-serif;font-size:1.4rem;font-weight:900;color:white;letter-spacing:-.02em;">DIMAN</div>
+      <div style="font-family:'Inter',sans-serif;font-size:.7rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.15em;margin-top:4px;">Sistema inteligente da manutenção</div>
     </div>
     <div style="width:200px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;">
       <div id="load-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#1565C0,#1E88E5);border-radius:2px;animation:load-progress 1.5s ease forwards;"></div>
@@ -335,46 +335,46 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script src="js/core/events.js"></script>
-  <script src="js/core/db_v2.js?v=123"></script>
+  <script src="js/core/db_v2.js?v=124"></script>
   <script src="js/core/auth.js"></script>
   <script src="js/core/notifications.js"></script>
 
   <!-- 2. MODULES -->
   <!-- Empty stubs (superseded) -->
-  <script src="js/modules/labor-analysis.js?v=123"></script>
-  <script src="js/modules/dashboard.js?v=123"></script>
-  <script src="js/modules/equipment.js?v=123"></script>
+  <script src="js/modules/labor-analysis.js?v=124"></script>
+  <script src="js/modules/dashboard.js?v=124"></script>
+  <script src="js/modules/equipment.js?v=124"></script>
 
 
   <!-- Feature modules batches -->
-  <script src="js/modules/home_v2.js?v=123"></script>
-  <script src="js/modules/released.js?v=123"></script>
-  <script src="js/modules/waiting.js?v=123"></script>
-  <script src="js/modules/equipment-panel.js?v=123"></script>
-  <script src="js/modules/checklists.js?v=123"></script>
-  <script src="js/modules/equipment-table.js?v=123"></script>
-  <script src="js/modules/modules-1.js?v=123"></script>
-  <script src="js/modules/modules-2.js?v=123"></script>
-  <script src="js/modules/modules-3.js?v=123"></script>
-  <script src="js/modules/worker-panel.js?v=123"></script>
-  <script src="js/modules/workforce-time.js?v=123"></script>
-  <script src="js/modules/bonus.js?v=123"></script>
-  <script src="js/modules/attendance.js?v=123"></script>
-  <script src="js/modules/services.js?v=123"></script>
-  <script src="js/modules/manuals.js?v=123"></script>
-  <script src="js/modules/meetings.js?v=123"></script>
-  <script src="js/modules/vacations.js?v=123"></script>
-  <script src="js/modules/tasks-ongoing.js?v=123"></script>
+  <script src="js/modules/home_v2.js?v=124"></script>
+  <script src="js/modules/released.js?v=124"></script>
+  <script src="js/modules/waiting.js?v=124"></script>
+  <script src="js/modules/equipment-panel.js?v=124"></script>
+  <script src="js/modules/checklists.js?v=124"></script>
+  <script src="js/modules/equipment-table.js?v=124"></script>
+  <script src="js/modules/modules-1.js?v=124"></script>
+  <script src="js/modules/modules-2.js?v=124"></script>
+  <script src="js/modules/modules-3.js?v=124"></script>
+  <script src="js/modules/worker-panel.js?v=124"></script>
+  <script src="js/modules/workforce-time.js?v=124"></script>
+  <script src="js/modules/bonus.js?v=124"></script>
+  <script src="js/modules/attendance.js?v=124"></script>
+  <script src="js/modules/services.js?v=124"></script>
+  <script src="js/modules/manuals.js?v=124"></script>
+  <script src="js/modules/meetings.js?v=124"></script>
+  <script src="js/modules/vacations.js?v=124"></script>
+  <script src="js/modules/tasks-ongoing.js?v=124"></script>
 
   <!-- D-1 | D | D+1 Panel -->
-  <script src="js/modules/d-panel.js?v=123"></script>
+  <script src="js/modules/d-panel.js?v=124"></script>
 
   <!-- QR Modules -->
-  <script src="js/modules/qr-generator.js?v=123"></script>
-  <script src="js/modules/qr-view_v2.js?v=123"></script>
+  <script src="js/modules/qr-generator.js?v=124"></script>
+  <script src="js/modules/qr-view_v2.js?v=124"></script>
 
   <!-- 3. APP BOOTSTRAP -->
-  <script src="js/app_v2.js?v=123"></script>
+  <script src="js/app_v2.js?v=124"></script>
 
   <!-- Loading screen removal -->
   <script>

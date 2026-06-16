@@ -281,8 +281,8 @@ function showLoginPage() {
           <div style="display:inline-flex;align-items:center;justify-content:center;margin-bottom:var(--space-4);padding:8px;background:white;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,0.25);animation:glow-pulse 3s ease-in-out infinite;">
             <img src="logo.png" style="width:110px;height:110px;object-fit:contain;" alt="Logo GEOSOL" />
           </div>
-          <h1 style="font-size:var(--text-2xl);font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">DIMAN-BHZ</h1>
-          <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:var(--font-semibold);letter-spacing:0.12em;text-transform:uppercase;">Planejamento, Controle e Gestão Inteligente da Manutenção</div>
+          <h1 style="font-size:var(--text-2xl);font-weight:800;letter-spacing:-0.03em;margin-bottom:4px;">DIMAN</h1>
+          <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:var(--font-semibold);letter-spacing:0.12em;text-transform:uppercase;">Sistema inteligente da manutenção</div>
         </div>
 
         <!-- Form -->
@@ -625,8 +625,8 @@ function renderShell(session) {
               <img src="logo.png" style="width:100%;height:100%;object-fit:contain;" alt="GEOSOL Logo" />
             </div>
             <div class="topbar-title-wrap">
-              <div style="font-weight:900;font-size:1.2rem;letter-spacing:-0.03em;line-height:1;">DIMAN-BHZ</div>
-              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Planejamento Operacional</div>
+              <div style="font-weight:900;font-size:1.2rem;letter-spacing:-0.03em;line-height:1;">DIMAN</div>
+              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px;">Sistema inteligente da manutenção</div>
             </div>
             
             <div style="width:1px;height:24px;background:var(--border-card);margin:0 var(--space-2);" class="topbar-title-wrap"></div>
