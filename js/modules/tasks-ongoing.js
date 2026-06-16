@@ -1,5 +1,6 @@
 window.TasksOngoingModule = (() => {
   let _interval;
+  let _liveInterval;
   let _eqFilter = '';
 
   function render() {
@@ -12,7 +13,7 @@ window.TasksOngoingModule = (() => {
             </div>
             Tarefas Em andamento / Impedidas
           </div>
-          <div style="font-size:var(--text-sm);color:var(--text-muted);">(Atualização automática)</div>
+          <div style="font-size:var(--text-sm);color:var(--text-muted);">(Tempo real)</div>
         </div>
 
         <div style="margin-bottom:var(--space-4); display:flex; align-items:center; gap:16px; background:var(--bg-card); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border-card);">
@@ -52,12 +53,10 @@ window.TasksOngoingModule = (() => {
     const timesheets = (DB.timesheets ? DB.timesheets.list() : []) || [];
     const restrictions = (DB.restrictions ? DB.restrictions.getAll() : []) || [];
     
-    // Sort logic: Em Andamento first, then others. Inside Em Andamento, active timesheets first.
     activeTasks.sort((a, b) => {
       if (a.status === 'Em Andamento' && b.status !== 'Em Andamento') return -1;
       if (b.status === 'Em Andamento' && a.status !== 'Em Andamento') return 1;
       
-      // If both are Em Andamento, sort by executing vs paused
       if (a.status === 'Em Andamento' && b.status === 'Em Andamento') {
         const aActive = timesheets.some(ts => ts.taskId === a.id && !ts.endTime);
         const bActive = timesheets.some(ts => ts.taskId === b.id && !ts.endTime);
@@ -86,32 +85,12 @@ window.TasksOngoingModule = (() => {
     `;
   }
 
-  function formatTimeDiff(startTimeIso) {
-    const start = new Date(startTimeIso).getTime();
-    const now = new Date().getTime();
-    let diffMins = Math.floor((now - start) / 60000);
-    if (diffMins < 0) diffMins = 0;
-    
-    const days = Math.floor(diffMins / 1440);
-    const hours = Math.floor((diffMins % 1440) / 60);
-    const mins = diffMins % 60;
-    
-    let str = '';
-    if (days > 0) str += `${days}d `;
-    if (hours > 0 || days > 0) str += `${hours}h `;
-    str += `${mins}m`;
-    return str;
-  }
-
   function renderCard(t, equipMap, workerMap, timesheets, restrictions) {
     const eq = equipMap[t.equipmentId];
     const eqCode = eq ? eq.codigo : '—';
 
-    // Execution data
     const taskTimesheets = timesheets.filter(ts => ts.taskId === t.id);
     const activeTs = taskTimesheets.filter(ts => !ts.endTime);
-
-    // Impediment data
     const openRests = restrictions.filter(r => r.equipmentId === t.equipmentId && r.status !== 'Fechada' && (r.tarefaBloqueada === t.descricao || r.tipo === 'Tarefa Bloqueada' || t.status === 'Aguardando Peça'));
 
     let statusHtml = '';
@@ -124,31 +103,34 @@ window.TasksOngoingModule = (() => {
         statusHtml = `<span class="badge badge-primary" style="animation: pulse 2s infinite; font-size:11px;">Em Execução</span>`;
         detailsHtml = activeTs.map(ts => {
           const wName = workerMap[ts.workerId]?.nome || 'Desconhecido';
-          const timeStr = formatTimeDiff(ts.startTime);
-          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:12px;">🏃 ${wName} (${timeStr})</span>`;
+          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:12px;">🏃 ${wName} (<span class="live-timer" data-start="${ts.startTime}"></span>)</span>`;
         }).join(' ');
       } else {
         borderColor = 'var(--color-warning)';
         statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Pausada</span>`;
         
         let pauseTimeStr = 'Desconhecido';
+        let pauseStartIso = '';
         if (taskTimesheets.length > 0) {
           const closedTs = taskTimesheets.filter(ts => ts.endTime).sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
           if (closedTs.length > 0) {
-            pauseTimeStr = formatTimeDiff(closedTs[0].endTime);
+            pauseStartIso = closedTs[0].endTime;
           }
         } else if (t.dataReplanejada || t.dataPlanejadaInicio) {
-           // Fallback to planned date if no timesheet ever existed
-           pauseTimeStr = formatTimeDiff(t.dataReplanejada || t.dataPlanejadaInicio);
+           pauseStartIso = t.dataReplanejada || t.dataPlanejadaInicio;
         }
 
-        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">⏸️ Pausada há ${pauseTimeStr}</span>`;
+        if (pauseStartIso) {
+           detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">⏸️ Pausada há <span class="live-timer" data-start="${pauseStartIso}"></span></span>`;
+        } else {
+           detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">⏸️ Pausada há Desconhecido</span>`;
+        }
       }
     } else if (t.status === 'Bloqueada') {
       borderColor = 'var(--color-danger)';
       statusHtml = `<span class="badge badge-danger" style="font-size:11px;">Bloqueada</span>`;
       if (openRests.length > 0) {
-        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-danger);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);padding:4px 8px;border-radius:12px;">🔒 Há ${formatTimeDiff(r.createdAt)} - Motivo: ${r.descricao}</span>`).join(' ');
+        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-danger);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);padding:4px 8px;border-radius:12px;">🔒 Há <span class="live-timer" data-start="${r.createdAt}"></span> - Motivo: ${r.descricao}</span>`).join(' ');
       } else {
         detailsHtml = `<span style="font-size:11px;color:var(--color-danger);font-weight:600;background:rgba(239,68,68,0.1);padding:4px 8px;border-radius:12px;">🔒 Motivo não especificado</span>`;
       }
@@ -156,7 +138,7 @@ window.TasksOngoingModule = (() => {
       borderColor = 'var(--color-warning)';
       statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Aguardando Peça</span>`;
       if (openRests.length > 0) {
-        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-warning);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">📦 Há ${formatTimeDiff(r.createdAt)} - Falta: ${r.descricao}</span>`).join(' ');
+        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-warning);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">📦 Há <span class="live-timer" data-start="${r.createdAt}"></span> - Falta: ${r.descricao}</span>`).join(' ');
       } else {
         detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:4px 8px;border-radius:12px;">📦 Aguardando Peça</span>`;
       }
@@ -206,22 +188,64 @@ window.TasksOngoingModule = (() => {
     }
   }
 
+  function updateLiveTimers() {
+    const els = document.querySelectorAll('.live-timer');
+    const now = new Date().getTime();
+    els.forEach(el => {
+      const startStr = el.getAttribute('data-start');
+      if (!startStr) return;
+      const start = new Date(startStr).getTime();
+      let diffSecs = Math.floor((now - start) / 1000);
+      if (diffSecs < 0) diffSecs = 0;
+      
+      const days = Math.floor(diffSecs / 86400);
+      const hours = Math.floor((diffSecs % 86400) / 3600);
+      const mins = Math.floor((diffSecs % 3600) / 60);
+      const secs = diffSecs % 60;
+      
+      let str = '';
+      if (days > 0) str += `${days}d `;
+      if (hours > 0 || days > 0) {
+        str += `${hours.toString().padStart(2, '0')}:`;
+      }
+      str += `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      
+      el.innerText = str;
+    });
+  }
+
   function startAutoRefresh() {
     if (_interval) clearInterval(_interval);
+    if (_liveInterval) clearInterval(_liveInterval);
+    
+    // Auto refresh data
     _interval = setInterval(() => {
       const el = document.getElementById('ongoing-tasks-content');
       if (el) {
         el.innerHTML = renderContent();
+        updateLiveTimers();
       } else {
         clearInterval(_interval);
+        clearInterval(_liveInterval);
       }
-    }, 30000); // Atualiza a cada 30 segundos
+    }, 30000); 
+
+    // Live update DOM timers
+    _liveInterval = setInterval(() => {
+      if (!document.getElementById('ongoing-tasks-content')) {
+        clearInterval(_interval);
+        clearInterval(_liveInterval);
+        return;
+      }
+      updateLiveTimers();
+    }, 1000);
   }
 
-  // Hook into router initialization or call startAutoRefresh directly on render if preferred
   const originalRender = render;
   render = function() {
     startAutoRefresh();
+    // setTimeout to ensure elements are in DOM before updating the very first time
+    setTimeout(updateLiveTimers, 50);
     return originalRender();
   };
 
