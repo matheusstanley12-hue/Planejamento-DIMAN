@@ -331,7 +331,7 @@ function showLoginPage() {
       </div>
 
       <!-- Version info -->
-      <p style="text-align:center;font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-4);">PLANEJAMENTO DIMAN-BHZ v1.0 &nbsp;|&nbsp; Desenvolvido para Gestão Industrial</p>
+      <p style="text-align:center;font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-4);">DIMAN v1.0 &nbsp;|&nbsp; Desenvolvido por DIMAN-BHZ</p>
     </div>
   `;
 
