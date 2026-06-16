@@ -1,5 +1,6 @@
 window.TasksOngoingModule = (() => {
   let _interval;
+  let _eqFilter = '';
 
   function render() {
     return `
@@ -14,6 +15,14 @@ window.TasksOngoingModule = (() => {
           <div style="font-size:var(--text-sm);color:var(--text-muted);">(Atualização automática)</div>
         </div>
 
+        <div style="margin-bottom:var(--space-4); display:flex; align-items:center; gap:16px; background:var(--bg-card); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border-card);">
+          <label style="font-weight:600; color:var(--text-secondary); margin:0;">Filtrar Equipamento:</label>
+          <select class="form-control" style="max-width:300px; padding:6px 12px;" onchange="TasksOngoingModule.setEqFilter(this.value)">
+            <option value="">Todos os Equipamentos</option>
+            ${renderEqOptions()}
+          </select>
+        </div>
+
         <div id="ongoing-tasks-content">
           ${renderContent()}
         </div>
@@ -21,10 +30,24 @@ window.TasksOngoingModule = (() => {
     `;
   }
 
+  function renderEqOptions() {
+    const eqs = DB.equipment.list() || [];
+    return eqs.map(e => `<option value="${e.id}" ${_eqFilter === e.id ? 'selected' : ''}>${e.codigo} - ${e.tipo || ''}</option>`).join('');
+  }
+
+  function setEqFilter(val) {
+    _eqFilter = val;
+    const el = document.getElementById('ongoing-tasks-content');
+    if (el) el.innerHTML = renderContent();
+  }
+
   function renderContent() {
     const rawTasks = DB.tasks.getAll() || [];
-    // Filter tasks that are not concluded and not uninitiated.
-    const activeTasks = rawTasks.filter(t => ['Em Andamento', 'Bloqueada', 'Aguardando Peça'].includes(t.status));
+    let activeTasks = rawTasks.filter(t => ['Em Andamento', 'Bloqueada', 'Aguardando Peça'].includes(t.status));
+    
+    if (_eqFilter) {
+      activeTasks = activeTasks.filter(t => t.equipmentId === _eqFilter);
+    }
     
     const eqs = DB.equipment.list() || [];
     const equipMap = {};
@@ -42,7 +65,7 @@ window.TasksOngoingModule = (() => {
     }
 
     return `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));gap:var(--space-4);">
+      <div style="display:flex;flex-direction:column;gap:var(--space-2);" class="stagger">
         ${activeTasks.map(t => renderCard(t, equipMap, workerMap, timesheets, restrictions)).join('')}
       </div>
     `;
@@ -61,7 +84,6 @@ window.TasksOngoingModule = (() => {
   function renderCard(t, equipMap, workerMap, timesheets, restrictions) {
     const eq = equipMap[t.equipmentId];
     const eqCode = eq ? eq.codigo : '—';
-    const eqSector = eq ? eq.tipo : '—';
 
     // Execution data
     const taskTimesheets = timesheets.filter(ts => ts.taskId === t.id);
@@ -77,57 +99,68 @@ window.TasksOngoingModule = (() => {
     if (t.status === 'Em Andamento') {
       if (activeTs.length > 0) {
         borderColor = 'var(--brand-primary)';
-        statusHtml = `<span class="badge badge-primary" style="animation: pulse 2s infinite;">Em Execução</span>`;
+        statusHtml = `<span class="badge badge-primary" style="animation: pulse 2s infinite; font-size:11px;">Em Execução</span>`;
         detailsHtml = activeTs.map(ts => {
           const wName = workerMap[ts.workerId]?.nome || 'Desconhecido';
           const timeStr = formatTimeDiff(ts.startTime);
-          return `<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);margin-top:6px;"><svg style="width:12px;height:12px;color:var(--brand-primary);" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg> <b>${wName}</b> executando há ${timeStr}</div>`;
-        }).join('');
+          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:2px 8px;border-radius:12px;">🏃 ${wName} (${timeStr})</span>`;
+        }).join(' ');
       } else {
         borderColor = 'var(--color-warning)';
-        statusHtml = `<span class="badge badge-warning">Pausada</span>`;
-        detailsHtml = `<div style="font-size:12px;color:var(--color-warning);margin-top:6px;">Nenhum apontamento ativo. Tarefa encontra-se pausada.</div>`;
+        statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Pausada</span>`;
+        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:12px;">⏸️ Nenhum apontamento ativo</span>`;
       }
     } else if (t.status === 'Bloqueada') {
       borderColor = 'var(--color-danger)';
-      statusHtml = `<span class="badge badge-danger">Bloqueada</span>`;
+      statusHtml = `<span class="badge badge-danger" style="font-size:11px;">Bloqueada</span>`;
       if (openRests.length > 0) {
-        detailsHtml = openRests.map(r => `<div style="font-size:12px;color:var(--color-danger);margin-top:6px;background:rgba(244,67,54,0.1);padding:6px;border-radius:4px;"><b>Motivo:</b> ${r.descricao}<br><span style="font-size:10px;opacity:0.8;">Desde: ${new Date(r.createdAt).toLocaleString('pt-BR')}</span></div>`).join('');
+        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-danger);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);padding:2px 8px;border-radius:12px;">🔒 Motivo: ${r.descricao}</span>`).join(' ');
       } else {
-        detailsHtml = `<div style="font-size:12px;color:var(--color-danger);margin-top:6px;">Bloqueada (Motivo não especificado)</div>`;
+        detailsHtml = `<span style="font-size:11px;color:var(--color-danger);font-weight:600;background:rgba(239,68,68,0.1);padding:2px 8px;border-radius:12px;">🔒 Motivo não especificado</span>`;
       }
     } else if (t.status === 'Aguardando Peça') {
       borderColor = 'var(--color-warning)';
-      statusHtml = `<span class="badge badge-warning">Aguardando Peça</span>`;
+      statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Aguardando Peça</span>`;
       if (openRests.length > 0) {
-        detailsHtml = openRests.map(r => `<div style="font-size:12px;color:var(--color-warning);margin-top:6px;background:rgba(255,152,0,0.1);padding:6px;border-radius:4px;"><b>Peça/Falta:</b> ${r.descricao}<br><span style="font-size:10px;opacity:0.8;">Desde: ${new Date(r.createdAt).toLocaleString('pt-BR')}</span></div>`).join('');
+        detailsHtml = openRests.map(r => `<span style="font-size:11px;color:var(--color-warning);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:12px;">📦 Peça/Falta: ${r.descricao}</span>`).join(' ');
       } else {
-        detailsHtml = `<div style="font-size:12px;color:var(--color-warning);margin-top:6px;">Aguardando Peça para continuar</div>`;
+        detailsHtml = `<span style="font-size:11px;color:var(--color-warning);font-weight:600;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:12px;">📦 Aguardando Peça</span>`;
       }
     }
 
-    return `
-      <div class="card" style="border-top: 4px solid ${borderColor}; display:flex; flex-direction:column; padding:var(--space-4);">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-          <div>
-            <div style="font-size:14px; font-weight:800; color:var(--text-primary); margin-bottom:2px;">${t.descricao}</div>
-            <div style="font-size:11px; color:var(--text-muted);">${eqCode} &middot; ${eqSector} &middot; ${t.disciplina}</div>
-          </div>
-          <div>${statusHtml}</div>
+    const today = new Date().toISOString().slice(0,10);
+    function formatDateBr(iso) { if(!iso)return ''; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; }
+    const plannedStr = t.dataPlanejadaInicio ? `Plan: ${formatDateBr(t.dataPlanejadaInicio)} &rarr; ${formatDateBr(t.dataPlanejadaTermino)}` : '';
+
+    return `<div style="display:flex;align-items:center;gap:var(--space-4);padding:var(--space-4);background:var(--bg-card);border:1px solid ${borderColor};border-radius:var(--radius-md);transition:all .2s;" class="hover-lift">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-1);flex-wrap:wrap;">
+          ${t.critico ? '<span style="font-size:.7rem;background:var(--color-danger);color:white;padding:2px 6px;border-radius:3px;font-weight:700;">CRÍTICO</span>' : ''}
+          <span style="font-size:var(--text-sm);font-weight:700;color:var(--text-primary);text-transform:uppercase;">${t.descricao}</span>
         </div>
-        
-        <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-size:var(--text-xs);color:var(--text-muted);font-weight:600;">${eqCode}</span>
+          <span class="badge badge-ghost" style="font-size:10px">${t.disciplina}</span>
+          <span style="font-size:var(--text-xs);color:var(--text-muted)">👤 ${t.responsavel||'—'}</span>
+          ${plannedStr ? `<span style="font-size:var(--text-xs);color:var(--text-muted)">📅 ${plannedStr}</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
           ${detailsHtml}
         </div>
-
-        <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-card); display:flex; justify-content:space-between; align-items:center;">
-          <div style="font-size:11px; color:var(--text-muted);">
-            Avanço: <span style="font-weight:700; color:var(--text-primary);">${t.pctExecutado || 0}%</span>
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="TasksOngoingModule.goToEq('${t.equipmentId}')">Ver Equipamento</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:var(--space-4);flex-shrink:0;">
+        <div style="width:100px;">
+          <div class="progress-track" style="margin-bottom:4px;"><div class="progress-fill ${t.pctExecutado>=80?'success':t.pctExecutado>=50?'':'warning'}" style="width:${t.pctExecutado}%"></div></div>
+          <div style="font-size:11px;text-align:right;color:var(--text-muted);font-weight:600;">${t.pctExecutado}%</div>
+        </div>
+        <div style="min-width: 100px; text-align:center;">
+          ${statusHtml}
+        </div>
+        <div style="display:flex;gap:var(--space-1);">
+          <button class="btn btn-secondary btn-sm" onclick="TasksOngoingModule.goToEq('${t.equipmentId}')">Ir p/ Equipamento</button>
         </div>
       </div>
-    `;
+    </div>`;
   }
 
   function goToEq(eqId) {
@@ -158,5 +191,5 @@ window.TasksOngoingModule = (() => {
     return originalRender();
   };
 
-  return { render, goToEq };
+  return { render, goToEq, setEqFilter };
 })();
