@@ -73,6 +73,9 @@ window.TasksOngoingModule = (() => {
 
     const timesheets = (DB.timesheets ? DB.timesheets.list() : []) || [];
     const restrictions = (DB.restrictions ? DB.restrictions.getAll() : []) || [];
+    const workers = (DB.workforce ? DB.workforce.list() : []) || [];
+    const workerMap = {};
+    workers.forEach(w => { workerMap[w.id] = w; });
     
     if (_statusFilter) {
       activeTasks = activeTasks.filter(t => {
@@ -80,10 +83,9 @@ window.TasksOngoingModule = (() => {
         if (_statusFilter === 'Bloqueada') return t.status === 'Bloqueada';
         if (_statusFilter === 'Pausada' || _statusFilter === 'Em Execução') {
           if (t.status !== 'Em Andamento') return false;
-          const taskTs = timesheets.filter(ts => ts.taskId === t.id);
-          const activeTs = taskTs.filter(ts => !ts.endTime);
-          if (_statusFilter === 'Em Execução') return activeTs.length > 0;
-          if (_statusFilter === 'Pausada') return activeTs.length === 0;
+          const activeW = workers.filter(w => w.currentState === 'Trabalhando' && w.currentTaskId === t.id);
+          if (_statusFilter === 'Em Execução') return activeW.length > 0;
+          if (_statusFilter === 'Pausada') return activeW.length === 0;
         }
         return true;
       });
@@ -94,8 +96,8 @@ window.TasksOngoingModule = (() => {
       if (b.status === 'Em Andamento' && a.status !== 'Em Andamento') return 1;
       
       if (a.status === 'Em Andamento' && b.status === 'Em Andamento') {
-        const aActive = timesheets.some(ts => ts.taskId === a.id && !ts.endTime);
-        const bActive = timesheets.some(ts => ts.taskId === b.id && !ts.endTime);
+        const aActive = workers.some(w => w.currentState === 'Trabalhando' && w.currentTaskId === a.id);
+        const bActive = workers.some(w => w.currentState === 'Trabalhando' && w.currentTaskId === b.id);
         if (aActive && !bActive) return -1;
         if (!aActive && bActive) return 1;
       }
@@ -106,27 +108,23 @@ window.TasksOngoingModule = (() => {
     const equipMap = {};
     eqs.forEach(e => { equipMap[e.id] = e; });
 
-    const workers = (DB.workforce ? DB.workforce.list() : []) || [];
-    const workerMap = {};
-    workers.forEach(w => { workerMap[w.id] = w; });
-
     if (activeTasks.length === 0) {
       return '<div class="empty-state"><p>Nenhuma tarefa em andamento ou bloqueada no momento.</p></div>';
     }
 
     return `
       <div style="display:flex;flex-direction:column;gap:var(--space-2);" class="stagger">
-        ${activeTasks.map(t => renderCard(t, equipMap, workerMap, timesheets, restrictions)).join('')}
+        ${activeTasks.map(t => renderCard(t, equipMap, workerMap, workers, timesheets, restrictions)).join('')}
       </div>
     `;
   }
 
-  function renderCard(t, equipMap, workerMap, timesheets, restrictions) {
+  function renderCard(t, equipMap, workerMap, workers, timesheets, restrictions) {
     const eq = equipMap[t.equipmentId];
     const eqCode = eq ? eq.codigo : '—';
 
     const taskTimesheets = timesheets.filter(ts => ts.taskId === t.id);
-    const activeTs = taskTimesheets.filter(ts => !ts.endTime);
+    const activeWorkers = workers.filter(w => w.currentState === 'Trabalhando' && w.currentTaskId === t.id);
     const openRests = restrictions.filter(r => r.equipmentId === t.equipmentId && r.status !== 'Fechada' && (r.tarefaBloqueada === t.descricao || r.tipo === 'Tarefa Bloqueada' || t.status === 'Aguardando Peça'));
 
     let statusHtml = '';
@@ -134,23 +132,21 @@ window.TasksOngoingModule = (() => {
     let borderColor = 'var(--border-card)';
 
     if (t.status === 'Em Andamento') {
-      if (activeTs.length > 0) {
+      if (activeWorkers.length > 0) {
         borderColor = 'var(--brand-primary)';
         statusHtml = `<span class="badge badge-primary" style="animation: pulse 2s infinite; font-size:11px;">Em Execução</span>`;
-        detailsHtml = activeTs.map(ts => {
-          const wName = workerMap[ts.workerId]?.nome || 'Desconhecido';
-          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:12px;">🏃 ${wName} (<span class="live-timer" data-start="${ts.startTime}"></span>)</span>`;
+        detailsHtml = activeWorkers.map(w => {
+          return `<span style="font-size:11px;color:var(--brand-primary);font-weight:600;display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.1);padding:4px 8px;border-radius:12px;">🏃 ${w.nome} (<span class="live-timer" data-start="${w.currentActionStartTime}"></span>)</span>`;
         }).join(' ');
       } else {
         borderColor = 'var(--color-warning)';
         statusHtml = `<span class="badge badge-warning" style="font-size:11px;">Pausada</span>`;
         
-        let pauseTimeStr = 'Desconhecido';
         let pauseStartIso = '';
         if (taskTimesheets.length > 0) {
-          const closedTs = taskTimesheets.filter(ts => ts.endTime).sort((a,b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
+          const closedTs = taskTimesheets.filter(ts => ts.horaFim).sort((a,b) => new Date(b.horaFim).getTime() - new Date(a.horaFim).getTime());
           if (closedTs.length > 0) {
-            pauseStartIso = closedTs[0].endTime;
+            pauseStartIso = closedTs[0].horaFim;
           }
         } else if (t.dataReplanejada || t.dataPlanejadaInicio) {
            pauseStartIso = t.dataReplanejada || t.dataPlanejadaInicio;
