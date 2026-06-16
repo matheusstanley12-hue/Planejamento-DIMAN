@@ -96,7 +96,7 @@ window.Dashboard = (() => {
            charts.status = new Chart(ctxStatus, {
              type: 'doughnut',
              data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 0, hoverOffset: 4 }] },
-             options: { cutout: '75%', maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } }
+             options: { cutout: '80%', maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, padding: 15 } } } }
            });
         }
         
@@ -148,9 +148,9 @@ window.Dashboard = (() => {
           const tAnd = tasks.filter(t => t.pctExecutado > 0 && t.pctExecutado < 100).length;
           const tFim = tasks.filter(t => t.pctExecutado >= 100).length;
           charts.tasksChart = new Chart(ctxTasks, {
-            type: 'pie',
+            type: 'doughnut',
             data: { labels: ['Não iniciada', 'Andamento', 'Concluída'], datasets: [{ data: [tNao, tAnd, tFim], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderWidth:0, hoverOffset: 4 }] },
-            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } }
+            options: { cutout: '80%', maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, padding: 15 } } } }
           });
         }
 
@@ -164,7 +164,7 @@ window.Dashboard = (() => {
           charts.partsChart = new Chart(ctxParts, {
             type: 'doughnut',
             data: { labels: ['Solicitada', 'Comprada', 'Em Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'], borderWidth:0, hoverOffset: 4 }] },
-            options: { cutout: '65%', maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } } } } }
+            options: { cutout: '80%', maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', align: 'center', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, padding: 15 } } } }
           });
         }
 
