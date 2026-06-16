@@ -444,7 +444,7 @@ window.EquipmentPanel = (() => {
         </div>
         <div style="background:var(--bg-base);padding:var(--space-4);border-radius:var(--radius-md);border-left:3px solid var(--color-info);">
           <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Horas Trabalhadas</div>
-          <div style="font-size:1.8rem;font-weight:800;color:var(--text-primary);">${hReal}<span style="font-size:1rem;color:var(--text-muted);">/${hPlan}h</span></div>
+          <div style="font-size:1.8rem;font-weight:800;color:var(--text-primary);">${(Number(hReal)||0).toFixed(1)}<span style="font-size:1rem;color:var(--text-muted);">/${(Number(hPlan)||0).toFixed(1)}h</span></div>
         </div>
         <div style="background:var(--bg-base);padding:var(--space-4);border-radius:var(--radius-md);border-left:3px solid var(--color-warning);">
           <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Tarefas Concluídas</div>
