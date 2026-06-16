@@ -6,6 +6,45 @@ window.EquipmentPanel = (() => {
     'resumo': true
   };
 
+  function renderSvRequests(eqId) {
+    if (!window.DB || !DB.svRequests) return '<div class="alert alert-info">Módulo de Solicitações não disponível.</div>';
+    const reqs = DB.svRequests.list().filter(r => r.equipmentId === eqId);
+    if (reqs.length === 0) {
+      return `<div style="text-align:center;padding:var(--space-6);color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-lg);border:1px dashed var(--border-hover);">
+        Nenhuma solicitação de serviço registrada para este equipamento.
+      </div>`;
+    }
+    
+    let html = `<div style="display:flex;flex-direction:column;gap:var(--space-3);">`;
+    reqs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(r => {
+      const isConcluido = r.status === 'Concluído';
+      const statusColor = isConcluido ? 'success' : (r.status === 'Aprovado' ? 'primary' : 'warning');
+      html += `
+        <div style="background:var(--bg-base); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:var(--space-4);">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-3);">
+            <div>
+              <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">${r.titulo || 'Solicitação'}</div>
+              <div style="font-size:12px; color:var(--text-muted);">
+                Solicitante: <strong style="color:var(--text-secondary);">${r.solicitante}</strong> &bull; 
+                Data: ${new Date(r.createdAt).toLocaleDateString('pt-BR')}
+              </div>
+            </div>
+            <span class="badge badge-${statusColor}">${r.status}</span>
+          </div>
+          ${r.descricao ? `<div style="font-size:13px; color:var(--text-primary); margin-bottom:var(--space-3); line-height:1.4;">${r.descricao}</div>` : ''}
+          ${r.fotoPeca ? `
+            <div style="margin-top:var(--space-2);">
+              <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">Foto Anexada:</div>
+              <img src="${r.fotoPeca}" style="max-height:150px; border-radius:4px; border:1px solid var(--border-hover); cursor:pointer;" onclick="window.open(this.src)" />
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+    html += `</div>`;
+    return html;
+  }
+
   function formatCommentDate(isoString) {
     if (!isoString) return '';
     const d = new Date(isoString);
@@ -228,6 +267,8 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('cronograma', 'CRONOGRAMA & CAMINHO CRÍTICO', 'calendar', renderCronograma(tasks, eq))}
           
+          ${renderAccordion('svrequests', 'SOLICITAÇÕES DE SERVIÇO', 'clipboard', renderSvRequests(eq.id))}
+          
           ${renderAccordion('historico', 'HISTÓRICO & REPLANEJAMENTOS', 'clock', renderHistorico(eq))}
 
         </div>
@@ -314,10 +355,6 @@ window.EquipmentPanel = (() => {
               <div id="new-task-photos" style="margin-bottom:var(--space-4); display:none; background:var(--bg-base); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--border-default);">
                 <label style="margin-bottom:8px; display:block;">Fotos da Atividade</label>
                 <div style="display:flex;gap:15px;overflow-x:auto;">
-                  <div id="new-task-photo-peca-container" style="display:none;flex:0 0 auto;width:200px;">
-                    <span style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:700;">Foto da Solicitação</span>
-                    <img id="new-task-photo-peca" src="" style="width:100%;height:150px;object-fit:cover;border-radius:4px;border:1px solid var(--border-hover);cursor:pointer;" onclick="window.open(this.src)" />
-                  </div>
                   <div id="new-task-photo-comp-container" style="display:none;flex:0 0 auto;width:200px;">
                     <span style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:700;">Foto da Conclusão</span>
                     <img id="new-task-photo-comp" src="" style="width:100%;height:150px;object-fit:cover;border-radius:4px;border:1px solid var(--border-hover);cursor:pointer;" onclick="window.open(this.src)" />
@@ -902,19 +939,10 @@ window.EquipmentPanel = (() => {
       
       // Populate photos if available
       const photoContainer = document.getElementById('new-task-photos');
-      const photoPecaC = document.getElementById('new-task-photo-peca-container');
-      const photoPecaImg = document.getElementById('new-task-photo-peca');
       const photoCompC = document.getElementById('new-task-photo-comp-container');
       const photoCompImg = document.getElementById('new-task-photo-comp');
       
       let hasPhotos = false;
-      if (t.fotoPeca) {
-        photoPecaImg.src = t.fotoPeca;
-        photoPecaC.style.display = 'block';
-        hasPhotos = true;
-      } else {
-        photoPecaC.style.display = 'none';
-      }
       
       if (t.fotoComprovacao) {
         photoCompImg.src = t.fotoComprovacao;
