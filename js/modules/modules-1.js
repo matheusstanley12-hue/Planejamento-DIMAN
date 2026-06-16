@@ -80,6 +80,8 @@ window.Dashboard = (() => {
     const parts = DB.parts.getAll();
     const restrictions = DB.restrictions.getAll();
     const tasks = DB.tasks.getAll();
+    const timesheets = window.DB && DB.timesheets ? DB.timesheets.list() : [];
+    const wf = window.DB && DB.workforce ? DB.workforce.list() : [];
 
     // 1. Calculations for micro-cards
     const emManutencao = eqs.filter(e => e.status === 'Em Manutenção' || e.status === 'Backlog').length;
@@ -100,7 +102,7 @@ window.Dashboard = (() => {
     
     // Curva de avanço
     const desvio = aderencia - 100;
-    const avancoPlan = 100; // Normalizado para a barra
+    const avancoPlan = 100;
     const avancoReal = avancoGeral;
     const statusColor = aderencia >= 90 ? 'var(--color-success)' : (aderencia >= 70 ? 'var(--color-warning)' : 'var(--color-danger)');
 
@@ -120,7 +122,7 @@ window.Dashboard = (() => {
         Chart.defaults.color = textColor;
         Chart.defaults.font.family = 'Inter';
         
-        // Chart 1: Saúde da Frota
+        // 1. Saúde da Frota
         const ctxStatus = document.getElementById('mega-ch-status');
         if (ctxStatus) {
            const sts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog'];
@@ -129,17 +131,13 @@ window.Dashboard = (() => {
              type: 'doughnut',
              data: {
                labels: sts,
-               datasets: [{
-                 data: counts,
-                 backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-                 borderWidth: 2, borderColor: 'var(--bg-card)'
-               }]
+               datasets: [{ data: counts, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 2, borderColor: 'var(--bg-card)' }]
              },
              options: { cutout: '70%', maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
            });
         }
         
-        // Chart 2: Anual
+        // 2. Anual
         const ctxAno = document.getElementById('mega-ch-ano');
         if (ctxAno) {
           const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -158,31 +156,116 @@ window.Dashboard = (() => {
           });
         }
 
-        // Chart 3: Categoria
+        const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+        const catsLabels = ['Sondas Pesq', 'Bombas Pesq', 'Sondas Poço', 'Bombas Poço', 'Subconjuntos', 'Almoxarifado'];
+        
+        // 3. Categoria
         const ctxCat = document.getElementById('mega-ch-cat');
         if (ctxCat) {
-          const cats = ['Sondas', 'Bombas', 'Subconjuntos', 'Prog. almox', 'Outros'];
-          const cP = cats.map(c => eqs.filter(e => (e.tipo||'').includes(c.split(' ')[0]) && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
-          const cR = cats.map(c => eqs.filter(e => (e.tipo||'').includes(c.split(' ')[0]) && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix)).length);
+          const cP = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
+          const cR = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix)).length);
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
-            data: { labels: cats, datasets: [
-              { label: 'Real', data: cR, backgroundColor: '#0ea5e9', borderRadius: 4 },
-              { label: 'Plan', data: cP, backgroundColor: borderColor, borderRadius: 4 }
+            data: { labels: catsLabels, datasets: [
+              { label: 'Realizado', data: cR, backgroundColor: '#0ea5e9', borderRadius: 4 },
+              { label: 'Planejado', data: cP, backgroundColor: borderColor, borderRadius: 4 }
             ]},
             options: { ...chartDefaults(), indexAxis: 'y', maintainAspectRatio: false, scales: { x: { grid: { color: borderColor }, ticks: { precision: 0 } }, y: { grid: { display: false } } } }
+          });
+        }
+
+        // 4. Tarefas
+        const ctxTasks = document.getElementById('mega-ch-tasks');
+        if (ctxTasks) {
+          const tNao = tasks.filter(t => !t.pctExecutado).length;
+          const tAnd = tasks.filter(t => t.pctExecutado > 0 && t.pctExecutado < 100).length;
+          const tFim = tasks.filter(t => t.pctExecutado >= 100).length;
+          charts.tasksChart = new Chart(ctxTasks, {
+            type: 'pie',
+            data: { labels: ['Não iniciada', 'Andamento', 'Concluída'], datasets: [{ data: [tNao, tAnd, tFim], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderWidth:2, borderColor:'var(--bg-card)' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+          });
+        }
+
+        // 5. Insumos (Peças)
+        const ctxParts = document.getElementById('mega-ch-parts');
+        if (ctxParts) {
+          const pSol = parts.filter(p => p.status === 'Solicitada').length;
+          const pCom = parts.filter(p => p.status === 'Comprada').length;
+          const pTra = parts.filter(p => p.status === 'Em Transporte').length;
+          const pEnt = parts.filter(p => p.status === 'Entregue').length;
+          charts.partsChart = new Chart(ctxParts, {
+            type: 'doughnut',
+            data: { labels: ['Solicitada', 'Comprada', 'Em Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'], borderWidth:2, borderColor:'var(--bg-card)' }] },
+            options: { cutout: '60%', maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+          });
+        }
+
+        // 6. Esforço HH por Categoria
+        const ctxEffort = document.getElementById('mega-ch-effort');
+        if (ctxEffort) {
+          const hhP = catsFull.map(c => tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasPlanejadas||0),0));
+          const hhR = catsFull.map(c => tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasRealizadas||0),0));
+          charts.effort = new Chart(ctxEffort, {
+            type: 'bar',
+            data: { labels: catsLabels, datasets: [
+              { label: 'Real (hh)', data: hhR, backgroundColor: '#8b5cf6', borderRadius: 4 },
+              { label: 'Plan (hh)', data: hhP, backgroundColor: borderColor, borderRadius: 4 }
+            ]},
+            options: { ...chartDefaults(), maintainAspectRatio: false, scales: { y: { grid: { color: borderColor } }, x: { grid: { display: false } } } }
+          });
+        }
+
+        // 7. Mapa de Atrasos
+        const ctxDelay = document.getElementById('mega-ch-delay');
+        if (ctxDelay) {
+          const del = [0,0,0,0]; // No Prazo, 1-3, 4-7, >7
+          const delayedEqs = eqs.filter(e => e.status !== 'Liberado');
+          delayedEqs.forEach(e => {
+            if (!e.dataLiberacaoPlanejada) return;
+            const dPlan = new Date(e.dataLiberacaoPlanejada);
+            const dToday = new Date(todayStr);
+            const diffDays = Math.ceil((dToday - dPlan) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 0) del[0]++;
+            else if (diffDays <= 3) del[1]++;
+            else if (diffDays <= 7) del[2]++;
+            else del[3]++;
+          });
+          charts.delay = new Chart(ctxDelay, {
+            type: 'bar',
+            data: { labels: ['No Prazo', '1-3 Dias', '4-7 Dias', '> 7 Dias'], datasets: [{ label: 'Qtd. Máquinas', data: del, backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7f1d1d'], borderRadius: 4 }] },
+            options: { ...chartDefaults(), indexAxis: 'y', maintainAspectRatio: false, plugins: { legend:{display:false} }, scales: { x: { grid: { color: borderColor } }, y: { grid: { display: false } } } }
+          });
+        }
+
+        // 8. Mão de Obra
+        const ctxWorker = document.getElementById('mega-ch-worker');
+        if (ctxWorker) {
+          const roles = ['Mecânico', 'Eletricista', 'Soldador', 'Ajudante', 'Técnico'];
+          const roleCount = roles.map(r => wf.filter(w => (w.cargo||'').includes(r)).length);
+          charts.worker = new Chart(ctxWorker, {
+            type: 'polarArea',
+            data: { labels: roles, datasets: [{ data: roleCount, backgroundColor: ['rgba(59,130,246,0.6)', 'rgba(16,185,129,0.6)', 'rgba(245,158,11,0.6)', 'rgba(239,68,68,0.6)', 'rgba(139,92,246,0.6)'], borderWidth:1, borderColor:'var(--bg-card)' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } }, scales: { r: { grid: { color: borderColor }, ticks: { display: false } } } }
           });
         }
       } catch(e) { console.warn('Mega Chart Error', e); }
     }, 100);
 
     const microCard = (title, val, iconColor) => `
-      <div style="flex: 0 0 auto; min-width: 140px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: var(--space-3); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
-        <div style="width: 24px; height: 24px; border-radius: 6px; background: ${iconColor}20; border: 1px solid ${iconColor}40; display:flex; align-items:center; justify-content:center; margin-bottom: 12px;">
+      <div style="flex: 0 0 auto; min-width: 130px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: var(--space-3); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: ${iconColor}20; border: 1px solid ${iconColor}40; display:flex; align-items:center; justify-content:center; margin-bottom: 8px;">
           <div style="width: 6px; height: 6px; border-radius: 50%; background: ${iconColor};"></div>
         </div>
-        <div style="font-size: 24px; font-weight: 900; color: var(--text-primary); line-height: 1;">${val}</div>
-        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${title}">${title}</div>
+        <div style="font-size: 22px; font-weight: 900; color: var(--text-primary); line-height: 1;">${val}</div>
+        <div style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${title}">${title}</div>
+      </div>
+    `;
+    
+    const chartCard = (title, id) => `
+      <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; height: 260px;">
+        <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:12px;">${title}</div>
+        <div style="flex:1; position:relative;"><canvas id="${id}"></canvas></div>
       </div>
     `;
 
@@ -204,6 +287,22 @@ window.Dashboard = (() => {
           <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Atualizar
         </button>
+      </div>
+
+      <!-- SECTION 1: Micro Cards (Horizontal Scroll) -->
+      <div style="display:flex; gap: var(--space-3); overflow-x: auto; padding-bottom: 8px; margin-bottom: -8px;">
+        ${microCard('Em Manutenção', emManutencao, '#3b82f6')}
+        ${microCard('Liberados', liberados, '#10b981')}
+        ${microCard('Atrasados', atrasados, '#ef4444')}
+        ${microCard('Aguardando Peças', aguardandoPecas, '#f59e0b')}
+        ${microCard('Paralisados / F. Peça', paralisados, '#ef4444')}
+        ${microCard('Total de Tarefas', tarefasTotal, '#3b82f6')}
+        ${microCard('Tarefas Concluídas', tarefasConcluidas, '#10b981')}
+        ${microCard('Tarefas Críticas', tarefasCriticas, '#ef4444')}
+        ${microCard('Restrições Abertas', restrAbertas, '#f59e0b')}
+        ${microCard('Avanço Geral', avancoGeral + '%', '#0ea5e9')}
+        ${microCard('Horas Realizadas', horasRealizadas + 'h', '#8b5cf6')}
+        ${microCard('Aderência', aderencia + '%', '#ef4444')}
       </div>
 
       <!-- SECTION 2: Curva de Avanço -->
@@ -257,45 +356,23 @@ window.Dashboard = (() => {
         </div>
       </div>
 
-      <!-- SECTION 1: Micro Cards (Horizontal Scroll) -->
-      <div style="display:flex; gap: var(--space-3); overflow-x: auto; padding-bottom: 8px; margin-bottom: -8px;">
-        ${microCard('Em Manutenção', emManutencao, '#3b82f6')}
-        ${microCard('Liberados', liberados, '#10b981')}
-        ${microCard('Atrasados', atrasados, '#ef4444')}
-        ${microCard('Aguardando Peças', aguardandoPecas, '#f59e0b')}
-        ${microCard('Paralisados / F. Peça', paralisados, '#ef4444')}
-        ${microCard('Total de Tarefas', tarefasTotal, '#3b82f6')}
-        ${microCard('Tarefas Concluídas', tarefasConcluidas, '#10b981')}
-        ${microCard('Tarefas Críticas', tarefasCriticas, '#ef4444')}
-        ${microCard('Restrições Abertas', restrAbertas, '#f59e0b')}
-        ${microCard('Avanço Geral', avancoGeral + '%', '#0ea5e9')}
-        ${microCard('Horas Realizadas', horasRealizadas + 'h', '#8b5cf6')}
-        ${microCard('Aderência', aderencia + '%', '#ef4444')}
-      </div>
-
-      <!-- SECTION 3: Charts Grid -->
+      <!-- SECTION 3: 8 Charts in Grid -->
       <div style="display:grid; grid-template-columns: repeat(12, 1fr); gap:var(--space-4);">
-        <!-- Doughnut -->
-        <div style="grid-column: span 4; background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; min-height: 280px;">
-          <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:16px;">Saúde da Frota</div>
-          <div style="position:relative; flex:1;">
-            <canvas id="mega-ch-status"></canvas>
-            <div style="position:absolute; top:50%; left:30%; transform:translate(-50%, -50%); text-align:center; pointer-events:none;">
-              <div style="font-size:24px; font-weight:900; color:var(--text-primary); line-height:1;">${eqs.length}</div>
-              <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">Total</div>
-            </div>
-          </div>
-        </div>
-        <!-- Anual -->
-        <div style="grid-column: span 5; background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; min-height: 280px;">
-          <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:16px;">Projeção e Execução Anual</div>
-          <div style="flex:1; position:relative;"><canvas id="mega-ch-ano"></canvas></div>
-        </div>
-        <!-- Categoria -->
-        <div style="grid-column: span 3; background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; min-height: 280px;">
-          <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:16px;">Entregas por Família</div>
-          <div style="flex:1; position:relative;"><canvas id="mega-ch-cat"></canvas></div>
-        </div>
+        
+        <!-- Row 1: 3 Charts -->
+        <div style="grid-column: span 4;">${chartCard('1. Saúde da Frota', 'mega-ch-status')}</div>
+        <div style="grid-column: span 4;">${chartCard('2. Pipeline de Peças (Suprimentos)', 'mega-ch-parts')}</div>
+        <div style="grid-column: span 4;">${chartCard('3. Status das Tarefas', 'mega-ch-tasks')}</div>
+
+        <!-- Row 2: 3 Charts -->
+        <div style="grid-column: span 4;">${chartCard('4. Mapa de Atrasos da Frota', 'mega-ch-delay')}</div>
+        <div style="grid-column: span 4;">${chartCard('5. Projeção vs Execução Anual', 'mega-ch-ano')}</div>
+        <div style="grid-column: span 4;">${chartCard('6. Apropriação de Esforço (HH) por Categoria', 'mega-ch-effort')}</div>
+        
+        <!-- Row 3: 2 Charts -->
+        <div style="grid-column: span 6;">${chartCard('7. Especialidades Alocadas (Mão de Obra)', 'mega-ch-worker')}</div>
+        <div style="grid-column: span 6;">${chartCard('8. Volume de Entregas por Categoria', 'mega-ch-cat')}</div>
+
       </div>
 
       <!-- SECTION 4: Lists -->
@@ -336,7 +413,7 @@ window.Dashboard = (() => {
           <div style="display:flex; flex-direction:column; gap:8px; flex:1; overflow-y:auto;">
             ${alertas.length === 0 ? '<div style="color:var(--text-muted);font-size:12px;text-align:center;margin-top:20px;">Nenhum equipamento crítico.</div>' : ''}
             ${alertas.map(e => {
-              const d = window.daysBetween ? window.daysBetween(todayStr, e.dataLiberacaoPlanejada) : 0;
+              const d = window.daysBetween ? window.daysBetween(e.dataLiberacaoPlanejada, todayStr) : 0;
               return `
               <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-surface); border-radius:8px; padding:12px; border-left:3px solid #ef4444;">
                 <div>
