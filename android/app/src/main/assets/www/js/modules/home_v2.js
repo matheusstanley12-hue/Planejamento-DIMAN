@@ -22,7 +22,12 @@ window.HomeModule = (() => {
   }
 
   function render() {
-    const eqs = [...window.DB.equipment.list()];
+    const currentMonthStr = new Date().toISOString().slice(0, 7);
+    const eqs = [...window.DB.equipment.list()].filter(e => {
+      if (e.status === 'Liberado') return false; // always hide released
+      if (!e.dataLiberacaoPlanejada) return true; // show if no date
+      return e.dataLiberacaoPlanejada.startsWith(currentMonthStr);
+    });
     // Sort equipment by estimated release date ascending (soonest to leave first)
     eqs.sort((a, b) => {
       const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada || '9999-12-31';
@@ -227,7 +232,7 @@ window.HomeModule = (() => {
         }
       </style>
 
-      <div style="max-width:100%;padding:var(--space-6);">
+      <div style="max-width:100%; padding:var(--space-6); display:flex; flex-direction:column; height: calc(100vh - var(--topbar-height)); overflow:hidden;">
         <!-- Top Indicators -->
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-4);margin-bottom:var(--space-6);">
           <div id="summary-card-manutencao" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('manutencao')" title="Clique para filtrar">
@@ -261,7 +266,7 @@ window.HomeModule = (() => {
         </div>
 
         <!-- Kanban Board Horizontal Container -->
-        <div class="planner-board" style="display:flex; gap:var(--space-5); overflow-x:auto; overflow-y:hidden; padding-bottom:var(--space-4); align-items:flex-start; width:100%; height:calc(100vh - 260px);">
+        <div class="planner-board" style="display:flex; gap:var(--space-5); overflow-x:auto; overflow-y:hidden; padding-bottom:var(--space-4); align-items:flex-start; width:100%; flex: 1; min-height: 0;">
           ${boardHtml}
         </div>
       </div>

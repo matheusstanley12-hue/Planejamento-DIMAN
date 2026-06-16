@@ -72,25 +72,75 @@ window.WorkerPanel = (() => {
     preds.forEach(pid => {
       const pTask = allTasks.find(t => t.id === pid);
       if (pTask && pTask.status !== 'Concluída') {
-        blockedBy.push(pTask.codigo || pTask.descricao);
+        const pDesc = pTask.descricao || 'Tarefa sem descrição';
+        const pDisc = pTask.disciplina ? `[${pTask.disciplina}] ` : '';
+        const pCod = pTask.codigo ? ` (${pTask.codigo})` : '';
+        blockedBy.push(`${pDisc}${pDesc}${pCod}`);
       }
     });
     return blockedBy;
   }
 
-  // --- TIME TRACKING (NEW) ---
-  function startTask(taskId) {
+  function startPromptTask(taskId) {
     const session = Auth.getSession();
     const myWorker = getMyWorker(session);
-    if (!myWorker) return Toast.error('Erro', 'Cadastro não encontrado no sistema.');
-    if (myWorker.currentState && myWorker.currentState !== 'Ocioso') {
-      return Toast.error('Atenção', 'Você já tem uma tarefa ou pausa em andamento. Finalize primeiro.');
+    
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-start-task">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Iniciar Tarefa</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-start-task')">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai executar essa tarefa?</p>
+            <div class="form-group" style="margin-bottom:15px;">
+              <label>Matrícula do Executante (deixe o seu se for você mesmo):</label>
+              <input type="text" id="start-task-matricula" value="${myWorker ? myWorker.matricula : ''}" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"/>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.startTask('${taskId}')">Iniciar Tarefa</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+    container.innerHTML = modalHtml;
+    openModal('modal-worker-start-task');
+  }
+
+  function startTask(taskId) {
+    const matriculaInput = document.getElementById('start-task-matricula')?.value.trim() || '';
+    if (document.getElementById('modal-worker-start-task')) closeModal('modal-worker-start-task');
+
+    const session = Auth.getSession();
+    let targetWorker = null;
+
+    if (matriculaInput) {
+      targetWorker = DB.workforce.list().find(w => String(w.matricula) === String(matriculaInput));
+      if (!targetWorker) return Toast.error('Erro', 'Matrícula não encontrada no sistema.');
+    } else {
+      targetWorker = getMyWorker(session);
+      if (!targetWorker) return Toast.error('Erro', 'Seu cadastro não foi encontrado.');
     }
 
     const t = DB.tasks.get(taskId);
     if (!t) return;
 
-    DB.workforce.update(myWorker.id, {
+    // Check allocation blocking
+    if (targetWorker.equipmentId && targetWorker.equipmentId !== t.equipmentId) {
+      const eqWorker = DB.equipment.get(targetWorker.equipmentId);
+      const eqName = eqWorker ? eqWorker.codigo : 'Outro Equipamento';
+      return Toast.error('Acesso Negado', `Ei ${targetWorker.nome}, você está alocado na sonda/equipamento ${eqName}. Por gentileza, procure o seu gestor e solicite a troca de alocação.`);
+    }
+
+    if (targetWorker.currentState && targetWorker.currentState !== 'Ocioso') {
+      return Toast.error('Atenção', `${targetWorker.nome}, você já tem uma atividade ou pausa em andamento. Por gentileza, finalize sua tarefa atual primeiro.`);
+    }
+
+    DB.workforce.update(targetWorker.id, {
       currentState: 'Trabalhando',
       currentTaskId: taskId,
       currentActionStartTime: new Date().toISOString(),
@@ -101,7 +151,7 @@ window.WorkerPanel = (() => {
       DB.tasks.update(taskId, { status: 'Em Andamento' });
     }
 
-    Toast.success('Iniciado!', `Você começou a tarefa: "${t.descricao}"`);
+    Toast.success('Iniciado!', `A tarefa "${t.descricao}" foi iniciada para ${targetWorker.nome}.`);
     Router.navigate('worker-panel', { force: true });
   }
 
@@ -123,7 +173,7 @@ window.WorkerPanel = (() => {
               <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptMissingParts()">⚙️ Falta de Peças</button>
               <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('DSS')">🛡️ DSS</button>
               <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Fim Expediente')">🏠 Fim Expediente</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Outros')">Outros</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptOtherReason()">Outros</button>
             </div>
           </div>
         </div>
@@ -173,6 +223,45 @@ window.WorkerPanel = (() => {
     pauseWork(reason);
   }
 
+  function promptOtherReason() {
+    closeModal('modal-worker-pause');
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-other-reason">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Justificar Pausa (Outros)</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-other-reason')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, descreva o motivo da pausa da atividade:</p>
+            <div class="form-group" style="margin-bottom:15px;">
+              <textarea id="other-reason-desc" rows="4" placeholder="Descreva o motivo detalhadamente..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitOtherReason()">Confirmar Pausa</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+    container.innerHTML = modalHtml;
+    openModal('modal-worker-other-reason');
+  }
+
+  function submitOtherReason() {
+    const desc = document.getElementById('other-reason-desc').value.trim();
+    if (!desc) {
+      Toast.error('Erro', 'Por favor, descreva o motivo da pausa.');
+      return;
+    }
+    const reason = 'Outros: ' + desc;
+    closeModal('modal-worker-other-reason');
+    pauseWork(reason);
+  }
+
+
   function pauseWork(reason) {
     closeModal('modal-worker-pause');
     const session = Auth.getSession();
@@ -200,19 +289,111 @@ window.WorkerPanel = (() => {
 
     if (t) {
       let updatePayload = { horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100) };
-      if (reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça')) {
-        updatePayload.status = 'Aguardando Peça';
+      if (reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason === 'Outros') {
+        updatePayload.status = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') ? 'Aguardando Peça' : 'Pausada';
+        updatePayload.pauseReason = reason;
+        updatePayload.pauseStartTime = now.toISOString();
       }
       DB.tasks.update(t.id, updatePayload);
     }
 
-    DB.workforce.update(myWorker.id, {
-      currentState: 'Em Pausa',
-      currentPauseReason: reason,
-      currentActionStartTime: now.toISOString()
+    if (reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason === 'Outros') {
+      DB.workforce.update(myWorker.id, {
+        currentState: 'Ocioso',
+        currentTaskId: null,
+        currentPauseReason: '',
+        currentActionStartTime: null
+      });
+      Toast.info('Tarefa Pausada', `A tarefa foi pausada. Você está livre para iniciar outra atividade.`);
+    } else {
+      DB.workforce.update(myWorker.id, {
+        currentState: 'Em Pausa',
+        currentPauseReason: reason,
+        currentActionStartTime: now.toISOString()
+      });
+      Toast.info('Pausado', `Motivo: ${reason}`);
+    }
+
+    Router.navigate('worker-panel', { force: true });
+  }
+
+  function promptResumeTask(taskId) {
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-resume-task">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Justificar Retomada</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-resume-task')">
+              <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, informe a justificativa para retomar essa tarefa (ex: "Peça solicitada chegou", "Área liberada", etc):</p>
+            <div class="form-group" style="margin-bottom:15px;">
+              <textarea id="resume-task-desc" rows="4" placeholder="Descreva a justificativa..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitResumeTask('${taskId}')">Confirmar Retomada</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+    container.innerHTML = modalHtml;
+    openModal('modal-worker-resume-task');
+  }
+
+  function submitResumeTask(taskId) {
+    const desc = document.getElementById('resume-task-desc').value.trim();
+    if (!desc) return Toast.error('Erro', 'Por favor, informe a justificativa.');
+    closeModal('modal-worker-resume-task');
+    
+    const session = Auth.getSession();
+    const myWorker = getMyWorker(session);
+    if (!myWorker) return Toast.error('Erro', 'Cadastro não encontrado.');
+    if (myWorker.currentState && myWorker.currentState !== 'Ocioso') {
+      return Toast.error('Atenção', `${myWorker.nome}, você já tem uma atividade ou pausa em andamento. Por gentileza, finalize a sua tarefa primeiro.`);
+    }
+
+    const t = DB.tasks.get(taskId);
+    if (!t) return;
+
+    // Log the pause duration
+    if (t.pauseStartTime) {
+      const pauseStart = new Date(t.pauseStartTime);
+      const now = new Date();
+      const elapsedHrs = (now - pauseStart) / (1000 * 60 * 60);
+      DB.timesheets.create({
+        workerId: null, // Task-level delay
+        workerNome: 'SISTEMA',
+        equipmentId: t.equipmentId,
+        taskId: t.id,
+        data: now.toISOString().slice(0, 10),
+        horaInicio: pauseStart.toISOString(),
+        horaFim: now.toISOString(),
+        horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+        tipo: 'Atraso Tarefa',
+        motivoPausa: t.pauseReason || 'Pausada',
+        observacao: `Fim do atraso. Justificativa: ${desc}`
+      });
+    }
+
+    // Reset task pause fields and set to Em Andamento
+    DB.tasks.update(taskId, {
+      status: 'Em Andamento',
+      pauseStartTime: null,
+      pauseReason: null
     });
 
-    Toast.info('Pausado', `Motivo: ${reason}`);
+    // Start mechanic's timer
+    DB.workforce.update(myWorker.id, {
+      currentState: 'Trabalhando',
+      currentTaskId: taskId,
+      currentActionStartTime: new Date().toISOString(),
+      currentPauseReason: ''
+    });
+
+    Toast.success('Retomado!', `Você voltou a executar a tarefa: "${t.descricao}"`);
     Router.navigate('worker-panel', { force: true });
   }
 
@@ -466,16 +647,24 @@ window.WorkerPanel = (() => {
     const state = myWorker.currentState || 'Ocioso';
     
     // Auto-update timer display
-    if (!window.workerTimerInterval && state !== 'Ocioso') {
+    if (!window.workerTimerInterval) {
       window.workerTimerInterval = setInterval(() => {
+        const session = window.Auth.getSession();
+        const workers = window.DB.workforce.list();
+        const myW = workers.find(w => (w.matricula && session.matricula && w.matricula === session.matricula) || w.nome === session.nome);
+
         const el = document.getElementById('live-timer-wp');
-        if (el && myWorker.currentActionStartTime) {
-          el.innerText = formatTimeDiff(myWorker.currentActionStartTime);
+        if (el && myW && myW.currentActionStartTime) {
+          el.innerText = formatTimeDiff(myW.currentActionStartTime);
         }
+
+        document.querySelectorAll('.live-pause-timer').forEach(span => {
+          const start = span.getAttribute('data-start');
+          if (start) {
+            span.innerText = ` - ${formatTimeDiff(start)}`;
+          }
+        });
       }, 1000);
-    } else if (state === 'Ocioso' && window.workerTimerInterval) {
-      clearInterval(window.workerTimerInterval);
-      window.workerTimerInterval = null;
     }
 
     if (state === 'Trabalhando') {
@@ -555,7 +744,7 @@ window.WorkerPanel = (() => {
       statusPanelHtml = `
         <div class="active-task-card idle">
           <div class="task-state" style="color:var(--text-muted);font-weight:700;">OCIOSO</div>
-          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Você não possui atividades ativas no momento. Inicie uma atividade abaixo para começar a contar o tempo.</p>
+          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Nenhuma tarefa em execução no momento. Escolha uma atividade na fila abaixo para iniciar seu trabalho.</p>
         </div>
       `;
     }
@@ -584,13 +773,28 @@ window.WorkerPanel = (() => {
       const isBlocked = blockedBy.length > 0;
       
       let actionBtn = '';
-      if (state === 'Ocioso' || (state === 'Trabalhando' && myWorker.currentTaskId !== t.id) || (state === 'Em Pausa' && myWorker.currentTaskId !== t.id)) {
+      if (t.status === 'Aguardando Peça' || t.status === 'Pausada') {
+        const pauseReason = t.pauseReason || t.status;
+        let timeStr = '';
+        if (t.pauseStartTime) {
+          timeStr = `<span class="live-pause-timer" data-start="${t.pauseStartTime}"> - ${formatTimeDiff(t.pauseStartTime)}</span>`;
+        }
+        actionBtn = `
+          <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+            <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              ${pauseReason}${timeStr}
+            </div>
+            <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">RETOMAR TAREFA</button>
+          </div>
+        `;
+      } else if (state === 'Ocioso' || (state === 'Trabalhando' && myWorker.currentTaskId !== t.id) || (state === 'Em Pausa' && myWorker.currentTaskId !== t.id)) {
         if (!canExecuteTask(session, t)) {
           actionBtn = `<div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>`;
         } else if (isBlocked) {
           actionBtn = `<div class="task-card-blocked">Bloqueada por: ${blockedBy.join(', ')}</div>`;
         } else {
-          actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startTask('${t.id}')">INICIAR AGORA</button>`;
+          actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
         }
       }
 
@@ -719,7 +923,7 @@ window.WorkerPanel = (() => {
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:24px;">
           <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin:0;">Fila de Tarefas Pendentes</h3>
-          <button class="btn btn-ghost btn-sm" onclick="WorkerPanel.openCreateTask()" style="color:var(--brand-primary);font-weight:700;">+ Adicionar Extra</button>
+          <button class="btn btn-primary btn-sm" onclick="WorkerPanel.openCreateTask()" style="font-weight:700;">+ Nova Tarefa</button>
         </div>
         
         ${listTasks.length > 0 ? tasksHtml : `
@@ -1024,7 +1228,23 @@ window.WorkerPanel = (() => {
     }
 
     DB.tasks.create(data);
-    Toast.success('Sucesso', 'Nova tarefa criada e vinculada a você.');
+    
+    // Novo Fluxo: Teste gera Retrabalho
+    if (data.disciplina === 'Teste') {
+      const retrabalhoData = {
+        ...data,
+        id: undefined, // ensure new ID
+        disciplina: 'Retrabalho',
+        descricao: '[RETRABALHO] ' + data.descricao,
+        status: 'Pendente',
+        pctExecutado: 0,
+        horasRealizadas: 0,
+        responsavel: ''
+      };
+      DB.tasks.create(retrabalhoData);
+    }
+
+    Toast.success('Sucesso', 'Nova tarefa criada.');
     closeModal('modal-worker-new-task');
     Router.navigate('worker-panel', { force: true });
   }
@@ -1416,6 +1636,8 @@ window.WorkerPanel = (() => {
                 <select id="w-sv-setor">
                   <option value="Usinagem">Usinagem</option>
                   <option value="Mecânica">Mecânica</option>
+                  <option value="Teste">Teste</option>
+                  <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
                   <option value="Elétrica">Elétrica</option>
                 </select>
@@ -1612,13 +1834,17 @@ window.WorkerPanel = (() => {
     openReportRestriction,
     updateRestrictionTasks,
     saveRestriction,
-    getMyEquipments,
     startTask,
+    startPromptTask,
     promptPause,
     pauseWork,
+    resumeWork,
+    promptResumeTask,
+    submitResumeTask,
     promptMissingParts,
     submitMissingParts,
-    resumeWork,
+    promptOtherReason,
+    submitOtherReason,
     promptComplete,
     previewPhoto,
     finalizeTask
@@ -1874,6 +2100,8 @@ window.WorkerServices = (() => {
                 <option value="Usinagem">Usinagem</option>
                 <option value="Caldeiraria">Caldeiraria</option>
                 <option value="Mecânica">Mecânica</option>
+                <option value="Teste">Teste</option>
+                <option value="Retrabalho">Retrabalho</option>
                 <option value="Elétrica">Elétrica</option>
                 <option value="Lubrificação">Lubrificação</option>
               </select>

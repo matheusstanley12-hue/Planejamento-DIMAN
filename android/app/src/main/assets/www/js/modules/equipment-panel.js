@@ -197,7 +197,7 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('resumo', 'RESUMO EXECUTIVO', 'chart-bar', renderResumo(eq, tasks, openRestr, pendingParts, adherencia, hPlan, hReal))}
           
-          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'].map(disc => {
+          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'].map(disc => {
             const discTasks = tasks.filter(t => t.disciplina === disc);
             const discHPlan = discTasks.reduce((s,t) => s + (t.horasPlanejadas||0), 0);
             const discHReal = discTasks.reduce((s,t) => s + (t.horasRealizadas||0), 0);
@@ -716,7 +716,76 @@ window.EquipmentPanel = (() => {
   }
 
   function renderHistorico(eq) {
-    return `<div class="alert alert-info" style="margin-bottom:0;"><div class="alert-content">Visualização da timeline e tabela de replanejamentos originais.</div></div>`;
+    const tSheets = DB.timesheets.list().filter(ts => ts.equipmentId === eq.id);
+    let horasPecas = 0, horasMaoObra = 0, horasAtrasoOutros = 0, horasTrabalho = 0;
+    
+    const timelineItems = [];
+
+    // Add replannings to timeline
+    if (eq.replanning && eq.replanning.length > 0) {
+      eq.replanning.forEach(r => {
+        timelineItems.push({
+          date: new Date(r.novaData),
+          title: 'Replanejamento',
+          desc: `De ${formatDate(r.dataAnterior)} para ${formatDate(r.novaData)}. Motivo: ${r.motivo} (Por: ${r.responsavel})`,
+          type: 'replan'
+        });
+      });
+    }
+
+    tSheets.forEach(ts => {
+      if (ts.tipo === 'Trabalho') horasTrabalho += ts.horasTrabalhadas || 0;
+      else if (ts.tipo === 'Atraso Tarefa') {
+        const pReason = ts.motivoPausa || '';
+        if (pReason.includes('Falta de Peça')) horasPecas += ts.horasTrabalhadas || 0;
+        else if (pReason.includes('Mão de Obra')) horasMaoObra += ts.horasTrabalhadas || 0;
+        else horasAtrasoOutros += ts.horasTrabalhadas || 0;
+
+        timelineItems.push({
+          date: new Date(ts.horaFim),
+          title: `Atraso: ${pReason}`,
+          desc: `Tarefa ID: ${ts.taskId?.split('-')[0] || ''} | Duração: ${(ts.horasTrabalhadas||0).toFixed(1)}h | Obs: ${ts.observacao || ''}`,
+          type: 'delay'
+        });
+      }
+    });
+
+    timelineItems.sort((a, b) => b.date - a.date);
+
+    const timelineHtml = timelineItems.length === 0 ? '<p style="color:var(--text-muted);font-size:13px;">Nenhum evento registrado.</p>' :
+      `<div style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
+        ${timelineItems.map(item => `
+          <div style="border-left:2px solid ${item.type==='replan'?'var(--brand-primary)': 'var(--color-danger)'}; padding-left:12px;">
+            <div style="font-size:11px;color:var(--text-muted);">${item.date.toLocaleDateString('pt-BR')} ${item.date.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">${item.title}</div>
+            <div style="font-size:13px;color:var(--text-secondary);">${item.desc}</div>
+          </div>
+        `).join('')}
+      </div>`;
+
+    return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:var(--space-4);margin-bottom:var(--space-5);">
+        <div class="card" style="padding:var(--space-4);background:rgba(239,68,68,0.05);border-color:rgba(239,68,68,0.2);">
+          <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Horas Perdidas: Peças</div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--color-danger);">${horasPecas.toFixed(1)}h</div>
+        </div>
+        <div class="card" style="padding:var(--space-4);background:rgba(245,158,11,0.05);border-color:rgba(245,158,11,0.2);">
+          <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Horas Perdidas: Mão de Obra</div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--color-warning);">${horasMaoObra.toFixed(1)}h</div>
+        </div>
+        <div class="card" style="padding:var(--space-4);background:rgba(107,114,128,0.05);border-color:rgba(107,114,128,0.2);">
+          <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Horas Perdidas: Outros</div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--text-secondary);">${horasAtrasoOutros.toFixed(1)}h</div>
+        </div>
+        <div class="card" style="padding:var(--space-4);background:rgba(16,185,129,0.05);border-color:rgba(16,185,129,0.2);">
+          <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Total Horas Trabalhadas</div>
+          <div style="font-size:1.5rem;font-weight:800;color:var(--color-success);">${horasTrabalho.toFixed(1)}h</div>
+        </div>
+      </div>
+      
+      <h4 style="font-size:14px;color:var(--text-primary);margin-bottom:8px;font-weight:600;">Linha do Tempo de Eventos</h4>
+      ${timelineHtml}
+    `;
   }
 
   function renderAnexos() {

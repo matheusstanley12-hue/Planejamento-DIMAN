@@ -177,13 +177,21 @@ async function initApp() {
 
   // ---- PUBLIC QR VIEW (no login required) ----
   const hash = window.location.hash;
-  if (hash.startsWith('#qrview')) {
+  const search = window.location.search;
+  
+  let qrId = null;
+  if (search.includes('qrview=')) {
+    const urlParams = new URLSearchParams(search);
+    qrId = urlParams.get('qrview');
+  } else if (hash.startsWith('#qrview')) {
     const params = {};
     hash.replace('#qrview', '').replace(/[?&]([^=&]+)=([^&]*)/g, (_, k, v) => { params[k] = decodeURIComponent(v); });
-    if (params.id) {
-      renderPublicQrView(params.id);
-      return true;
-    }
+    qrId = params.id;
+  }
+
+  if (qrId) {
+    renderPublicQrView(qrId);
+    return true;
   }
 
   // LocalStorage wipe removed to prevent erasing Supabase on new devices
@@ -466,6 +474,7 @@ function renderShell(session) {
     { route:'worker-manuals', label:'Meus Manuais',      icon:'document-report', perm:'workerPanel', section:'' },
     { route:'d-panel',    label:'D-1 | D | D+1',       icon:'calendar-days',  perm:'dashboard',   section:'OPERACIONAL' },
     { route:'dashboard',  label:'Dashboard',             icon:'squares-2x2',    perm:'dashboard',   section:'' },
+    { route:'labor-analysis', label:'Análise por Mão de Obra', icon:'chart-pie', perm:'dashboard', section:'' },
     { route:'workshop',   label:'Controle de Oficina',  icon:'building-office', perm:'workshop',   section:'' },
     { route:'waiting',    label:'Aguardando Manutenção', icon:'clock',          perm:'dashboard',   section:'' },
     { route:'equipment',  label:'Equipamentos',          icon:'wrench-screwdriver', perm:'equipment', section:'PLANEJAMENTO' },
@@ -590,6 +599,16 @@ function renderShell(session) {
           </div>
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
+        <div class="sidebar-footer" style="margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);">
+          <div class="nav-item" onclick="window.Auth.logout()" style="color:var(--text-secondary);margin:0;">
+            <span class="nav-icon" style="color:rgba(255,255,255,0.4);">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+              </svg>
+            </span>
+            <span class="nav-label">Sair</span>
+          </div>
+        </div>
       </aside>
 
       <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
@@ -669,6 +688,9 @@ function renderShell(session) {
   }
 
   // Register all routes
+  Router.register('dashboard', (p) => Dashboard.render());
+  Router.register('labor-analysis', (p) => LaborAnalysisModule.render());
+  Router.register('workshop', (p) => WorkshopModule.render());
   Router.register('home', () => HomeModule.render());
   Router.register('worker-panel', () => WorkerPanel.render());
   Router.register('worker-parts', () => typeof WorkerParts !== 'undefined' ? WorkerParts.render() : '<div class="page-container">Erro ao carregar módulo de Peças</div>');

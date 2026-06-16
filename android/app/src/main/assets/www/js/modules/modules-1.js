@@ -17,230 +17,425 @@ window.Dashboard = (() => {
   function chartDefaults() {
     return {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 20, bottom: 10, left: 10, right: 10 } },
+      interaction: { mode: 'index', intersect: false },
       plugins: { 
-        legend: { labels: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#8EACC8', font: { family: 'Inter', size: 11 } } },
+        legend: { 
+          position: 'top',
+          align: 'end',
+          labels: { 
+            color: '#64748B', 
+            font: { family: 'Inter', size: 11, weight: '600' },
+            usePointStyle: true,
+            pointStyle: 'circle',
+            boxWidth: 8,
+            padding: 20
+          } 
+        },
+        datalabels: {
+          color: '#1E293B',
+          font: { weight: '800', size: 11, family: 'Inter' },
+          anchor: 'end',
+          align: 'top',
+          offset: 4,
+          formatter: (value) => {
+            if (!value || value <= 0) return '';
+            const rounded = Math.round(value * 10) / 10;
+            return rounded;
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(15, 23, 42, 0.9)',
+          titleFont: { family: 'Inter', size: 13 },
+          bodyFont: { family: 'Inter', size: 12 },
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: true
+        }
       },
-      layout: { padding: { top: 20 } },
       scales: {
-        x: { ticks: { color: '#8EACC8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#8EACC8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        x: { 
+          ticks: { color: '#64748B', font: { size: 10, family: 'Inter' }, maxRotation: 45, minRotation: 45 }, 
+          grid: { display: false },
+          border: { display: false }
+        },
+        y: { 
+          grace: '30%',
+          ticks: { color: '#94A3B8', font: { size: 10, family: 'Inter' }, padding: 10 }, 
+          grid: { color: '#F1F5F9', drawBorder: false },
+          border: { display: false },
+          beginAtZero: true
+        }
       }
     };
   }
 
   function render() {
     destroyCharts();
-    const stats = DB.kpi.getEquipmentStats();
+    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const stats = DB.kpi.getEquipmentStats(currentMonthPrefix);
+    
     const eqs = DB.equipment.list();
     const parts = DB.parts.getAll();
     const restrictions = DB.restrictions.getAll();
-    const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
-    const nextRelease = eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
-      const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
-      const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
-      return dateA.localeCompare(dateB);
-    })[0];
+    const tasks = DB.tasks.getAll();
+    const timesheets = window.DB && DB.timesheets ? DB.timesheets.list() : [];
+    const wf = window.DB && DB.workforce ? DB.workforce.list() : [];
 
-    const kpis = [
-      { label:'Em Manutenção', value: stats.emManutencao, icon:'primary', type:'info' },
-      { label:'Liberados', value: stats.liberados, icon:'success', type:'success' },
-      { label:'Atrasados', value: stats.atrasados, icon:'danger', type:'danger' },
-      { label:'Aguardando Peças', value: stats.aguardandoPecas, icon:'warning', type:'warning' },
-      { label:'Paralisados / F. Peça', value: stats.bloqueados, icon:'danger', type:'danger' },
-      { label:'Total de Tarefas', value: stats.totalTarefas, icon:'primary', type:'primary' },
-      { label:'Tarefas Concluídas', value: stats.concluidas, icon:'success', type:'success' },
-      { label:'Tarefas Críticas', value: stats.criticas, icon:'danger', type:'danger' },
-      { label:'Restrições Abertas', value: stats.restricoesAbertas, icon:'warning', type:'warning' },
-      { label:'Avanço Geral', value: `${stats.pctAvancoGeral}%`, icon:'primary', type:'primary' },
-      { label:'Horas Realizadas', value: `${stats.horasRealizadas.toFixed(0)}h`, icon:'info', type:'info' },
-      { label:'Aderência', value: `${stats.aderencia}%`, icon: stats.aderencia>=90?'success':stats.aderencia>=70?'warning':'danger', type: stats.aderencia>=90?'success':stats.aderencia>=70?'warning':'danger' },
-    ];
-
+    // 1. Calculations for micro-cards
+    const emManutencao = eqs.filter(e => e.status === 'Em Manutenção' || e.status === 'Backlog').length;
+    const liberados = eqs.filter(e => e.status === 'Liberado' && (e.dataLiberacaoAtual || '').startsWith(currentMonthPrefix)).length;
+    const atrasados = eqs.filter(e => e.status !== 'Liberado' && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada < todayStr).length;
+    const aguardandoPecas = eqs.filter(e => e.status === 'Falta de Peças').length;
+    const paralisados = eqs.filter(e => e.status === 'Paralisado').length;
+    
+    const tarefasTotal = tasks.length;
+    const tarefasConcluidas = tasks.filter(t => t.pctExecutado >= 100).length;
+    const tarefasCriticas = tasks.filter(t => t.critico || (t.dataPlanejadaTermino && t.dataPlanejadaTermino < todayStr && t.pctExecutado < 100)).length;
+    
+    const restrAbertas = restrictions.filter(r => r.status === 'Aberta').length;
+    
+    const avancoGeral = Math.round(stats.pctAvancoGeral || 0);
+    const horasRealizadas = Math.round(stats.horasRealizadas || 0);
+    const aderencia = Math.round(stats.aderencia || 0);
+    
     // Curva de avanço
-    const planejado = 78, realizado = stats.pctAvancoGeral;
-    const desvio = realizado - planejado;
-    const devClass = desvio >= 0 ? 'success' : (desvio >= -10 ? 'warning' : 'danger');
+    const desvio = aderencia - 100;
+    const avancoPlan = 100;
+    const avancoReal = avancoGeral;
+    const statusColor = aderencia >= 90 ? 'var(--color-success)' : (aderencia >= 70 ? 'var(--color-warning)' : 'var(--color-danger)');
 
-    const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
-    const allTasks = DB.tasks.getAll();
-    function discHours(disc, type) {
-      return allTasks.filter(t=>t.disciplina===disc).reduce((s,t)=>s+(parseFloat(t[type])||0),0);
-    }
+    // Listas
+    const proximasLibs = eqs.filter(e => e.status !== 'Liberado' && e.dataLiberacaoPlanejada)
+                            .sort((a,b) => a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada))
+                            .slice(0, 5);
+                            
+    const alertas = eqs.filter(e => e.status !== 'Liberado' && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada < todayStr)
+                       .sort((a,b) => a.dataLiberacaoPlanejada.localeCompare(b.dataLiberacaoPlanejada))
+                       .slice(0, 5);
+
+    setTimeout(() => {
+      try {
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text-muted').trim() || '#64748b';
+        const borderColor = getComputedStyle(document.body).getPropertyValue('--border-default').trim() || 'rgba(150,150,150,0.2)';
+        Chart.defaults.color = textColor;
+        Chart.defaults.font.family = 'Inter';
+        
+        // 1. Saúde da Frota
+        const ctxStatus = document.getElementById('mega-ch-status');
+        if (ctxStatus) {
+           const sts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog'];
+           const counts = sts.map(s => eqs.filter(e => e.status === s).length);
+           charts.status = new Chart(ctxStatus, {
+             type: 'doughnut',
+             data: {
+               labels: sts,
+               datasets: [{ data: counts, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 2, borderColor: 'var(--bg-card)' }]
+             },
+             options: { cutout: '70%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+           });
+        }
+        
+        // 2. Anual
+        const ctxAno = document.getElementById('mega-ch-ano');
+        if (ctxAno) {
+          const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const mP = Array(12).fill(0), mR = Array(12).fill(0);
+          eqs.forEach(e => {
+            if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+            if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+          });
+          charts.ano = new Chart(ctxAno, {
+            type: 'bar',
+            data: { labels: mStr, datasets: [
+              { type: 'line', label: 'Realizado', data: mR, borderColor: '#10b981', backgroundColor: '#10b981', fill: false, tension: 0.4, borderWidth: 3 },
+              { type: 'bar', label: 'Planejado', data: mP, backgroundColor: borderColor, borderRadius: 4, barPercentage: 0.5 }
+            ]},
+            options: { ...chartDefaults(), maintainAspectRatio: false, scales: { y: { grid: { color: borderColor }, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+          });
+        }
+
+        const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+        const catsLabels = ['Sondas Pesq', 'Bombas Pesq', 'Sondas Poço', 'Bombas Poço', 'Subconjuntos', 'Almoxarifado'];
+        
+        // 3. Categoria
+        const ctxCat = document.getElementById('mega-ch-cat');
+        if (ctxCat) {
+          const cP = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
+          const cR = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix)).length);
+          charts.cat = new Chart(ctxCat, {
+            type: 'bar',
+            data: { labels: catsLabels, datasets: [
+              { label: 'Realizado', data: cR, backgroundColor: '#0ea5e9', borderRadius: 4 },
+              { label: 'Planejado', data: cP, backgroundColor: borderColor, borderRadius: 4 }
+            ]},
+            options: { ...chartDefaults(), indexAxis: 'y', maintainAspectRatio: false, scales: { x: { grid: { color: borderColor }, ticks: { precision: 0 } }, y: { grid: { display: false } } } }
+          });
+        }
+
+        // 4. Tarefas
+        const ctxTasks = document.getElementById('mega-ch-tasks');
+        if (ctxTasks) {
+          const tNao = tasks.filter(t => !t.pctExecutado).length;
+          const tAnd = tasks.filter(t => t.pctExecutado > 0 && t.pctExecutado < 100).length;
+          const tFim = tasks.filter(t => t.pctExecutado >= 100).length;
+          charts.tasksChart = new Chart(ctxTasks, {
+            type: 'pie',
+            data: { labels: ['Não iniciada', 'Andamento', 'Concluída'], datasets: [{ data: [tNao, tAnd, tFim], backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderWidth:2, borderColor:'var(--bg-card)' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+          });
+        }
+
+        // 5. Insumos (Peças)
+        const ctxParts = document.getElementById('mega-ch-parts');
+        if (ctxParts) {
+          const pSol = parts.filter(p => p.status === 'Solicitada').length;
+          const pCom = parts.filter(p => p.status === 'Comprada').length;
+          const pTra = parts.filter(p => p.status === 'Em Transporte').length;
+          const pEnt = parts.filter(p => p.status === 'Entregue').length;
+          charts.partsChart = new Chart(ctxParts, {
+            type: 'doughnut',
+            data: { labels: ['Solicitada', 'Comprada', 'Em Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'], borderWidth:2, borderColor:'var(--bg-card)' }] },
+            options: { cutout: '60%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+          });
+        }
+
+        // 6. Esforço HH por Categoria
+        const ctxEffort = document.getElementById('mega-ch-effort');
+        if (ctxEffort) {
+          const hhP = catsFull.map(c => tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasPlanejadas||0),0));
+          const hhR = catsFull.map(c => tasks.filter(t => { const eq=DB.equipment.get(t.equipmentId); return eq && (eq.tipo||'') === c; }).reduce((s,t)=>s+(t.horasRealizadas||0),0));
+          charts.effort = new Chart(ctxEffort, {
+            type: 'bar',
+            data: { labels: catsLabels, datasets: [
+              { label: 'Real (hh)', data: hhR, backgroundColor: '#8b5cf6', borderRadius: 4 },
+              { label: 'Plan (hh)', data: hhP, backgroundColor: borderColor, borderRadius: 4 }
+            ]},
+            options: { ...chartDefaults(), maintainAspectRatio: false, scales: { y: { grid: { color: borderColor } }, x: { grid: { display: false } } } }
+          });
+        }
+
+        // 7. Mapa de Atrasos
+        const ctxDelay = document.getElementById('mega-ch-delay');
+        if (ctxDelay) {
+          const del = [0,0,0,0]; // No Prazo, 1-3, 4-7, >7
+          const delayedEqs = eqs.filter(e => e.status !== 'Liberado');
+          delayedEqs.forEach(e => {
+            if (!e.dataLiberacaoPlanejada) return;
+            const dPlan = new Date(e.dataLiberacaoPlanejada);
+            const dToday = new Date(todayStr);
+            const diffDays = Math.ceil((dToday - dPlan) / (1000 * 60 * 60 * 24));
+            if (diffDays <= 0) del[0]++;
+            else if (diffDays <= 3) del[1]++;
+            else if (diffDays <= 7) del[2]++;
+            else del[3]++;
+          });
+          charts.delay = new Chart(ctxDelay, {
+            type: 'bar',
+            data: { labels: ['No Prazo', '1-3 Dias', '4-7 Dias', '> 7 Dias'], datasets: [{ label: 'Qtd. Máquinas', data: del, backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7f1d1d'], borderRadius: 4 }] },
+            options: { ...chartDefaults(), indexAxis: 'y', maintainAspectRatio: false, plugins: { legend:{display:false} }, scales: { x: { grid: { color: borderColor } }, y: { grid: { display: false } } } }
+          });
+        }
+
+        // 8. Mão de Obra
+        const ctxWorker = document.getElementById('mega-ch-worker');
+        if (ctxWorker) {
+          const roles = ['Mecânico', 'Eletricista', 'Soldador', 'Ajudante', 'Técnico'];
+          const roleCount = roles.map(r => wf.filter(w => (w.cargo||'').includes(r)).length);
+          charts.worker = new Chart(ctxWorker, {
+            type: 'polarArea',
+            data: { labels: roles, datasets: [{ data: roleCount, backgroundColor: ['rgba(59,130,246,0.6)', 'rgba(16,185,129,0.6)', 'rgba(245,158,11,0.6)', 'rgba(239,68,68,0.6)', 'rgba(139,92,246,0.6)'], borderWidth:1, borderColor:'var(--bg-card)' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } }, scales: { r: { grid: { color: borderColor }, ticks: { display: false } } } }
+          });
+        }
+      } catch(e) { console.warn('Mega Chart Error', e); }
+    }, 100);
+
+    const microCard = (title, val, iconColor) => `
+      <div style="flex: 0 0 auto; min-width: 130px; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: var(--space-3); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="width: 20px; height: 20px; border-radius: 6px; background: ${iconColor}20; border: 1px solid ${iconColor}40; display:flex; align-items:center; justify-content:center; margin-bottom: 8px;">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background: ${iconColor};"></div>
+        </div>
+        <div style="font-size: 22px; font-weight: 900; color: var(--text-primary); line-height: 1;">${val}</div>
+        <div style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${title}">${title}</div>
+      </div>
+    `;
+    
+    const chartCard = (title, id) => `
+      <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; min-height: 300px; height: 100%; overflow:hidden;">
+        <div style="font-size:13px; font-weight:800; color:var(--text-primary); margin-bottom:16px; flex-shrink: 0;">${title}</div>
+        <div style="flex:1; position:relative; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;">
+           <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
+             <canvas id="${id}"></canvas>
+           </div>
+        </div>
+      </div>
+    `;
 
     const html = `
-    <div class="page-container">
-      <div class="section-header">
-        <div>
-          <div class="section-title">
-            <div class="section-title-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
-            </div>
-            Dashboard Executivo
+    <div style="width:100%; max-width:100%; padding:var(--space-5); display:flex; flex-direction:column; gap:var(--space-4);">
+      
+      <!-- HEADER -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <div style="width: 40px; height: 40px; background: var(--brand-primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff;">
+            <svg style="width:20px;height:20px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
           </div>
-          <div class="section-subtitle">Visão geral em tempo real · ${new Date().toLocaleString('pt-BR')}</div>
+          <div>
+            <h1 style="font-size:var(--text-xl); font-weight:900; color:var(--text-primary); margin:0;">Dashboard Executivo</h1>
+            <p style="font-size:var(--text-xs); color:var(--text-muted); margin:2px 0 0 0;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
+          </div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="Router.navigate('dashboard',{force:true})">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+        <button class="btn btn-primary" style="display:flex; align-items:center; gap:8px;" onclick="Router.navigate('dashboard',{force:true})">
+          <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Atualizar
         </button>
       </div>
 
-      <!-- Curva de Avanço Real -->
-      <div class="card" style="margin-bottom:var(--space-5);background:linear-gradient(135deg,rgba(21,101,192,0.08) 0%,var(--bg-card) 100%);border-color:var(--border-hover);">
-        <div class="card-header"><div class="card-title">📊 Curva de Avanço Real</div><span class="badge badge-${devClass}">${desvio >= 0 ? '+' : ''}${desvio}% de desvio</span></div>
-        <div style="display:flex;gap:var(--space-6);align-items:center;flex-wrap:wrap;">
-          <div style="text-align:center;padding:var(--space-4) var(--space-6);background:var(--bg-base);border-radius:var(--radius-lg);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-1)">Planejado</div>
-            <div style="font-size:3rem;font-weight:800;color:var(--brand-primary-light);line-height:1">${planejado}%</div>
+      <!-- SECTION 1: Micro Cards (Horizontal Scroll) -->
+      <div style="display:flex; gap: var(--space-3); overflow-x: auto; padding-bottom: 8px; margin-bottom: -8px;">
+        ${microCard('Em Manutenção', emManutencao, '#3b82f6')}
+        ${microCard('Liberados', liberados, '#10b981')}
+        ${microCard('Atrasados', atrasados, '#ef4444')}
+        ${microCard('Aguardando Peças', aguardandoPecas, '#f59e0b')}
+        ${microCard('Paralisados / F. Peça', paralisados, '#ef4444')}
+        ${microCard('Total de Tarefas', tarefasTotal, '#3b82f6')}
+        ${microCard('Tarefas Concluídas', tarefasConcluidas, '#10b981')}
+        ${microCard('Tarefas Críticas', tarefasCriticas, '#ef4444')}
+        ${microCard('Restrições Abertas', restrAbertas, '#f59e0b')}
+        ${microCard('Avanço Geral', avancoGeral + '%', '#0ea5e9')}
+        ${microCard('Horas Realizadas', horasRealizadas + 'h', '#8b5cf6')}
+        ${microCard('Aderência', aderencia + '%', '#ef4444')}
+      </div>
+
+      <!-- SECTION 2: Curva de Avanço -->
+      <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-5); display:flex; flex-direction:column; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+          <div style="font-size:14px; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <svg style="width:16px;color:var(--brand-primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Curva de Avanço Real
           </div>
-          <div style="font-size:2rem;color:var(--text-muted)">vs</div>
-          <div style="text-align:center;padding:var(--space-4) var(--space-6);background:var(--bg-base);border-radius:var(--radius-lg);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-1)">Realizado</div>
-            <div style="font-size:3rem;font-weight:800;color:var(--color-${devClass});line-height:1">${realizado}%</div>
-          </div>
-          <div style="flex:1;min-width:200px;">
-            <div style="display:flex;flex-direction:column;gap:var(--space-3);">
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)"><span style="font-size:var(--text-xs);color:var(--text-muted)">Planejado</span><span style="font-size:var(--text-xs);font-weight:700;font-family:var(--font-mono)">${planejado}%</span></div>
-                <div class="progress-track"><div class="progress-fill" style="width:${planejado}%"></div></div>
-              </div>
-              <div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1)"><span style="font-size:var(--text-xs);color:var(--text-muted)">Realizado</span><span style="font-size:var(--text-xs);font-weight:700;font-family:var(--font-mono)">${realizado}%</span></div>
-                <div class="progress-track"><div class="progress-fill ${devClass}" style="width:${realizado}%"></div></div>
-              </div>
+          <div class="badge" style="background:rgba(239, 68, 68, 0.1); color:#ef4444; font-weight:800;">${desvio > 0 ? '+' : ''}${desvio}% de desvio</div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap: 40px; width:100%;">
+          
+          <div style="display:flex; gap: 16px;">
+            <div style="background: var(--bg-surface); padding: 12px 24px; border-radius: 12px; text-align:center;">
+              <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Planejado</div>
+              <div style="font-size:32px; font-weight:900; color:#0ea5e9; line-height:1; margin-top:4px;">${avancoPlan}%</div>
+            </div>
+            <div style="display:flex; align-items:center; font-weight:800; color:var(--border-default); font-size:18px;">VS</div>
+            <div style="background: var(--bg-surface); padding: 12px 24px; border-radius: 12px; text-align:center;">
+              <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Realizado</div>
+              <div style="font-size:32px; font-weight:900; color:${statusColor}; line-height:1; margin-top:4px;">${avancoReal}%</div>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-            <div style="opacity:${desvio<-15?1:0.3}">🔴 Crítico</div>
-            <div style="opacity:${desvio>=-15&&desvio<-5?1:0.3}">🟡 Atenção</div>
-            <div style="opacity:${desvio>=-5?1:0.3}">🟢 OK</div>
-          </div>
-        </div>
-      </div>
 
-      <!-- KPI Grid -->
-      <div class="kpi-grid stagger">
-        ${kpis.map(k => `
-          <div class="kpi-card ${k.type}">
-            <div class="kpi-header">
-              <div class="kpi-icon ${k.icon}">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z"/></svg>
+          <div style="flex:1; display:flex; flex-direction:column; gap: 16px;">
+            <!-- Line 1: Plan -->
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div style="width:60px; font-size:10px; color:var(--text-muted); font-weight:600;">Planejado</div>
+              <div style="flex:1; height:4px; background:var(--bg-surface); border-radius:2px; position:relative;">
+                <div style="position:absolute; top:0; left:0; height:100%; width:100%; background:#0ea5e9; border-radius:2px;"></div>
               </div>
+              <div style="width:30px; font-size:10px; font-weight:800;">100%</div>
             </div>
-            <div class="kpi-value">${k.value}</div>
-            <div class="kpi-label">${k.label}</div>
+            <!-- Line 2: Real -->
+            <div style="display:flex; align-items:center; gap:16px;">
+              <div style="width:60px; font-size:10px; color:var(--text-muted); font-weight:600;">Realizado</div>
+              <div style="flex:1; height:4px; background:var(--bg-surface); border-radius:2px; position:relative;">
+                <div style="position:absolute; top:0; left:0; height:100%; width:${avancoReal}%; background:${statusColor}; border-radius:2px; transition:width 1s;"></div>
+              </div>
+              <div style="width:30px; font-size:10px; font-weight:800;">${avancoReal}%</div>
+            </div>
           </div>
-        `).join('')}
-      </div>
 
-      <!-- Charts grid -->
-      <div class="charts-grid">
-        <div class="chart-card">
-          <div class="card-header"><div class="card-title">Planejado × Realizado por Disciplina</div></div>
-          <canvas id="ch-disc" height="220"></canvas>
-        </div>
-        <div class="chart-card">
-          <div class="card-header"><div class="card-title">Status dos Equipamentos</div></div>
-          <canvas id="ch-status" height="220"></canvas>
-        </div>
-        <div class="chart-card">
-          <div class="card-header"><div class="card-title">Avanço por Equipamento</div></div>
-          <canvas id="ch-eq" height="220"></canvas>
-        </div>
-        <div class="chart-card">
-          <div class="card-header"><div class="card-title">Consumo de Mão de Obra</div></div>
-          <canvas id="ch-mo" height="220"></canvas>
+          <div style="display:flex; flex-direction:column; gap: 8px; border-left:1px solid var(--border-card); padding-left: 24px;">
+            <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary);"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div> Crítico</div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary);"><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b;"></div> Atenção</div>
+            <div style="display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary);"><div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div> OK</div>
+          </div>
         </div>
       </div>
 
-      <!-- Next releases + Alerts -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);margin-top:var(--space-5);">
-        <div class="card">
-          <div class="card-header"><div class="card-title">🚀 Próximas Liberações</div></div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-3);">
-            ${eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
-              const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
-              const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
-              return dateA.localeCompare(dateB);
-            }).slice(0,6).map(e => {
-              const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
-              const days = daysBetween(new Date().toISOString().slice(0,10), datePrev);
-              const cls = days < 0 ? 'danger' : days <= 5 ? 'warning' : 'success';
-              return `<div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);">
-                <div class="avatar avatar-sm" style="background:var(--gradient-primary)">${e.codigo.slice(0,2)}</div>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:var(--text-sm);font-weight:600;color:var(--text-primary)">${e.codigo}</div>
-                  <div style="font-size:var(--text-xs);color:var(--text-muted)">${e.cliente}</div>
+      <!-- SECTION 3: 8 Charts in Grid -->
+      <div style="display:grid; grid-template-columns: repeat(12, 1fr); gap:var(--space-4);">
+        
+        <!-- Row 1: 3 Charts -->
+        <div style="grid-column: span 4;">${chartCard('1. Saúde da Frota', 'mega-ch-status')}</div>
+        <div style="grid-column: span 4;">${chartCard('2. Pipeline de Peças (Suprimentos)', 'mega-ch-parts')}</div>
+        <div style="grid-column: span 4;">${chartCard('3. Status das Tarefas', 'mega-ch-tasks')}</div>
+
+        <!-- Row 2: 3 Charts -->
+        <div style="grid-column: span 4;">${chartCard('4. Mapa de Atrasos da Frota', 'mega-ch-delay')}</div>
+        <div style="grid-column: span 4;">${chartCard('5. Projeção vs Execução Anual', 'mega-ch-ano')}</div>
+        <div style="grid-column: span 4;">${chartCard('6. Apropriação de Esforço (HH) por Categoria', 'mega-ch-effort')}</div>
+        
+        <!-- Row 3: 2 Charts -->
+        <div style="grid-column: span 6;">${chartCard('7. Especialidades Alocadas (Mão de Obra)', 'mega-ch-worker')}</div>
+        <div style="grid-column: span 6;">${chartCard('8. Volume de Entregas por Categoria', 'mega-ch-cat')}</div>
+
+      </div>
+
+      <!-- SECTION 4: Lists -->
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:var(--space-4);">
+        
+        <!-- Próximas Liberações -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); min-height:200px; display:flex; flex-direction:column;">
+          <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+            🚀 Próximas Liberações
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; flex:1; overflow-y:auto;">
+            ${proximasLibs.length === 0 ? '<div style="color:var(--text-muted);font-size:12px;text-align:center;margin-top:20px;">Nenhum equipamento agendado.</div>' : ''}
+            ${proximasLibs.map(e => {
+              const d = window.daysBetween ? window.daysBetween(todayStr, e.dataLiberacaoPlanejada) : 0;
+              return `
+              <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-surface); border-radius:8px; padding:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:24px;height:24px;border-radius:50%;background:#0ea5e9;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;">${(e.codigo||'').substring(0,2)}</div>
+                  <div>
+                    <div style="font-size:12px;font-weight:800;color:var(--text-primary);">${e.codigo}</div>
+                    <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">${e.cliente || 'Sem cliente'}</div>
+                  </div>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-size:var(--text-xs);font-weight:700;color:var(--color-${cls})">${formatDate(datePrev)}</div>
-                  <div style="font-size:10px;color:var(--color-${cls})">${days < 0 ? Math.abs(days)+' dias atrasado' : days === 0 ? 'Hoje!' : days+' dias'}</div>
+                  <div style="font-size:10px;font-weight:800;color:#f59e0b;">${e.dataLiberacaoPlanejada ? e.dataLiberacaoPlanejada.split('-').reverse().join('/') : ''}</div>
+                  <div style="font-size:9px;color:var(--text-muted);">${d} dias</div>
                 </div>
-              </div>`;
-            }).join('')}
+              </div>
+            `}).join('')}
           </div>
         </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">⚠️ Alertas Críticos</div></div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-            ${restrictions.filter(r=>r.status==='Aberta').slice(0,5).map(r => `
-              <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-danger-bg);border-radius:var(--radius-md);border-left:2px solid var(--color-danger);">
-                <span style="flex-shrink:0;">🚫</span>
-                <div style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.4">${r.descricao.slice(0,80)}${r.descricao.length>80?'...':''}</div>
+
+        <!-- Alertas Críticos -->
+        <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); min-height:200px; display:flex; flex-direction:column;">
+          <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+            ⚠️ Alertas Críticos
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; flex:1; overflow-y:auto;">
+            ${alertas.length === 0 ? '<div style="color:var(--text-muted);font-size:12px;text-align:center;margin-top:20px;">Nenhum equipamento crítico.</div>' : ''}
+            ${alertas.map(e => {
+              const d = window.daysBetween ? window.daysBetween(e.dataLiberacaoPlanejada, todayStr) : 0;
+              return `
+              <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-surface); border-radius:8px; padding:12px; border-left:3px solid #ef4444;">
+                <div>
+                  <div style="font-size:12px;font-weight:800;color:var(--text-primary);">${e.codigo}</div>
+                  <div style="font-size:9px;color:var(--color-danger);text-transform:uppercase;">Atrasado</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:14px;font-weight:900;color:#ef4444;">${d} dias</div>
+                </div>
               </div>
-            `).join('')}
-            ${parts.filter(p=>p.critica&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).slice(0,3).map(p => `
-              <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-warning-bg);border-radius:var(--radius-md);border-left:2px solid var(--color-warning);">
-                <span style="flex-shrink:0;">📦</span>
-                <div style="font-size:var(--text-xs);color:var(--text-secondary)">${p.descricao} — <strong>${p.status}</strong></div>
-              </div>
-            `).join('')}
+            `}).join('')}
           </div>
         </div>
+
       </div>
-    </div>`;
 
-    setTimeout(() => {
-      try {
-        // Chart 1: Disciplinas Planejado x Realizado
-        const c1 = document.getElementById('ch-disc');
-        if (c1) charts.disc = new Chart(c1, { type:'bar', data: {
-          labels: disciplines,
-          datasets: [
-            { label:'Planejado', data: disciplines.map(d=>discHours(d,'horasPlanejadas')), backgroundColor:'rgba(21,101,192,0.7)', borderRadius:4 },
-            { label:'Realizado', data: disciplines.map(d=>discHours(d,'horasRealizadas')), backgroundColor:'rgba(0,200,83,0.7)', borderRadius:4 }
-          ]
-        }, options: chartDefaults() });
-
-        // Chart 2: Status doughnut
-        const statusCounts = ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>eqs.filter(e=>e.status===s).length);
-        const c2 = document.getElementById('ch-status');
-        if (c2) charts.status = new Chart(c2, { type:'doughnut', data: {
-          labels: ['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'],
-          datasets: [{ data: statusCounts, backgroundColor:['rgba(30,136,229,0.8)','rgba(0,200,83,0.8)','rgba(244,67,54,0.8)','rgba(255,179,0,0.8)','rgba(107,114,128,0.8)','rgba(139,92,246,0.8)'], borderWidth:0 }]
-        }, options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{color:'#8EACC8',font:{family:'Inter',size:10}} } } } });
-
-        // Chart 3: Equipment progress bar
-        const c3 = document.getElementById('ch-eq');
-        if (c3) charts.eq = new Chart(c3, { type:'bar', data: {
-          labels: eqs.map(e=>e.codigo),
-          datasets: [{ label:'Avanço %', data: eqs.map(e=>e.pctAvanco||0), backgroundColor: eqs.map(e => e.pctAvanco >= 80 ? 'rgba(0,200,83,0.7)' : e.pctAvanco >= 50 ? 'rgba(30,136,229,0.7)' : 'rgba(255,179,0,0.7)'), borderRadius:4 }]
-        }, options: { ...chartDefaults(), scales: { y: { min:0, max:100, ticks:{color:'#8EACC8',callback:(v)=>v+'%'}, grid:{color:'rgba(255,255,255,0.05)'} }, x:{ticks:{color:'#8EACC8'},grid:{color:'rgba(255,255,255,0.05)'}} } } });
-
-        // Chart 4: MO consumption
-        const ts = DB.timesheets.list();
-        const moByDisc = {};
-        ts.forEach(t => {
-          const w = DB.workforce.get(t.workerId);
-          if (w) moByDisc[w.disciplina] = (moByDisc[w.disciplina] || 0) + (t.horasTrabalhadas || 0);
-        });
-        const c4 = document.getElementById('ch-mo');
-        if (c4) charts.mo = new Chart(c4, { type:'bar', data: {
-          labels: Object.keys(moByDisc),
-          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(41,182,246,0.7)', borderRadius:4 }]
-        }, options: chartDefaults() });
-      } catch(e) { console.warn('Chart.js error:', e); }
-    }, 100);
+    </div>
+    `;
 
     return html;
   }
@@ -598,7 +793,7 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma','Lavador','Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma','Lavador','Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto','Teste','Retrabalho'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -788,7 +983,86 @@ window.EquipmentModule = (() => {
     });
   }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete };
+  function renderLaborComparison(containerId = 'labor-comparison-container') {
+    setTimeout(() => {
+      try {
+        const allTs = DB.timesheets.list().filter(t => t.tipo === 'Trabalho');
+        const allEqTasks = DB.tasks.getAll();
+        const taskDict = {}; 
+        allEqTasks.forEach(t => taskDict[t.id] = t);
+        
+        const laborMap = {}; 
+        allTs.forEach(ts => {
+          const t = taskDict[ts.taskId];
+          if (!t || !t.descricao) return;
+          const key = (t.descricao.toLowerCase().trim() + '|' + (t.disciplina||'Geral')).trim();
+          if (!laborMap[key]) {
+            laborMap[key] = { desc: t.descricao, disc: t.disciplina||'Geral', workers: {} };
+          }
+          const wName = ts.workerNome || 'Desconhecido';
+          if (!laborMap[key].workers[wName]) {
+            laborMap[key].workers[wName] = { hours: 0, eqs: new Set() };
+          }
+          laborMap[key].workers[wName].hours += (ts.horasTrabalhadas || 0);
+          
+          const eq = DB.equipment.get(t.equipmentId);
+          if (eq) laborMap[key].workers[wName].eqs.add(eq.codigo);
+        });
+
+        const comparisons = Object.values(laborMap).filter(item => Object.keys(item.workers).length > 1);
+        
+        const container = document.getElementById(containerId);
+        if (container) {
+          if (comparisons.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Não há dados suficientes para gerar comparativos (é necessário que dois ou mais mecânicos realizem atividades com o mesmo nome).</div>';
+          } else {
+            comparisons.sort((a,b) => {
+              const sumA = Object.values(a.workers).reduce((s,w)=>s+w.hours,0);
+              const sumB = Object.values(b.workers).reduce((s,w)=>s+w.hours,0);
+              return sumB - sumA;
+            });
+
+            container.innerHTML = comparisons.map(item => {
+              const workerList = Object.entries(item.workers).map(([name, data]) => ({name, hours: data.hours, eqs: Array.from(data.eqs)}));
+              workerList.sort((a,b) => a.hours - b.hours);
+              
+              return `
+                <div style="border:1px solid var(--border-card);border-radius:var(--radius-md);padding:var(--space-4);background:var(--bg-base);">
+                  <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;">${item.disc}</div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;line-height:1.3;">${item.desc}</div>
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    ${workerList.map((w, idx) => `
+                      <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:4px;border-bottom:1px solid var(--border-light);">
+                        <div>
+                          <div style="font-size:13px;color:var(--text-secondary);font-weight:${idx===0?'700':'400'};">
+                            ${idx===0?'🏆 ':''}${w.name}
+                          </div>
+                          <div style="font-size:10px;color:var(--text-muted);">${w.eqs.join(', ')}</div>
+                        </div>
+                        <div style="font-size:14px;font-weight:700;color:${idx===0?'var(--color-success)':'var(--text-primary)'};">
+                          ${w.hours.toFixed(1)}h
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+      } catch (e) {
+        console.error('Error rendering labor comparison:', e);
+      }
+      
+      try {
+        if (window.EquipmentModule && window.EquipmentModule.renderLaborComparison) {
+          window.EquipmentModule.renderLaborComparison();
+        }
+      } catch(e) { console.error(e); }
+    }, 100);
+  }
+
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison };
 })();
 
 // ================================================================
@@ -996,7 +1270,7 @@ window.TasksModule = (() => {
       }
     }
 
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
     const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
     let obsHistoryHtml = '';

@@ -36,9 +36,9 @@ window.QrGeneratorModule = (() => {
             </div>
             <div style="display:flex;gap:var(--space-2);">
               <button class="btn btn-secondary" onclick="window.open('#qrview?id=${eq.id}', '_blank')">Visualizar Prévia</button>
-              <button class="btn btn-primary" onclick="QrGeneratorModule.generateQR('${eq.id}', '${eq.codigo}')">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                Gerar QR Code
+              <button class="btn btn-primary" onclick="QrGeneratorModule.downloadDirectPDF('${eq.id}', '${eq.codigo}', \`${eq.nome ? eq.nome.replace(/`/g, '') : ''}\`)">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                Baixar QR Code (PDF)
               </button>
             </div>
           </div>
@@ -64,134 +64,104 @@ window.QrGeneratorModule = (() => {
     `;
   }
 
-  function generateQR(id, codigo) {
-    const url = window.location.origin + window.location.pathname + '#qrview?id=' + id;
+  function downloadDirectPDF(id, codigo, nome) {
+    const url = window.location.origin + window.location.pathname + '?qrview=' + id + '#qrview?id=' + id;
     
-    // Armazena ID temporário para o printModel poder pegar
-    window._currentQrId = id;
-    
-    const modalHtml = `
-      <div class="modal-overlay" id="qr-modal" style="z-index:9999;">
-        <div class="modal" style="max-width:400px;text-align:center;">
-          <div class="modal-header">
-            <div class="modal-title">QR Code - ${codigo}</div>
-            <button class="modal-close" onclick="document.getElementById('qr-modal').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-          </div>
-          <div class="modal-body">
-            <div style="background:white;padding:20px;border-radius:12px;display:inline-block;margin-bottom:20px;">
-              <div id="qr-container"></div>
-            </div>
-            <p style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-4);">Este QR Code aponta para o visualizador público em tempo real deste equipamento.</p>
-          </div>
-          <div class="modal-footer" style="display:flex;gap:var(--space-3);justify-content:center;flex-wrap:wrap;">
-            <button class="btn btn-ghost" onclick="document.getElementById('qr-modal').remove()">Fechar</button>
-            <button class="btn btn-outline" onclick="QrGeneratorModule.printModel('${codigo}')">Baixar PDF (Modelo)</button>
-            <button class="btn btn-primary" onclick="QrGeneratorModule.downloadQR('${codigo}')">Baixar Apenas QR</button>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-    if (typeof QRCode !== 'undefined') {
-      new QRCode(document.getElementById("qr-container"), {
-        text: url,
-        width: 200,
-        height: 200,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-      });
-    } else {
-      document.getElementById("qr-container").innerHTML = '<p style="color:red">Erro: QRCode.js não carregado</p>';
+    // Fallback if QRCode is missing
+    if (typeof QRCode === 'undefined') {
+      return alert("A biblioteca QRCode.js não está carregada.");
     }
-  }
 
-  function downloadQR(codigo) {
-    const container = document.getElementById("qr-container");
-    if (!container || !container.querySelector('canvas')) {
-      return alert('Aguarde o QR Code ser gerado.');
-    }
-    const canvas = container.querySelector('canvas');
-    canvas.toBlob(blob => {
-        const file = new File([blob], `QR_${codigo}.png`, { type: "image/png" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: `QR_${codigo}.png` }).catch(e => console.error(e));
-        } else {
-            const link = document.createElement('a');
-            link.download = `QR_${codigo}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-        }
+    Toast && Toast.info('Gerando PDF...', 'Aguarde um instante...');
+
+    // Create a temporary container to generate the QR Code canvas
+    const tempQrContainer = document.createElement('div');
+    tempQrContainer.style.position = 'absolute';
+    tempQrContainer.style.left = '-9999px';
+    document.body.appendChild(tempQrContainer);
+
+    new QRCode(tempQrContainer, {
+      text: url,
+      width: 250,
+      height: 250,
+      colorDark : "#000000",
+      colorLight : "#ffffff",
+      correctLevel : QRCode.CorrectLevel.H
     });
+    
+    // Wait for QRCode.js to draw
+    setTimeout(() => {
+      const canvas = tempQrContainer.querySelector('canvas');
+      if (!canvas) {
+        document.body.removeChild(tempQrContainer);
+        return Toast && Toast.error('Erro', 'Falha ao gerar QR Code interno.');
+      }
+
+      // Extract the base64 image data from the canvas
+      const dataUrl = canvas.toDataURL("image/png");
+      document.body.removeChild(tempQrContainer);
+
+      try {
+        // Use jsPDF directly to avoid all html2canvas rendering bugs
+        const doc = new window.jspdf.jsPDF('p', 'mm', 'a4');
+        
+        // Dimensions and math for centering
+        const boxW = 160;
+        const boxH = 175;
+        const startX = (210 - boxW) / 2; // Centers horizontally (25)
+        const startY = 35; // Top margin
+
+        // 1. Draw Card Border
+        doc.setDrawColor(226, 232, 240); // #e2e8f0
+        doc.setLineWidth(0.5);
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(startX, startY, boxW, boxH, 5, 5, 'FD');
+
+        // 2. Title
+        const titleStr = (nome || codigo).toUpperCase();
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42); // #0f172a
+        doc.setFontSize(26);
+        doc.text(titleStr, 105, startY + 22, { align: 'center' });
+
+        // 3. QR Code Border Box
+        const qrW = 75;
+        const qrH = 75;
+        const qrX = 105 - (qrW / 2);
+        const qrY = startY + 40;
+        
+        doc.setDrawColor(203, 213, 225); // #cbd5e1
+        doc.roundedRect(qrX - 5, qrY - 5, qrW + 10, qrH + 10, 3, 3, 'S');
+
+        // 4. Inject QR Code Image Native
+        doc.addImage(dataUrl, 'PNG', qrX, qrY, qrW, qrH);
+
+        // 5. Instruction Text
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139); // #64748b
+        doc.setFontSize(12);
+        doc.text("Aponte a câmera para consultar o status", 105, qrY + qrH + 20, { align: 'center' });
+        doc.text("e o histórico do equipamento", 105, qrY + qrH + 26, { align: 'center' });
+
+        // 6. Footer Divider Line
+        doc.setDrawColor(226, 232, 240);
+        doc.line(startX + 15, qrY + qrH + 40, startX + boxW - 15, qrY + qrH + 40);
+
+        // 7. Footer Text
+        doc.setFontSize(9);
+        doc.setTextColor(148, 163, 184); // #94a3b8
+        doc.text("Gerado por Planejamento Geosol • DIMAN-BHZ", 105, qrY + qrH + 50, { align: 'center' });
+
+        // Save the PDF!
+        doc.save(`QR_Code_${codigo}.pdf`);
+        Toast && Toast.success('PDF Gerado', 'O download foi concluído!');
+
+      } catch (e) {
+        console.error("jsPDF error:", e);
+        Toast && Toast.error('Erro', 'Não foi possível gerar o documento.');
+      }
+    }, 250);
   }
 
-  function printModel(codigo) {
-    const container = document.getElementById("qr-container");
-    if (!container || !container.querySelector('canvas')) {
-      return alert('Aguarde o QR Code ser gerado.');
-    }
-    const canvas = container.querySelector('canvas');
-    const dataUrl = canvas.toDataURL("image/png");
-    
-    // Create an invisible wrapper for the PDF generation
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'absolute';
-    wrapper.style.left = '-9999px';
-    wrapper.style.top = '0';
-    wrapper.style.width = '600px'; // Fixed width for consistent PDF scale
-    wrapper.style.background = '#f8fafc';
-    wrapper.style.padding = '40px';
-    wrapper.style.boxSizing = 'border-box';
-    wrapper.innerHTML = `
-        <div style="background: white; padding: 40px; border-radius: 16px; text-align: center; border: 2px solid #e2e8f0; font-family: 'Inter', sans-serif;">
-          <div style="font-size: 28px; font-weight: 900; color: #0f172a; margin-bottom: 20px;">Ativo: ${codigo}</div>
-          <div style="background: white; padding: 20px; display: inline-block; border-radius: 12px; border: 1px solid #cbd5e1;">
-            <img src="${dataUrl}" style="width: 250px; height: 250px; display: block;" />
-          </div>
-          <div style="font-size: 16px; color: #64748b; margin-top: 20px;">Escaneie a etiqueta para acompanhar o status em tempo real</div>
-          <div style="margin-top: 30px; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px;">Gerado por Planejamento Geosol &bull; DIMAN-BHZ</div>
-        </div>
-    `;
-    
-    document.body.appendChild(wrapper);
-    
-    const opt = {
-      margin:       0.5,
-      filename:     `Modelo_QR_${codigo}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-    
-    Toast && Toast.show('Gerando PDF...', 'Aguarde um instante...', 'info');
-    
-    if (window.html2pdf) {
-      window.html2pdf().set(opt).from(wrapper).output('blob').then((blob) => {
-        document.body.removeChild(wrapper);
-        const file = new File([blob], opt.filename, { type: "application/pdf" });
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            navigator.share({ files: [file], title: opt.filename }).catch(e => console.error(e));
-            Toast && Toast.success('Pronto!', 'Escolha onde salvar ou enviar o PDF.');
-        } else {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = opt.filename;
-            a.click();
-            URL.revokeObjectURL(url);
-            Toast && Toast.success('PDF Baixado', 'O download foi concluído.');
-        }
-      }).catch(e => {
-        document.body.removeChild(wrapper);
-        console.error("html2pdf error:", e);
-        Toast && Toast.error('Erro', 'Não foi possível gerar o PDF.');
-      });
-    } else {
-      document.body.removeChild(wrapper);
-      alert("A biblioteca html2pdf não está disponível.");
-    }
-  }
-
-  return { render, generateQR, downloadQR, printModel };
+  return { render, downloadDirectPDF };
 })();

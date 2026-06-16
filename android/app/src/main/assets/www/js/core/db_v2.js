@@ -231,10 +231,16 @@ window.DB = (() => {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'diman_store' }, payload => {
           if (payload.new && payload.new.key === 'all') {
             localStorage.setItem(payload.new.collection, JSON.stringify(payload.new.data));
-            // Force re-render of current view
+            // Force re-render of current view only if no modal is open and user is not typing
             if (window.Router) {
-              const current = window.Router.getCurrent();
-              if (current) window.Router.navigate(current, { force: true });
+              const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
+              const isTyping = document.querySelector('input:focus, textarea:focus, select:focus');
+              if (!hasOpenModal && !isTyping) {
+                const current = window.Router.getCurrent();
+                if (current) window.Router.navigate(current, { force: true });
+              } else {
+                if (window.Toast) window.Toast.info('Sincronização', 'Dados atualizados em segundo plano. Atualize a página quando finalizar a edição.', 4000);
+              }
             }
           }
         })
@@ -613,12 +619,20 @@ window.DB = (() => {
 
   // ==================== KPI CALCULATIONS ====================
   const kpi = {
-    getEquipmentStats() {
-      const eqs = equipment.list();
-      const allTasks = tasks.getAll();
-      const allParts = parts.getAll();
-      const allRestrictions = restrictions.getAll();
+    getEquipmentStats(monthPrefix) {
+      let eqs = equipment.list();
+      let allTasks = tasks.getAll();
+      let allParts = parts.getAll();
+      let allRestrictions = restrictions.getAll();
       const today = new Date().toISOString().slice(0, 10);
+
+      if (monthPrefix) {
+        // Filter equipments to those with release planned for this month or released this month
+        eqs = eqs.filter(e => (e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(monthPrefix)) || (e.dataLiberacaoAtual && e.dataLiberacaoAtual.startsWith(monthPrefix)) || (e.dataFim && e.dataFim.startsWith(monthPrefix)));
+        
+        // Filter tasks to those created or updated this month
+        allTasks = allTasks.filter(t => (t.createdAt && t.createdAt.startsWith(monthPrefix)) || (t.dataFim && t.dataFim.startsWith(monthPrefix)));
+      }
 
       return {
         total: eqs.length,

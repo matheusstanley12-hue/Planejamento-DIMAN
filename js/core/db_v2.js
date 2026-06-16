@@ -231,10 +231,16 @@ window.DB = (() => {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'diman_store' }, payload => {
           if (payload.new && payload.new.key === 'all') {
             localStorage.setItem(payload.new.collection, JSON.stringify(payload.new.data));
-            // Force re-render of current view
+            // Force re-render of current view only if no modal is open and user is not typing
             if (window.Router) {
-              const current = window.Router.getCurrent();
-              if (current) window.Router.navigate(current, { force: true });
+              const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
+              const isTyping = document.querySelector('input:focus, textarea:focus, select:focus');
+              if (!hasOpenModal && !isTyping) {
+                const current = window.Router.getCurrent();
+                if (current) window.Router.navigate(current, { force: true });
+              } else {
+                if (window.Toast) window.Toast.info('Sincronização', 'Dados atualizados em segundo plano. Atualize a página quando finalizar a edição.', 4000);
+              }
             }
           }
         })
