@@ -79,9 +79,9 @@ window.Dashboard = (() => {
            const sts = ['Operando', 'Liberado', 'Em Manutenção', 'Aguardando Peça', 'Paralisado'];
            const counts = sts.map(s => eqs.filter(e => e.status === s).length);
            charts.status = new Chart(ctxStatus, {
-             type: 'doughnut',
-             data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#10b981', '#eab308', '#f97316', '#ef4444', '#a855f7'], borderWidth:0, cutout:'75%' }] },
-             options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 }, color: '#cbd5e1' } } }, layout: { padding: 10 } }
+             type: 'bar',
+             data: { labels: sts, datasets: [{ data: counts, backgroundColor: ['#10b981', '#eab308', '#f97316', '#ef4444', '#a855f7'], borderRadius: 4, barThickness: 24 }] },
+             options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, layout: { padding: 10 }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }, y: { display: false } } }
            });
         }
         
