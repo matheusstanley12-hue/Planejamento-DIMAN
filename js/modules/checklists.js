@@ -53,11 +53,12 @@ window.ChecklistsModule = (() => {
   }
 
   function deleteFile(id) {
-    if (confirm('Tem certeza que deseja remover este anexo?')) {
+    window.uiConfirm('Tem certeza que deseja remover este anexo?', (res) => {
+      if (!res) return;
       attachments[currentTab] = attachments[currentTab].filter(f => f.id !== id);
       window.Toast && Toast.success('Anexo removido.');
       Router.navigate('checklists', { force: true });
-    }
+    });
   }
 
   function render() {

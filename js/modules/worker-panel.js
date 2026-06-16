@@ -564,34 +564,36 @@ window.WorkerPanel = (() => {
   }
 
   function cancelWork() {
-    if (!confirm('Tem certeza que deseja cancelar este apontamento em andamento? As horas decorridas não serão registradas.')) return;
-    const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
-    if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
+    window.uiConfirm('Tem certeza que deseja cancelar este apontamento em andamento? As horas decorridas não serão registradas.', (res) => {
+      if (!res) return;
+      const session = Auth.getSession();
+      const myWorker = getMyWorker(session);
+      if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
-    const t = DB.tasks.get(myWorker.currentTaskId);
+      const t = DB.tasks.get(myWorker.currentTaskId);
 
-    DB.workforce.update(myWorker.id, {
-      currentState: 'Ocioso',
-      currentTaskId: null,
-      currentActionStartTime: null,
-      currentPauseReason: ''
-    });
+      DB.workforce.update(myWorker.id, {
+        currentState: 'Ocioso',
+        currentTaskId: null,
+        currentActionStartTime: null,
+        currentPauseReason: ''
+      });
 
-    if (t) {
-      // Check if there are other workers executing this task or past timesheets
-      const workers = DB.workforce.list() || [];
-      const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId === t.id);
-      const timesheets = DB.timesheets.list() || [];
-      const hasTimesheets = timesheets.some(ts => ts.taskId === t.id);
-      
-      if (!otherActive && !hasTimesheets) {
-        DB.tasks.update(t.id, { status: 'Não Iniciada' });
+      if (t) {
+        // Check if there are other workers executing this task or past timesheets
+        const workers = DB.workforce.list() || [];
+        const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId === t.id);
+        const timesheets = DB.timesheets.list() || [];
+        const hasTimesheets = timesheets.some(ts => ts.taskId === t.id);
+        
+        if (!otherActive && !hasTimesheets) {
+          DB.tasks.update(t.id, { status: 'Não Iniciada' });
+        }
       }
-    }
 
-    Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
-    Router.navigate('worker-panel', { force: true });
+      Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
+      Router.navigate('worker-panel', { force: true });
+    });
   }
 
   function promptComplete() {

@@ -164,7 +164,8 @@ window.AttendanceModule = (() => {
   }
 
   function cancelFerias(workerId) {
-    if (confirm('Deseja cancelar o período de férias agendado/ativo para este funcionário?')) {
+    window.uiConfirm('Deseja cancelar o período de férias agendado/ativo para este funcionário?', (res) => {
+      if (!res) return;
       const vList = window.DB && DB.vacations ? DB.vacations.list().filter(v => v.workerId === workerId) : [];
       const tIso = new Date().toISOString().slice(0, 10);
       const toDelete = vList.find(v => tIso <= v.endDate); // Delete current or future vacation
@@ -177,7 +178,7 @@ window.AttendanceModule = (() => {
       
       Toast.success('Cancelado', 'As férias foram removidas.');
       Router.navigate('attendance', { force: true });
-    }
+    });
   }
 
   function promptLancamento(workerId, tipo) {

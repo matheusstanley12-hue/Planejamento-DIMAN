@@ -128,7 +128,8 @@ window.VacationsModule = (() => {
   }
 
   function cancelVacation(vacationId, workerId, isLegacy) {
-    if (confirm('Deseja realmente cancelar este período de férias? O funcionário ficará disponível imediatamente para o período.')) {
+    window.uiConfirm('Deseja realmente cancelar este período de férias? O funcionário ficará disponível imediatamente para o período.', (res) => {
+      if (!res) return;
       if (!isLegacy) {
         DB.vacations.delete(vacationId);
       }
@@ -137,7 +138,7 @@ window.VacationsModule = (() => {
       
       Toast.success('Férias canceladas com sucesso!');
       Router.navigate('vacations', { force: true });
-    }
+    });
   }
 
   return { render, cancelVacation };

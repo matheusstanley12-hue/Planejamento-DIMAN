@@ -254,17 +254,19 @@ window.MeetingsModule = (() => {
   }
 
   function completeTask(id) {
-    if (confirm('Marcar esta tarefa como concluída?')) {
+    window.uiConfirm('Marcar esta tarefa como concluída?', (res) => {
+      if (!res) return;
       DB.meetingTasks.update(id, { status: 'Concluída', completedAt: DB.now() });
       renderTable();
-    }
+    });
   }
 
   function deleteTask(id) {
-    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
+    window.uiConfirm('Tem certeza que deseja excluir esta tarefa?', (res) => {
+      if (!res) return;
       DB.meetingTasks.delete(id);
       renderTable();
-    }
+    });
   }
 
   function downloadPDF() {

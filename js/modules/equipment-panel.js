@@ -168,7 +168,7 @@ window.EquipmentPanel = (() => {
           </button>
           <div style="display:flex;gap:var(--space-2);">
             ${window.Auth && Auth.getSession()?.perfil === 'Administrador' ? `
-              <button class="btn btn-ghost btn-sm" onclick="try{window.EquipmentPanel.deleteEquipment()}catch(e){alert(e.message)}" style="color:var(--color-danger);border:1px solid transparent;" title="Excluir Equipamento permanentemente" onmouseover="this.style.borderColor='var(--color-danger)'" onmouseout="this.style.borderColor='transparent'">
+              <button class="btn btn-ghost btn-sm" onclick="try{window.EquipmentPanel.deleteEquipment()}catch(e){window.Toast.error('Erro', e.message)}" style="color:var(--color-danger);border:1px solid transparent;" title="Excluir Equipamento permanentemente" onmouseover="this.style.borderColor='var(--color-danger)'" onmouseout="this.style.borderColor='transparent'">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                 Excluir Equipamento
               </button>
@@ -1118,7 +1118,11 @@ window.EquipmentPanel = (() => {
       : (defaultWorker && selectedWorker !== defaultWorker);
 
     if (isWorkerChanged) {
-      const justification = prompt(`Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${selectedWorker || 'Ninguém'}"):`);
+      const justification = await window.promptAsync(
+        'Justificativa',
+        `Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${selectedWorker || 'Ninguém'}"):`,
+        'Digite a justificativa...'
+      );
       if (justification === null) {
         return; // Abort saving!
       }
@@ -1172,13 +1176,12 @@ window.EquipmentPanel = (() => {
     Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
   }
 
-  function deleteTask(eqId, id) {
-    if (confirm('Tem certeza que deseja excluir esta atividade?')) {
+  async function deleteTask(eqId, id) {
+    if (!(await window.confirmAsync('Atenção', 'Tem certeza que deseja excluir esta atividade?', true))) return;
       DB.tasks.delete(id);
       Toast.success('Atividade removida.');
       Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
     }
-  }
 
   function openPartModal(partId = null) {
     openModal('eq-part-modal');
@@ -1260,13 +1263,12 @@ window.EquipmentPanel = (() => {
     Router.navigate('equipment-panel', { id: currentEqId, force: true });
   }
 
-  function deletePart(id) {
-    if (confirm('Tem certeza que deseja excluir esta peça?')) {
+  async function deletePart(id) {
+    if (!(await window.confirmAsync('Atenção', 'Tem certeza que deseja excluir esta peça?', true))) return;
       DB.parts.delete(id);
       Toast.success('Peça removida.');
       Router.navigate('equipment-panel', { id: currentEqId, force: true });
     }
-  }
 
   function togglePartEntregue(id, isChecked) {
     const today = new Date().toISOString().slice(0, 10);
@@ -1510,7 +1512,7 @@ window.EquipmentPanel = (() => {
       }).join(';'))
     ].join('\n');
     
-    const blob = new Blob(['\\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1524,9 +1526,9 @@ window.EquipmentPanel = (() => {
     Toast.success('Exportação', 'Download do arquivo iniciado.');
   }
 
-  function deleteEquipment() {
+  async function deleteEquipment() {
     if (!currentEqId) return;
-    const eq = window.DB.equipment.get(currentEqId);
+    const eq = DB.equipment.get(currentEqId);
     if (!eq) return;
     
     const user = window.Auth.getSession();
@@ -1535,21 +1537,21 @@ window.EquipmentPanel = (() => {
       return;
     }
 
-    if (confirm(`ATENÇÃO! Tem certeza que deseja excluir completamente o equipamento ${eq.codigo} e TODAS as suas tarefas, peças e histórico? Esta ação não pode ser desfeita.`)) {
-      // Remover todas as tarefas atreladas
-      const eqTasks = window.DB.tasks.getByEquipment(currentEqId);
-      eqTasks.forEach(t => window.DB.tasks.delete(t.id));
-      
-      // Remover todas as pecas atreladas
-      const eqParts = window.DB.parts.list(currentEqId);
-      eqParts.forEach(p => window.DB.parts.delete(p.id));
-      
-      // Finalmente remove o equipamento
-      window.DB.equipment.delete(currentEqId);
-      
-      window.Toast.success('Equipamento Excluído', `O equipamento ${eq.codigo} foi removido com sucesso.`);
-      window.Router.navigate('home', { force: true });
-    }
+    if (!(await window.confirmAsync('ATENÇÃO', `Tem certeza que deseja excluir completamente o equipamento ${eq.codigo} e TODAS as suas tarefas, peças e histórico? Esta ação não pode ser desfeita.`, true))) return;
+    
+    // Remover todas as tarefas atreladas
+    const eqTasks = window.DB.tasks.getByEquipment(currentEqId);
+    eqTasks.forEach(t => window.DB.tasks.delete(t.id));
+    
+    // Remover todas as pecas atreladas
+    const eqParts = window.DB.parts.list(currentEqId);
+    eqParts.forEach(p => window.DB.parts.delete(p.id));
+    
+    // Finalmente remove o equipamento
+    window.DB.equipment.delete(currentEqId);
+    
+    window.Toast.success('Equipamento Excluído', `O equipamento ${eq.codigo} foi removido com sucesso.`);
+    window.Router.navigate('home', { force: true });
   }
 
   function toggleTaskExpand(taskId) {
@@ -1701,7 +1703,7 @@ window.EquipmentPanel = (() => {
     }
   }
 
-  function deleteComment(taskId, commentId, eqId) {
+  async function deleteComment(taskId, commentId, eqId) {
     const task = DB.tasks.get(taskId);
     if (!task) return;
 
@@ -1724,7 +1726,7 @@ window.EquipmentPanel = (() => {
       return;
     }
 
-    if (!confirm('Deseja realmente excluir este comentário?')) return;
+    if (!(await window.confirmAsync('Atenção', 'Deseja realmente excluir este comentário?', true))) return;
 
     const updatedComments = comments.filter(c => c.id !== commentId);
     const updatedObservations = JSON.stringify(updatedComments);

@@ -1747,14 +1747,15 @@ window.UsersModule = (() => {
       Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir usuários.');
       return;
     }
-    if(confirm('Tem certeza que deseja excluir este usuário?')) {
+    window.uiConfirm('Tem certeza que deseja excluir este usuário?', (res) => {
+      if (!res) return;
       let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
       users = users.filter(u => u.id !== id);
       localStorage.setItem('diman_users', JSON.stringify(users));
       if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
       Toast && Toast.success('Sucesso', 'Usuário excluído.');
       Router.navigate('users', { force: true });
-    }
+    });
   }
 
   function openEditUser(id) {
@@ -2003,11 +2004,13 @@ window.ActionPlanModule = (() => {
       Toast.error('Acesso Negado', 'Apenas administradores podem excluir planos de ação.');
       return;
     }
-    if (!confirm('Tem certeza que deseja excluir este plano de ação?')) return;
-    const plans = getPlans().filter(p => p.id !== planId);
-    savePlans(plans);
-    Toast.success('Plano excluído');
-    Router.navigate('action-plans', { force: true });
+    window.uiConfirm('Tem certeza que deseja excluir este plano de ação?', (res) => {
+      if (!res) return;
+      const plans = getPlans().filter(p => p.id !== planId);
+      savePlans(plans);
+      Toast.success('Plano excluído');
+      Router.navigate('action-plans', { force: true });
+    });
   }
 
   function render() {

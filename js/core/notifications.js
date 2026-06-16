@@ -40,6 +40,35 @@ window.Toast = (() => {
   };
 })();
 
+// ---- UI Confirm Modal ----
+window.uiConfirm = function(msg, callback) {
+  return new Promise((resolve) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);z-index:999999;display:flex;justify-content:center;align-items:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg-card, #fff);padding:24px;border-radius:12px;width:90%;max-width:400px;box-shadow:0 10px 25px rgba(0,0,0,0.5);text-align:center;border:1px solid var(--border-default, #ccc);';
+    box.innerHTML = `
+      <h3 style="margin-top:0;margin-bottom:12px;font-size:18px;color:var(--text-primary, #111);">Confirmação</h3>
+      <p style="margin-bottom:24px;font-size:14px;color:var(--text-secondary, #555);">${msg}</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button class="btn btn-secondary" id="ui-confirm-cancel" style="flex:1;">Cancelar</button>
+        <button class="btn btn-primary" id="ui-confirm-ok" style="flex:1;">Confirmar</button>
+      </div>
+    `;
+    d.appendChild(box);
+    document.body.appendChild(d);
+
+    const finish = (result) => {
+      d.remove();
+      if (callback) callback(result);
+      resolve(result);
+    };
+
+    box.querySelector('#ui-confirm-cancel').onclick = () => finish(false);
+    box.querySelector('#ui-confirm-ok').onclick = () => finish(true);
+  });
+};
+
 // ---- Notification Panel ----
 const NotifPanel = (() => {
   let open = false;
