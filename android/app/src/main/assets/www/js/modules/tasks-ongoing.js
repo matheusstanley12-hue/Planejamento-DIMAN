@@ -2,6 +2,7 @@ window.TasksOngoingModule = (() => {
   let _interval;
   let _liveInterval;
   let _eqFilter = '';
+  let _statusFilter = '';
 
   function render() {
     return `
@@ -16,12 +17,24 @@ window.TasksOngoingModule = (() => {
           <div style="font-size:var(--text-sm);color:var(--text-muted);">(Tempo real)</div>
         </div>
 
-        <div style="margin-bottom:var(--space-4); display:flex; align-items:center; gap:16px; background:var(--bg-card); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border-card);">
-          <label style="font-weight:600; color:var(--text-secondary); margin:0;">Filtrar Equipamento:</label>
-          <select class="form-control" style="max-width:300px; padding:6px 12px;" onchange="TasksOngoingModule.setEqFilter(this.value)">
-            <option value="">Todos os Equipamentos</option>
-            ${renderEqOptions()}
-          </select>
+        <div style="margin-bottom:var(--space-4); display:flex; align-items:center; gap:16px; background:var(--bg-card); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border-card); flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-weight:600; color:var(--text-secondary); margin:0;">Equipamento:</label>
+            <select class="form-control" style="max-width:300px; padding:6px 12px;" onchange="TasksOngoingModule.setEqFilter(this.value)">
+              <option value="">Todos os Equipamentos</option>
+              ${renderEqOptions()}
+            </select>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-weight:600; color:var(--text-secondary); margin:0;">Status:</label>
+            <select class="form-control" style="max-width:200px; padding:6px 12px;" onchange="TasksOngoingModule.setStatusFilter(this.value)">
+              <option value="" ${_statusFilter === '' ? 'selected' : ''}>Todos os Status</option>
+              <option value="Em Execução" ${_statusFilter === 'Em Execução' ? 'selected' : ''}>Em Execução</option>
+              <option value="Pausada" ${_statusFilter === 'Pausada' ? 'selected' : ''}>Pausada</option>
+              <option value="Aguardando Peça" ${_statusFilter === 'Aguardando Peça' ? 'selected' : ''}>Aguardando Peça</option>
+              <option value="Bloqueada" ${_statusFilter === 'Bloqueada' ? 'selected' : ''}>Bloqueada</option>
+            </select>
+          </div>
         </div>
 
         <div id="ongoing-tasks-content">
@@ -40,6 +53,14 @@ window.TasksOngoingModule = (() => {
     _eqFilter = val;
     const el = document.getElementById('ongoing-tasks-content');
     if (el) el.innerHTML = renderContent();
+    updateLiveTimers();
+  }
+
+  function setStatusFilter(val) {
+    _statusFilter = val;
+    const el = document.getElementById('ongoing-tasks-content');
+    if (el) el.innerHTML = renderContent();
+    updateLiveTimers();
   }
 
   function renderContent() {
@@ -53,6 +74,21 @@ window.TasksOngoingModule = (() => {
     const timesheets = (DB.timesheets ? DB.timesheets.list() : []) || [];
     const restrictions = (DB.restrictions ? DB.restrictions.getAll() : []) || [];
     
+    if (_statusFilter) {
+      activeTasks = activeTasks.filter(t => {
+        if (_statusFilter === 'Aguardando Peça') return t.status === 'Aguardando Peça';
+        if (_statusFilter === 'Bloqueada') return t.status === 'Bloqueada';
+        if (_statusFilter === 'Pausada' || _statusFilter === 'Em Execução') {
+          if (t.status !== 'Em Andamento') return false;
+          const taskTs = timesheets.filter(ts => ts.taskId === t.id);
+          const activeTs = taskTs.filter(ts => !ts.endTime);
+          if (_statusFilter === 'Em Execução') return activeTs.length > 0;
+          if (_statusFilter === 'Pausada') return activeTs.length === 0;
+        }
+        return true;
+      });
+    }
+
     activeTasks.sort((a, b) => {
       if (a.status === 'Em Andamento' && b.status !== 'Em Andamento') return -1;
       if (b.status === 'Em Andamento' && a.status !== 'Em Andamento') return 1;
@@ -249,5 +285,5 @@ window.TasksOngoingModule = (() => {
     return originalRender();
   };
 
-  return { render, goToEq, setEqFilter };
+  return { render, goToEq, setEqFilter, setStatusFilter };
 })();
