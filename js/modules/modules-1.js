@@ -133,7 +133,7 @@ window.Dashboard = (() => {
                labels: sts,
                datasets: [{ data: counts, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 2, borderColor: 'var(--bg-card)' }]
              },
-             options: { cutout: '70%', maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+             options: { cutout: '70%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
            });
         }
         
@@ -197,7 +197,7 @@ window.Dashboard = (() => {
           charts.partsChart = new Chart(ctxParts, {
             type: 'doughnut',
             data: { labels: ['Solicitada', 'Comprada', 'Em Transporte', 'Entregue'], datasets: [{ data: [pSol, pCom, pTra, pEnt], backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981'], borderWidth:2, borderColor:'var(--bg-card)' }] },
-            options: { cutout: '60%', maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
+            options: { cutout: '60%', maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } } }
           });
         }
 
@@ -246,7 +246,7 @@ window.Dashboard = (() => {
           charts.worker = new Chart(ctxWorker, {
             type: 'polarArea',
             data: { labels: roles, datasets: [{ data: roleCount, backgroundColor: ['rgba(59,130,246,0.6)', 'rgba(16,185,129,0.6)', 'rgba(245,158,11,0.6)', 'rgba(239,68,68,0.6)', 'rgba(139,92,246,0.6)'], borderWidth:1, borderColor:'var(--bg-card)' }] },
-            options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } }, scales: { r: { grid: { color: borderColor }, ticks: { display: false } } } }
+            options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } } }, scales: { r: { grid: { color: borderColor }, ticks: { display: false } } } }
           });
         }
       } catch(e) { console.warn('Mega Chart Error', e); }
@@ -263,9 +263,13 @@ window.Dashboard = (() => {
     `;
     
     const chartCard = (title, id) => `
-      <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; height: 260px;">
-        <div style="font-size:12px; font-weight:800; color:var(--text-primary); margin-bottom:12px;">${title}</div>
-        <div style="flex:1; position:relative;"><canvas id="${id}"></canvas></div>
+      <div style="background:var(--bg-card); border:1px solid var(--border-card); border-radius:var(--radius-xl); padding:var(--space-4); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; min-height: 300px; height: 100%; overflow:hidden;">
+        <div style="font-size:13px; font-weight:800; color:var(--text-primary); margin-bottom:16px; flex-shrink: 0;">${title}</div>
+        <div style="flex:1; position:relative; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;">
+           <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
+             <canvas id="${id}"></canvas>
+           </div>
+        </div>
       </div>
     `;
 
