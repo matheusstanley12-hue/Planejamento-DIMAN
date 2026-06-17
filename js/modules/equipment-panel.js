@@ -1105,12 +1105,23 @@ window.EquipmentPanel = (() => {
       previousWorker = t ? t.responsavel : null;
     }
     
-    const isWorkerChanged = editingTaskId
-      ? (selectedWorker !== previousWorker)
-      : (defaultWorker && selectedWorker !== defaultWorker);
+    let isWorkerChanged = false;
+    if (editingTaskId) {
+      if (previousWorker && previousWorker !== 'Não atribuído' && selectedWorker !== previousWorker) {
+        isWorkerChanged = true;
+      }
+    } else {
+      if (selectedWorker && selectedWorker !== 'Não atribuído' && selectedWorker !== defaultWorker) {
+        isWorkerChanged = true;
+      }
+    }
 
     if (isWorkerChanged) {
-      const justification = window.prompt(`Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${selectedWorker || 'Ninguém'}"):`);
+      const justification = await window.uiPromptAsync(
+        'Justificativa',
+        `Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${selectedWorker || 'Ninguém'}"):`,
+        'Digite a justificativa...'
+      );
       if (justification === null) {
         return; // Abort saving!
       }

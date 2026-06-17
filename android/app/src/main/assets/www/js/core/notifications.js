@@ -69,6 +69,41 @@ window.uiConfirm = function(msg, callback) {
   });
 };
 
+window.uiPromptAsync = function(title, msg, placeholder = '') {
+  return new Promise((resolve) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);backdrop-filter:blur(2px);z-index:999999;display:flex;justify-content:center;align-items:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg-card, #fff);padding:24px;border-radius:12px;width:90%;max-width:400px;box-shadow:0 10px 25px rgba(0,0,0,0.5);text-align:left;border:1px solid var(--border-default, #ccc);';
+    box.innerHTML = `
+      <h3 style="margin-top:0;margin-bottom:12px;font-size:18px;color:var(--text-primary, #111);">${title}</h3>
+      <p style="margin-bottom:16px;font-size:14px;color:var(--text-secondary, #555);">${msg}</p>
+      <input type="text" id="ui-prompt-input" placeholder="${placeholder}" style="width:100%;padding:10px;margin-bottom:24px;border:1px solid var(--border-default);border-radius:6px;font-size:14px;box-sizing:border-box;" />
+      <div style="display:flex;gap:12px;justify-content:flex-end;">
+        <button class="btn btn-secondary" id="ui-prompt-cancel">Cancelar</button>
+        <button class="btn btn-primary" id="ui-prompt-ok">Confirmar</button>
+      </div>
+    `;
+    d.appendChild(box);
+    document.body.appendChild(d);
+
+    const input = box.querySelector('#ui-prompt-input');
+    input.focus();
+
+    const finish = (result) => {
+      d.remove();
+      resolve(result);
+    };
+
+    box.querySelector('#ui-prompt-cancel').onclick = () => finish(null);
+    box.querySelector('#ui-prompt-ok').onclick = () => finish(input.value);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') finish(input.value);
+      if (e.key === 'Escape') finish(null);
+    });
+  });
+};
+
 // ---- Notification Panel ----
 const NotifPanel = (() => {
   let open = false;

@@ -1456,7 +1456,7 @@ window.TasksModule = (() => {
     openModal('modal-task');
   }
 
-  function save() {
+  async function save() {
     const id = document.getElementById('tk-editing-id').value;
     const desc = document.getElementById('tk-desc').value.trim();
     if (!desc) { Toast.error('Erro', 'Descrição é obrigatória.'); return; }
@@ -1550,12 +1550,23 @@ window.TasksModule = (() => {
       previousWorker = t ? t.responsavel : null;
     }
     
-    const isWorkerChanged = id
-      ? (data.responsavel !== previousWorker)
-      : (defaultWorker && data.responsavel !== defaultWorker);
+    let isWorkerChanged = false;
+    if (id) {
+      if (previousWorker && previousWorker !== 'Não atribuído' && data.responsavel !== previousWorker) {
+        isWorkerChanged = true;
+      }
+    } else {
+      if (data.responsavel && data.responsavel !== 'Não atribuído' && data.responsavel !== defaultWorker) {
+        isWorkerChanged = true;
+      }
+    }
 
     if (isWorkerChanged) {
-      const justification = prompt(`Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${data.responsavel || 'Ninguém'}"):`);
+      const justification = await window.uiPromptAsync(
+        'Justificativa',
+        `Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${data.responsavel || 'Ninguém'}"):`,
+        'Digite a justificativa...'
+      );
       if (justification === null) {
         return; // Abort saving!
       }
