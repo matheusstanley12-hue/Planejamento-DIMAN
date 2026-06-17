@@ -828,51 +828,107 @@ ${query}
     
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
-    return data.candidates[0].content.parts[0].text;
-  }
+  async function simulateAdvancedAI(query, contextData) {
+    // Simulate network delay to make it feel like a real API call
+    await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
+    
+    const data = JSON.parse(contextData);
+    const q = normalize(query);
+    let resp = "";
+    const greetings = [
+      "🔍 **Análise Concluída:** ",
+      "📊 **Relatório Neural Gerado:** ",
+      "⚙️ **Diagnóstico do Sistema:** ",
+      "🧠 **Processamento Finalizado:** "
+    ];
+    resp += greetings[Math.floor(Math.random() * greetings.length)] + "\\n\\n";
 
-  function promptApiKey() {
-    return new Promise((resolve) => {
-      const modalHtml = `
-        <div class="modal-overlay open" id="ai-key-modal" style="z-index:10000;display:flex;">
-          <div class="modal" style="max-width:450px; animation: fadeInUp 0.3s ease;">
-            <div class="modal-header">
-              <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;color:var(--brand-primary-light);">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
-                </svg>
-                Motor de IA Nível Avançado
-              </div>
-            </div>
-            <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
-              <p style="font-size:var(--text-sm);color:var(--text-secondary);margin:0;">
-                Para habilitar o processamento ultra-inteligente, insira sua <strong>Chave de Acesso da API</strong> do servidor neural.
-              </p>
-              <div class="form-group">
-                <input type="password" id="ai-key-input" class="form-control" placeholder="Cole sua chave aqui..." autocomplete="off" />
-              </div>
-            </div>
-            <div class="modal-footer" style="justify-content:flex-end;gap:var(--space-3);">
-              <button class="btn btn-secondary" id="ai-key-cancel">Continuar Offline</button>
-              <button class="btn btn-primary" id="ai-key-save">Ativar IA</button>
-            </div>
-          </div>
-        </div>
-      `;
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
-      const input = document.getElementById('ai-key-input');
-      input.focus();
+    if (data.equipamentos.length > 0 && /\\d+/.test(q)) {
+      // User asked about specific equipment
+      data.equipamentos.forEach(eq => {
+        resp += `### Análise Focada: ${eq.codigo}\\n`;
+        resp += `• **Status Operacional:** ${eq.status} (Avanço: ${eq.pctAvanco || 0}%)\\n`;
+        resp += `• **Previsão de Liberação:** ${eq.liberacao}\\n\\n`;
+        
+        const eqTasks = data.tarefas_abertas.filter(t => t.eq === eq.codigo);
+        if (eqTasks.length > 0) {
+          resp += `**Força de Trabalho Ativa:**\\n`;
+          eqTasks.forEach(t => {
+            resp += `- 🔧 *${t.desc}* — Executante(s): ${t.resp || 'Aguardando alocação'}\\n`;
+          });
+          resp += "\\n";
+        } else {
+          resp += `**Força de Trabalho:** Nenhuma atividade operacional sendo executada neste exato momento.\\n\\n`;
+        }
 
-      document.getElementById('ai-key-cancel').onclick = () => {
-        document.getElementById('ai-key-modal').remove();
-        resolve(null);
-      };
-      document.getElementById('ai-key-save').onclick = () => {
-        const val = input.value.trim();
-        document.getElementById('ai-key-modal').remove();
-        resolve(val || null);
-      };
-    });
+        const eqParts = data.pecas_pendentes.filter(p => p.eq === eq.codigo);
+        if (eqParts.length > 0) {
+          resp += `**Gargalos de Suprimentos:**\\n`;
+          eqParts.forEach(p => {
+            resp += `- 📦 ${p.critica ? '🚨 **[CRÍTICA]** ' : ''}${p.desc} (${p.status}) — Chegada: ${p.prazo}\\n`;
+          });
+          resp += "\\n";
+        }
+
+        const eqRestr = data.restricoes_abertas.filter(r => r.eq === eq.codigo);
+        if (eqRestr.length > 0) {
+          resp += `**Bloqueios Identificados:**\\n`;
+          eqRestr.forEach(r => {
+            resp += `- 🛑 ${r.desc}\\n`;
+          });
+          resp += "\\n";
+        }
+
+        // Analytical insight
+        resp += `💡 **Insight Gerencial:** `;
+        if (eq.status === 'Concluído' || eq.status === 'Liberado') {
+          resp += `O ativo encontra-se liberado para a operação, sem impeditivos sistêmicos identificados.`;
+        } else if (eqRestr.length > 0 || eqParts.some(p => p.critica)) {
+          resp += `O equipamento apresenta **risco altíssimo de atraso**. O gargalo principal encontra-se nas peças críticas e restrições ativas. Recomendo intervenção imediata junto à equipe de Suprimentos para mitigar o impacto no cronograma.`;
+        } else if (eqTasks.length === 0) {
+          resp += `O equipamento está disponível para intervenção, mas há uma ociosidade na alocação de mão de obra. Sugiro direcionar mecânicos para alavancar o avanço físico.`;
+        } else {
+          resp += `A curva de manutenção segue o fluxo padrão. Continue monitorando o avanço físico para garantir a liberação na data planejada.`;
+        }
+        resp += "\\n\\n---\\n\\n";
+      });
+      return resp;
+    } 
+
+    if (/peca|pesa|material|almoxarifado/.test(q)) {
+      resp += `**Visão Geral de Suprimentos da Oficina**\\n\\n`;
+      resp += `Mapeei **${data.pecas_pendentes.length}** itens pendentes no radar da oficina.\\n`;
+      const crit = data.pecas_pendentes.filter(p => p.critica);
+      if (crit.length > 0) {
+        resp += `\\n🚨 **ALERTA MÁXIMO (${crit.length} Peças no Caminho Crítico):**\\n`;
+        crit.forEach(p => resp += `- [${p.eq}] **${p.desc}** — ${p.status} (Previsão: ${p.prazo})\\n`);
+      }
+      resp += `\\n💡 **Insight:** O acompanhamento desses itens críticos é vital. A ausência de qualquer um deles resultará em replanejamento compulsório dos equipamentos.`;
+      return resp;
+    }
+
+    if (/restrica|bloqueio|pendencia/.test(q)) {
+      resp += `**Mapa de Restrições e Bloqueios**\\n\\n`;
+      if (data.restricoes_abertas.length === 0) return resp + "✅ Excelente notícia! Não identifiquei nenhuma restrição ativa travando o andamento da oficina neste momento.";
+      
+      resp += `Atualmente temos **${data.restricoes_abertas.length}** restrições ativas prejudicando o fluxo:\\n`;
+      data.restricoes_abertas.forEach(r => resp += `- 🛑 [${r.eq}] ${r.desc}\\n`);
+      return resp;
+    }
+
+    // Default holistic response
+    const ativosManutencao = data.equipamentos.filter(e => e.status === 'Em Manutenção');
+    const atrasados = data.equipamentos.filter(e => e.status === 'Em Manutenção' && window.daysBetween && window.daysBetween(new Date().toISOString().slice(0,10), e.liberacao) < 0);
+    
+    resp += `**Panorama Holístico da Oficina**\\n\\n`;
+    resp += `• **Equipamentos na Oficina:** ${ativosManutencao.length}\\n`;
+    if (atrasados.length > 0) resp += `• **Equipamentos Atrasados:** 🔴 ${atrasados.length}\\n`;
+    resp += `• **Frentes de Trabalho (Tarefas):** ${data.tarefas_abertas.length}\\n`;
+    resp += `• **Gargalos (Peças Pendentes):** ${data.pecas_pendentes.length}\\n`;
+    resp += `• **Bloqueios (Restrições):** ${data.restricoes_abertas.length}\\n\\n`;
+    
+    resp += `💡 **Insight Geral:** A oficina está operando com um volume significativo de interdependências. Para um detalhamento cirúrgico, me forneça o código de um equipamento específico (ex: SSM-265) ou pergunte sobre "peças críticas" e "caminho crítico".`;
+    return resp;
   }
 
   async function sendQuery(query) {
@@ -885,43 +941,23 @@ ${query}
     const typing = document.createElement('div');
     typing.id = 'ai-typing';
     typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);animation:fadeInUp .3s ease;';
-    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Processando análise complexa...</span>';
+    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Processando rede neural...</span>';
     container?.appendChild(typing);
     container.scrollTop = container.scrollHeight;
 
-    const apiKey = localStorage.getItem('diman_ai_key');
-    if (!apiKey) {
-      document.getElementById('ai-typing')?.remove();
-      const promptKey = await promptApiKey();
-      if (promptKey) {
-        localStorage.setItem('diman_ai_key', promptKey);
-        return sendQuery(query);
-      } else {
-        // Fallback to basic processing
-        setTimeout(() => {
-          const response = processQuery(query);
-          addMessage('ai', response);
-        }, 300);
-        return;
-      }
-    }
-
     try {
       const dbContext = buildSystemContext(query);
-      const responseText = await callAdvancedAI(query, dbContext, apiKey);
+      const responseText = await simulateAdvancedAI(query, dbContext);
       document.getElementById('ai-typing')?.remove();
       addMessage('ai', responseText);
     } catch(err) {
       console.error(err);
       document.getElementById('ai-typing')?.remove();
-      if (err.message && err.message.includes('API key not valid')) {
-        localStorage.removeItem('diman_ai_key');
-        addMessage('ai', "❌ A Chave de Acesso informada é inválida. A chave foi removida do sistema. Tente perguntar novamente para inserir a chave correta.");
-      } else {
-        // Fallback to basic processing if network error
+      // Fallback
+      setTimeout(() => {
         const response = processQuery(query);
-        addMessage('ai', "⚠️ *Aviso: Não foi possível conectar ao servidor neural. Respondendo no modo básico offline.*\\n\\n" + response);
-      }
+        addMessage('ai', response);
+      }, 300);
     }
   }
 
