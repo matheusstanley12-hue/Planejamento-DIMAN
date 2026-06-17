@@ -831,6 +831,50 @@ ${query}
     return data.candidates[0].content.parts[0].text;
   }
 
+  function promptApiKey() {
+    return new Promise((resolve) => {
+      const modalHtml = `
+        <div class="modal-overlay open" id="ai-key-modal" style="z-index:10000;display:flex;">
+          <div class="modal" style="max-width:450px; animation: fadeInUp 0.3s ease;">
+            <div class="modal-header">
+              <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px;color:var(--brand-primary-light);">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+                </svg>
+                Motor de IA Nível Avançado
+              </div>
+            </div>
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+              <p style="font-size:var(--text-sm);color:var(--text-secondary);margin:0;">
+                Para habilitar o processamento ultra-inteligente, insira sua <strong>Chave de Acesso da API</strong> do servidor neural.
+              </p>
+              <div class="form-group">
+                <input type="password" id="ai-key-input" class="form-control" placeholder="Cole sua chave aqui..." autocomplete="off" />
+              </div>
+            </div>
+            <div class="modal-footer" style="justify-content:flex-end;gap:var(--space-3);">
+              <button class="btn btn-secondary" id="ai-key-cancel">Continuar Offline</button>
+              <button class="btn btn-primary" id="ai-key-save">Ativar IA</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const input = document.getElementById('ai-key-input');
+      input.focus();
+
+      document.getElementById('ai-key-cancel').onclick = () => {
+        document.getElementById('ai-key-modal').remove();
+        resolve(null);
+      };
+      document.getElementById('ai-key-save').onclick = () => {
+        const val = input.value.trim();
+        document.getElementById('ai-key-modal').remove();
+        resolve(val || null);
+      };
+    });
+  }
+
   async function sendQuery(query) {
     if (!query?.trim()) return;
     const input = document.getElementById('ai-input');
@@ -848,9 +892,9 @@ ${query}
     const apiKey = localStorage.getItem('diman_ai_key');
     if (!apiKey) {
       document.getElementById('ai-typing')?.remove();
-      const promptKey = window.prompt("Para habilitar a Inteligência de Nível Avançado, por favor insira a sua Chave de Acesso da API (Motor IA):");
+      const promptKey = await promptApiKey();
       if (promptKey) {
-        localStorage.setItem('diman_ai_key', promptKey.trim());
+        localStorage.setItem('diman_ai_key', promptKey);
         return sendQuery(query);
       } else {
         // Fallback to basic processing
