@@ -477,6 +477,37 @@ window.DPanel = (() => {
     `;
   }
 
+  function renderTop5Card() {
+    const top = getTopPerformers();
+    if (top.length === 0) return '';
+    
+    const emojis = ['🥇', '🥈', '🥉', '🏅', '🏅'];
+    const colors = ['#eab308', '#94a3b8', '#b45309', '#64748b', '#64748b'];
+
+    return `
+      <div class="card" style="margin-top:var(--space-5);">
+        <div class="card-header">
+          <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color:var(--brand-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+            Top 5 Executantes
+          </div>
+          <span style="font-size:var(--text-xs);color:var(--text-muted)">Ranking do Mês (Tarefas Concluídas)</span>
+        </div>
+        <div style="display:flex; gap:var(--space-4); flex-wrap:wrap;">
+          ${top.map((t, idx) => `
+            <div style="flex:1; min-width:140px; display:flex; align-items:center; gap:var(--space-3); background:var(--bg-base); border-radius:var(--radius-md); padding:var(--space-3) var(--space-4); border-left:3px solid ${colors[idx]};">
+              <div style="font-size:1.8rem; line-height:1;">${emojis[idx]}</div>
+              <div>
+                <div style="font-size:var(--text-sm); font-weight:700; color:var(--text-primary); margin-bottom:2px;">${t.nome.split(' ')[0]}</div>
+                <div style="font-size:var(--text-xs); color:var(--text-secondary);">${t.count} tarefas</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   function render() {
     const d1Tasks = getTasksForDate(dateOf(-1));
     const dTasks  = getTasksForDate(today());
@@ -520,6 +551,9 @@ window.DPanel = (() => {
 
         <!-- Indicators -->
         ${renderIndicators()}
+
+        <!-- Top 5 Performers -->
+        ${renderTop5Card()}
 
         <!-- AI Alerts -->
         ${renderAIAlerts()}
