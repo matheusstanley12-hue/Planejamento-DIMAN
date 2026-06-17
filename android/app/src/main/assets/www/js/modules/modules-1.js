@@ -1422,7 +1422,7 @@ window.TasksModule = (() => {
         <div class="modal modal-lg">
           <div class="modal-header"><div class="modal-title" id="task-modal-title">Tarefa</div><button class="modal-close" onclick="closeModal('modal-task')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
           <div class="modal-body" id="task-modal-body"></div>
-          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button id="modal-task-save-btn" class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
         </div>
       </div>`;
       document.body.appendChild(div.firstElementChild);
@@ -1433,6 +1433,11 @@ window.TasksModule = (() => {
       const select = document.getElementById('tk-eq');
       if (select) select.value = equipmentId;
     }
+    const saveBtn = document.getElementById('modal-task-save-btn');
+    if (saveBtn) saveBtn.style.display = 'block';
+    const obsInput = document.getElementById('tk-obs');
+    if (obsInput) obsInput.disabled = false;
+
     onFormChange();
     openModal('modal-task');
   }
@@ -1444,7 +1449,7 @@ window.TasksModule = (() => {
         <div class="modal modal-lg">
           <div class="modal-header"><div class="modal-title" id="task-modal-title">Tarefa</div><button class="modal-close" onclick="closeModal('modal-task')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
           <div class="modal-body" id="task-modal-body"></div>
-          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
+          <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modal-task')">Cancelar</button><button id="modal-task-save-btn" class="btn btn-primary" onclick="TasksModule.save()">Salvar</button></div>
         </div>
       </div>`;
       document.body.appendChild(div.firstElementChild);
@@ -1453,6 +1458,20 @@ window.TasksModule = (() => {
     if (!t) return;
     document.getElementById('task-modal-title').textContent = 'Detalhamento da Tarefa';
     document.getElementById('task-modal-body').innerHTML = taskForm(t);
+
+    const session = window.Auth.getSession();
+    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+    const saveBtn = document.getElementById('modal-task-save-btn');
+    if (!canEdit) {
+      if (saveBtn) saveBtn.style.display = 'none';
+      const obsInput = document.getElementById('tk-obs');
+      if (obsInput) obsInput.disabled = true;
+    } else {
+      if (saveBtn) saveBtn.style.display = 'block';
+      const obsInput = document.getElementById('tk-obs');
+      if (obsInput) obsInput.disabled = false;
+    }
+
     openModal('modal-task');
   }
 

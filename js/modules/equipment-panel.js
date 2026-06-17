@@ -345,10 +345,18 @@ window.EquipmentPanel = (() => {
             </div>
 
             <div class="form-group" style="margin-bottom:var(--space-3);">
-              <label>Predecessoras (Tarefas das quais esta depende)</label>
-              <select id="new-task-preds" class="form-select" multiple style="width:100%;height:90px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);padding:var(--space-2);font-size:12px;">
-              </select>
-              <small style="color:var(--text-muted);font-size:10px;display:block;margin-top:2px;">Segure Ctrl (ou Cmd) para selecionar mais de uma tarefa.</small>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label style="margin:0;">Predecessoras (Tarefas das quais esta depende)</label>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('preds-edit-area').style.display = document.getElementById('preds-edit-area').style.display === 'none' ? 'block' : 'none'" style="font-size:10px;padding:2px 8px;border:1px solid var(--border-hover);">Editar Predecessoras</button>
+              </div>
+              <div id="new-task-preds-display" style="background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);min-height:36px;padding:6px 8px;display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--text-secondary);">
+                 <!-- Chips will be injected here -->
+              </div>
+              <div id="preds-edit-area" style="display:none;margin-top:8px;">
+                <select id="new-task-preds" class="form-select" multiple style="width:100%;height:120px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary);padding:var(--space-2);font-size:12px;" onchange="window.EquipmentPanel.updatePredsDisplay()">
+                </select>
+                <small style="color:var(--text-muted);font-size:10px;display:block;margin-top:4px;">Segure Ctrl (ou Cmd) para selecionar mais de uma tarefa.</small>
+              </div>
             </div>
 
             <div class="form-group" style="margin-bottom:var(--space-4);">
@@ -373,7 +381,7 @@ window.EquipmentPanel = (() => {
             <div style="display:flex;gap:var(--space-3);justify-content:flex-end;">
               <button id="new-task-delete-btn" class="btn btn-danger" onclick="window.EquipmentPanel.deleteTaskFromModal()" style="display:none;margin-right:auto;">Excluir Atividade</button>
               <button class="btn btn-ghost" onclick="closeModal('eq-task-modal')">Cancelar</button>
-              <button class="btn btn-primary" onclick="window.EquipmentPanel.saveTask('${currentEqId}')">Salvar Atividade</button>
+              <button id="new-task-save-btn" class="btn btn-primary" onclick="window.EquipmentPanel.saveTask('${currentEqId}')">Salvar Atividade</button>
             </div>
           </div>
         </div>
@@ -915,6 +923,22 @@ window.EquipmentPanel = (() => {
       document.getElementById('new-task-critico').checked = !!t.critico;
       if (deleteBtn) deleteBtn.style.display = 'block';
       
+      const session = window.Auth.getSession();
+      const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+      const saveBtn = document.getElementById('new-task-save-btn');
+      if (!canEdit) {
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+        document.getElementById('new-task-obs').disabled = true;
+        const sendBtn = document.querySelector('#new-task-obs').nextElementSibling;
+        if (sendBtn) sendBtn.style.display = 'none';
+      } else {
+        if (saveBtn) saveBtn.style.display = 'block';
+        document.getElementById('new-task-obs').disabled = false;
+        const sendBtn = document.querySelector('#new-task-obs').nextElementSibling;
+        if (sendBtn) sendBtn.style.display = 'block';
+      }
+      
       // Populate observations history if any
       const obsHistoryEl = document.getElementById('new-task-obs-history');
       document.getElementById('new-task-obs').value = ''; // clean input for new comment
@@ -978,9 +1002,45 @@ window.EquipmentPanel = (() => {
       document.getElementById('new-task-critico').checked = false;
       document.getElementById('new-task-obs-history').style.display = 'none';
       document.getElementById('new-task-obs').value = '';
+      document.getElementById('new-task-obs').disabled = false;
+      const sendBtn = document.querySelector('#new-task-obs').nextElementSibling;
+      if (sendBtn) sendBtn.style.display = 'block';
       if (deleteBtn) deleteBtn.style.display = 'none';
+      const saveBtn = document.getElementById('new-task-save-btn');
+      if (saveBtn) saveBtn.style.display = 'block';
       Array.from(predsSelect.options).forEach(opt => opt.selected = false);
     }
+    
+    document.getElementById('preds-edit-area').style.display = 'none';
+    updatePredsDisplay();
+  }
+
+  function updatePredsDisplay() {
+    const select = document.getElementById('new-task-preds');
+    const display = document.getElementById('new-task-preds-display');
+    if (!select || !display) return;
+    
+    let html = '';
+    const selectedOptions = Array.from(select.selectedOptions);
+    if (selectedOptions.length === 0) {
+      html = '<span style="color:var(--text-muted);font-style:italic;">Nenhuma predecessora selecionada.</span>';
+    } else {
+      selectedOptions.forEach(opt => {
+        html += `<span class="badge" style="background:var(--brand-primary-light);color:#fff;display:inline-flex;align-items:center;gap:4px;padding:4px 8px;">
+          ${opt.textContent}
+          <span style="cursor:pointer;font-weight:bold;margin-left:4px;" onclick="window.EquipmentPanel.removePred('${opt.value}')">&times;</span>
+        </span>`;
+      });
+    }
+    display.innerHTML = html;
+  }
+
+  function removePred(val) {
+    const select = document.getElementById('new-task-preds');
+    if (!select) return;
+    const opt = Array.from(select.options).find(o => o.value === val);
+    if (opt) opt.selected = false;
+    updatePredsDisplay();
   }
 
   async function saveTask(eqId) {
@@ -1798,6 +1858,6 @@ window.EquipmentPanel = (() => {
     cancelCommentEdit, saveCommentEdit, deleteComment, renderComments,
     togglePartEntregue, onStatusFormChange, onEntregueFormChange,
     getEditingTaskId: () => editingTaskId,
-    addCommentFromModal
+    addCommentFromModal, updatePredsDisplay, removePred
   };
 })();
