@@ -1,5 +1,5 @@
-/* ============================================================
-   PLANEJAMENTO DIMAN-BHZ — Module: Worker Panel (Executante)
+﻿/* ============================================================
+   PLANEJAMENTO DIMAN-BHZ ÔÇö Module: Worker Panel (Executante)
    ============================================================ */
 
 window.WorkerPanel = (() => {
@@ -45,7 +45,7 @@ window.WorkerPanel = (() => {
       const map = e.workforceMap || {};
       if (Object.values(map).includes(myWorkerName) || Object.values(map).includes(session.nome) || e.id === myDirectEqId) return true;
       
-      const eqTasks = allTasks.filter(t => t.equipmentId === e.id && t.status !== 'Concluída');
+      const eqTasks = allTasks.filter(t => t.equipmentId === e.id && t.status !== 'Conclu├¡da');
       return eqTasks.some(t => t.responsavel && (t.responsavel === myWorkerName || t.responsavel === session.nome));
     });
   }
@@ -69,17 +69,17 @@ window.WorkerPanel = (() => {
     if (sDisc && sDisc === disc) return true;
 
     if (sCargo) {
-      if (disc.includes('mecânic') || disc.includes('mecanic')) {
-        if ((sCargo.includes('mecânic') || sCargo.includes('mecanic')) && !sCargo.includes('torneiro')) return true;
+      if (disc.includes('mec├ónic') || disc.includes('mecanic')) {
+        if ((sCargo.includes('mec├ónic') || sCargo.includes('mecanic')) && !sCargo.includes('torneiro')) return true;
       } else if (disc.includes('usinagem')) {
         if (sCargo.includes('usinagem') || sCargo.includes('torneiro')) return true;
-      } else if (disc.includes('elétric') || disc.includes('eletric')) {
-        if (sCargo.includes('elétric') || sCargo.includes('eletric')) return true;
+      } else if (disc.includes('el├®tric') || disc.includes('eletric')) {
+        if (sCargo.includes('el├®tric') || sCargo.includes('eletric')) return true;
       } else if (disc.includes('caldeir') || disc.includes('solda')) {
         if (sCargo.includes('caldeir') || sCargo.includes('soldad')) return true;
       } else if (disc.includes('pintor') || disc.includes('pintura')) {
         if (sCargo.includes('pintor')) return true;
-      } else if (disc.includes('lavador') || disc.includes('lavação') || disc.includes('lavacao')) {
+      } else if (disc.includes('lavador') || disc.includes('lava├º├úo') || disc.includes('lavacao')) {
         if (sCargo.includes('lavador')) return true;
       } else if (disc.includes('montag') || disc.includes('montador')) {
         if (sCargo.includes('montag') || sCargo.includes('montador')) return true;
@@ -98,8 +98,8 @@ window.WorkerPanel = (() => {
     const blockedBy = [];
     preds.forEach(pid => {
       const pTask = allTasks.find(t => t.id === pid);
-      if (pTask && pTask.status !== 'Concluída') {
-        const pDesc = pTask.descricao || 'Tarefa sem descrição';
+      if (pTask && pTask.status !== 'Conclu├¡da') {
+        const pDesc = pTask.descricao || 'Tarefa sem descri├º├úo';
         const pDisc = pTask.disciplina ? `[${pTask.disciplina}] ` : '';
         const pCod = pTask.codigo ? ` (${pTask.codigo})` : '';
         blockedBy.push(`${pDisc}${pDesc}${pCod}`);
@@ -150,9 +150,9 @@ window.WorkerPanel = (() => {
     div.className = 'form-group executor-item';
     div.style.marginBottom = '15px';
     div.innerHTML = `
-      <label style="text-transform:uppercase;font-size:10px;font-weight:700;color:var(--text-muted);">Matrícula do Ajudante:</label>
+      <label style="text-transform:uppercase;font-size:10px;font-weight:700;color:var(--text-muted);">Matr├¡cula do Ajudante:</label>
       <div style="display:flex;gap:8px;margin-top:5px;">
-        <input type="number" inputmode="numeric" class="start-task-matricula-input" placeholder="Matrícula..." style="flex:1;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);font-size:16px;"/>
+        <input type="number" inputmode="numeric" class="start-task-matricula-input" placeholder="Matr├¡cula..." style="flex:1;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);font-size:16px;"/>
         <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);font-weight:bold;padding:0 12px;border:1px solid var(--border-card);background:var(--bg-elevated);" onclick="this.parentElement.parentElement.remove()">X</button>
       </div>
     `;
@@ -161,7 +161,7 @@ window.WorkerPanel = (() => {
 
   function confirmStartTaskWithJustification(taskId, matriculasStr) {
     const just = document.getElementById('start-task-justification').value.trim();
-    if (!just) return Toast.error('Erro', 'A justificativa é obrigatória.');
+    if (!just) return Toast.error('Erro', 'A justificativa ├® obrigat├│ria.');
     
     const session = Auth.getSession();
     const t = DB.tasks.get(taskId);
@@ -169,7 +169,7 @@ window.WorkerPanel = (() => {
 
     const obsObj = {
       id: 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
-      text: `Justificativa de alocação (Executantes de outra sonda/equipamento): ${just}`,
+      text: `Justificativa de aloca├º├úo (Executantes de outra sonda/equipamento): ${just}`,
       user: session.nome,
       userId: session.userId,
       createdAt: new Date().toISOString()
@@ -239,7 +239,7 @@ window.WorkerPanel = (() => {
     let targetWorkers = [];
     for (let mat of matriculas) {
       let w = DB.workforce.list().find(wk => String(wk.matricula) === String(mat));
-      if (!w) return Toast.error('Erro', `Matrícula ${mat} não encontrada no sistema.`);
+      if (!w) return Toast.error('Erro', `Matr├¡cula ${mat} n├úo encontrada no sistema.`);
       targetWorkers.push(w);
     }
 
@@ -255,7 +255,7 @@ window.WorkerPanel = (() => {
           w.currentPauseReason = '';
           DB.workforce.update(w.id, w);
         } else {
-          return Toast.error('Atenção', `${w.nome} já tem uma atividade ou pausa em andamento. Finalize a tarefa atual primeiro.`);
+          return Toast.error('Aten├º├úo', `${w.nome} j├í tem uma atividade ou pausa em andamento. Finalize a tarefa atual primeiro.`);
         }
       }
     }
@@ -269,18 +269,18 @@ window.WorkerPanel = (() => {
         <div class="modal-overlay" id="modal-worker-justification" style="z-index:9999;">
           <div class="modal" style="box-shadow:var(--shadow-lg);">
             <div class="modal-header">
-              <div class="modal-title">Atenção: Desvio de Alocação</div>
+              <div class="modal-title">Aten├º├úo: Desvio de Aloca├º├úo</div>
               <button class="modal-close" onclick="closeModal('modal-worker-justification')">
                 <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
             <div class="modal-body" style="padding-top:10px;">
               <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">
-                Os executantes a seguir estão alocados em outros equipamentos:<br><strong style="color:var(--color-danger);font-size:14px;">${names}</strong>
+                Os executantes a seguir est├úo alocados em outros equipamentos:<br><strong style="color:var(--color-danger);font-size:14px;">${names}</strong>
               </p>
               <div class="form-group" style="margin-bottom:15px;">
                 <label>Justificativa do Desvio *</label>
-                <textarea id="start-task-justification" rows="3" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;background:var(--bg-base);" placeholder="Informe o motivo para alocá-los nesta tarefa..."></textarea>
+                <textarea id="start-task-justification" rows="3" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;background:var(--bg-base);" placeholder="Informe o motivo para aloc├í-los nesta tarefa..."></textarea>
               </div>
               <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.confirmStartTaskWithJustification('${taskId}', '${matriculasStr}')">Confirmar e Iniciar</button>
             </div>
@@ -301,8 +301,7 @@ window.WorkerPanel = (() => {
     startTaskForWorkers(taskId, targetWorkers);
   }
 
-  function promptPause(workerId) {
-    const wIdParam = workerId ? `'${workerId}'` : 'null';
+  function promptPause() {
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-pause">
         <div class="modal" style="box-shadow:var(--shadow-lg);">
@@ -313,14 +312,14 @@ window.WorkerPanel = (() => {
             </button>
           </div>
           <div class="modal-body" style="padding-top:10px;">
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Selecione abaixo por que a tarefa está sendo pausada:</p>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Selecione abaixo por que voc├¬ est├í parando a tarefa atual:</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Almoço', ${wIdParam})">🍽️ Almoço</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Banheiro', ${wIdParam})">🚻 Banheiro</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptMissingParts(${wIdParam})">⚙️ Falta de Peças</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('DSS', ${wIdParam})">🛡️ DSS</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Fim Expediente', ${wIdParam})">🏠 Fim Expediente</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptOtherReason(${wIdParam})">Outros</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Almo├ºo')">­ƒì¢´©Å Almo├ºo</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Banheiro')">­ƒÜ╗ Banheiro</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptMissingParts()">ÔÜÖ´©Å Falta de Pe├ºas</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('DSS')">­ƒøí´©Å DSS</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Fim Expediente')">­ƒÅá Fim Expediente</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptOtherReason()">Outros</button>
             </div>
           </div>
         </div>
@@ -332,80 +331,87 @@ window.WorkerPanel = (() => {
     openModal('modal-worker-pause');
   }
 
-  function promptMissingParts(workerId) {
-    const wIdParam = workerId ? `'${workerId}'` : 'null';
+  function promptMissingParts() {
     closeModal('modal-worker-pause');
-    setTimeout(() => {
-      const modalHtml = `
-        <div class="modal-overlay" id="modal-worker-missing-parts">
-          <div class="modal" style="box-shadow:var(--shadow-lg);">
-            <div class="modal-header">
-              <div class="modal-title">Falta de Peças</div>
-              <button class="modal-close" onclick="closeModal('modal-worker-missing-parts')">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-missing-parts">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Justificar Falta de Pe├ºas</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-missing-parts')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, descreva qual pe├ºa est├í faltando para que possamos providenciar (c├│digo, nome, etc):</p>
+            <div class="form-group" style="margin-bottom:15px;">
+              <textarea id="missing-parts-desc" rows="4" placeholder="Ex: Filtro de ├│leo c├│d 12345, Junta do cabe├ºote, etc..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
             </div>
-            <div class="modal-body" style="padding-top:10px;">
-              <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Especifique qual peça ou componente está faltando:</p>
-              <textarea id="missing-parts-desc" class="form-input" rows="3" placeholder="Ex: Correia do motor, parafusos M8..." style="margin-bottom:15px;"></textarea>
-              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.submitMissingParts(${wIdParam})">Pausar por Falta de Peças</button>
-            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitMissingParts()">Confirmar Pausa</button>
           </div>
         </div>
-      `;
-      const container = document.getElementById('worker-panel-modals') || document.createElement('div');
-      if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
-      container.innerHTML = modalHtml;
-      openModal('modal-worker-missing-parts');
-    }, 100);
+      </div>
+    `;
+    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+    container.innerHTML = modalHtml;
+    openModal('modal-worker-missing-parts');
   }
 
-  function submitMissingParts(workerId) {
+  function submitMissingParts() {
     const desc = document.getElementById('missing-parts-desc').value.trim();
-    if (!desc) return Toast.error('Erro', 'Por favor, descreva as peças faltantes.');
+    if (!desc) {
+      Toast.error('Erro', 'Por favor, descreva a pe├ºa que est├í faltando.');
+      return;
+    }
+    const reason = 'Falta de Pe├ºas: ' + desc;
     closeModal('modal-worker-missing-parts');
-    pauseWork(`Falta de Peças: ${desc}`, workerId);
+    pauseWork(reason);
   }
 
-  function promptOtherReason(workerId) {
-    const wIdParam = workerId ? `'${workerId}'` : 'null';
+  function promptOtherReason() {
     closeModal('modal-worker-pause');
-    setTimeout(() => {
-      const modalHtml = `
-        <div class="modal-overlay" id="modal-worker-other-reason">
-          <div class="modal" style="box-shadow:var(--shadow-lg);">
-            <div class="modal-header">
-              <div class="modal-title">Outro Motivo</div>
-              <button class="modal-close" onclick="closeModal('modal-worker-other-reason')">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-worker-other-reason">
+        <div class="modal" style="box-shadow:var(--shadow-lg);">
+          <div class="modal-header">
+            <div class="modal-title">Justificar Pausa (Outros)</div>
+            <button class="modal-close" onclick="closeModal('modal-worker-other-reason')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, descreva o motivo da pausa da atividade:</p>
+            <div class="form-group" style="margin-bottom:15px;">
+              <textarea id="other-reason-desc" rows="4" placeholder="Descreva o motivo detalhadamente..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
             </div>
-            <div class="modal-body" style="padding-top:10px;">
-              <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Descreva o motivo da pausa:</p>
-              <textarea id="other-reason-desc" class="form-input" rows="3" placeholder="Ex: Aguardando liberação de área..." style="margin-bottom:15px;"></textarea>
-              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.submitOtherReason(${wIdParam})">Pausar Tarefa</button>
-            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitOtherReason()">Confirmar Pausa</button>
           </div>
         </div>
-      `;
-      const container = document.getElementById('worker-panel-modals') || document.createElement('div');
-      if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
-      container.innerHTML = modalHtml;
-      openModal('modal-worker-other-reason');
-    }, 100);
+      </div>
+    `;
+    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+    container.innerHTML = modalHtml;
+    openModal('modal-worker-other-reason');
   }
 
-  function submitOtherReason(workerId) {
+  function submitOtherReason() {
     const desc = document.getElementById('other-reason-desc').value.trim();
-    if (!desc) return Toast.error('Erro', 'Por favor, descreva o motivo.');
+    if (!desc) {
+      Toast.error('Erro', 'Por favor, descreva o motivo da pausa.');
+      return;
+    }
+    const reason = 'Outros: ' + desc;
     closeModal('modal-worker-other-reason');
-    pauseWork(desc, workerId);
+    pauseWork(reason);
   }
 
 
-  function pauseWork(reason, workerId) {
+  function pauseWork(reason) {
+    closeModal('modal-worker-pause');
     const session = Auth.getSession();
-    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
+    const myWorker = getMyWorker(session);
     if (!myWorker || myWorker.currentState !== 'Trabalhando') return;
 
     const t = DB.tasks.get(myWorker.currentTaskId);
@@ -424,27 +430,27 @@ window.WorkerPanel = (() => {
       horaFim: now.toISOString(),
       horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
       tipo: 'Trabalho',
-      observacao: `Timer (Automático)`
+      observacao: `Timer (Autom├ítico)`
     });
 
     if (t) {
       let updatePayload = { horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100) };
-      if (reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason.startsWith('Outros')) {
-        updatePayload.status = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') ? 'Aguardando Peça' : 'Pausada';
+      if (reason.startsWith('Falta de Pe├ºas') || reason.startsWith('Falta de Pe├ºa') || reason.startsWith('Outros')) {
+        updatePayload.status = reason.startsWith('Falta de Pe├ºas') || reason.startsWith('Falta de Pe├ºa') ? 'Aguardando Pe├ºa' : 'Pausada';
         updatePayload.pauseReason = reason;
         updatePayload.pauseStartTime = now.toISOString();
       }
       DB.tasks.update(t.id, updatePayload);
     }
 
-    if (reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason.startsWith('Outros')) {
+    if (reason.startsWith('Falta de Pe├ºas') || reason.startsWith('Falta de Pe├ºa') || reason.startsWith('Outros')) {
       DB.workforce.update(myWorker.id, {
         currentState: 'Ocioso',
         currentTaskId: null,
         currentPauseReason: '',
         currentActionStartTime: null
       });
-      Toast.info('Tarefa Pausada', `A tarefa foi pausada. Você está livre para iniciar outra atividade.`);
+      Toast.info('Tarefa Pausada', `A tarefa foi pausada. Voc├¬ est├í livre para iniciar outra atividade.`);
     } else {
       DB.workforce.update(myWorker.id, {
         currentState: 'Em Pausa',
@@ -468,7 +474,7 @@ window.WorkerPanel = (() => {
             </button>
           </div>
           <div class="modal-body" style="padding-top:10px;">
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, informe a justificativa para retomar essa tarefa (ex: "Peça solicitada chegou", "Área liberada", etc):</p>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, informe a justificativa para retomar essa tarefa (ex: "Pe├ºa solicitada chegou", "├ürea liberada", etc):</p>
             <div class="form-group" style="margin-bottom:15px;">
               <textarea id="resume-task-desc" rows="4" placeholder="Descreva a justificativa..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
             </div>
@@ -490,9 +496,9 @@ window.WorkerPanel = (() => {
     
     const session = Auth.getSession();
     const myWorker = getMyWorker(session);
-    if (!myWorker) return Toast.error('Erro', 'Cadastro não encontrado.');
+    if (!myWorker) return Toast.error('Erro', 'Cadastro n├úo encontrado.');
     if (myWorker.currentState && myWorker.currentState !== 'Ocioso') {
-      return Toast.error('Atenção', `${myWorker.nome}, você já tem uma atividade ou pausa em andamento. Por gentileza, finalize a sua tarefa primeiro.`);
+      return Toast.error('Aten├º├úo', `${myWorker.nome}, voc├¬ j├í tem uma atividade ou pausa em andamento. Por gentileza, finalize a sua tarefa primeiro.`);
     }
 
     const t = DB.tasks.get(taskId);
@@ -533,52 +539,54 @@ window.WorkerPanel = (() => {
       currentPauseReason: ''
     });
 
-    Toast.success('Retomado!', `Você voltou a executar a tarefa: "${t.descricao}"`);
+    Toast.success('Retomado!', `Voc├¬ voltou a executar a tarefa: "${t.descricao}"`);
     Router.navigate('worker-panel', { force: true });
   }
 
-  function resumeWork(workerId) {
+  function resumeWork() {
     const session = Auth.getSession();
-    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
+    const myWorker = getMyWorker(session);
     if (!myWorker || myWorker.currentState !== 'Em Pausa') return;
-      const t = DB.tasks.get(myWorker.currentTaskId);
-      const startTime = new Date(myWorker.currentActionStartTime);
-      const now = new Date();
-      const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
 
-      DB.timesheets.create({
-        workerId: myWorker.id,
-        workerNome: session.nome,
-        equipmentId: t ? t.equipmentId : null,
-        taskId: t ? t.id : null,
-        data: now.toISOString().slice(0, 10),
-        horaInicio: startTime.toISOString(),
-        horaFim: now.toISOString(),
-        horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
-        tipo: 'Pausa',
-        motivoPausa: myWorker.currentPauseReason,
-        observacao: `Pausa (${myWorker.currentPauseReason})`
-      });
+    const t = DB.tasks.get(myWorker.currentTaskId);
+    const startTime = new Date(myWorker.currentActionStartTime);
+    const now = new Date();
+    const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
 
-      DB.workforce.update(myWorker.id, {
-        currentState: 'Trabalhando',
-        currentPauseReason: '',
-        currentActionStartTime: now.toISOString()
-      });
+    // Save Timesheet (Pause)
+    DB.timesheets.create({
+      workerId: myWorker.id,
+      workerNome: session.nome,
+      equipmentId: t ? t.equipmentId : null,
+      taskId: t ? t.id : null,
+      data: now.toISOString().slice(0, 10),
+      horaInicio: startTime.toISOString(),
+      horaFim: now.toISOString(),
+      horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+      tipo: 'Pausa',
+      motivoPausa: myWorker.currentPauseReason,
+      observacao: `Pausa (${myWorker.currentPauseReason})`
+    });
 
-      if (t && t.status !== 'Em Andamento') {
-        DB.tasks.update(t.id, { status: 'Em Andamento' });
-      }
+    DB.workforce.update(myWorker.id, {
+      currentState: 'Trabalhando',
+      currentPauseReason: '',
+      currentActionStartTime: now.toISOString()
+    });
 
-      Toast.success('Retomado!', 'O cronômetro de trabalho voltou a rodar.');
-      Router.navigate('worker-panel', { force: true });
+    if (t && t.status !== 'Em Andamento') {
+      DB.tasks.update(t.id, { status: 'Em Andamento' });
+    }
+
+    Toast.success('Retomado!', 'O cron├┤metro de trabalho voltou a rodar.');
+    Router.navigate('worker-panel', { force: true });
   }
 
-  function cancelWork(workerId) {
-    window.uiConfirm('Tem certeza que deseja cancelar este apontamento em andamento?', (res) => {
+  function cancelWork() {
+    window.uiConfirm('Tem certeza que deseja cancelar este apontamento em andamento? As horas decorridas n├úo ser├úo registradas.', (res) => {
       if (!res) return;
       const session = Auth.getSession();
-      const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
+      const myWorker = getMyWorker(session);
       if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
       const t = DB.tasks.get(myWorker.currentTaskId);
@@ -598,7 +606,7 @@ window.WorkerPanel = (() => {
         const hasTimesheets = timesheets.some(ts => ts.taskId === t.id);
         
         if (!otherActive && !hasTimesheets) {
-          DB.tasks.update(t.id, { status: 'Não Iniciada' });
+          DB.tasks.update(t.id, { status: 'N├úo Iniciada' });
         }
       }
 
@@ -607,13 +615,12 @@ window.WorkerPanel = (() => {
     });
   }
 
-  function promptComplete(workerId) {
+  function promptComplete() {
     const session = Auth.getSession();
-    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
+    const myWorker = getMyWorker(session);
     if (!myWorker || !myWorker.currentTaskId) return;
 
     const t = DB.tasks.get(myWorker.currentTaskId);
-    const wIdParam = workerId ? `'${workerId}'` : 'null';
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-complete">
@@ -626,7 +633,7 @@ window.WorkerPanel = (() => {
           </div>
           <div class="modal-body">
             <p style="font-size:14px;color:var(--text-primary);font-weight:bold;margin-bottom:10px;">${t.descricao}</p>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Tire uma foto para comprovar a execução do serviço e finalizar a tarefa.</p>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">Tire uma foto para comprovar a execu├º├úo do servi├ºo e finalizar a tarefa.</p>
             
             <div style="text-align:center;margin-bottom:20px;">
               <label for="task-photo-upload" class="btn btn-outline" style="width:100%;height:100px;display:flex;flex-direction:column;justify-content:center;align-items:center;border:2px dashed var(--brand-primary);color:var(--brand-primary);cursor:pointer;background:var(--bg-base);">
@@ -636,16 +643,16 @@ window.WorkerPanel = (() => {
               <input type="file" id="task-photo-upload" accept="image/*" capture="environment" style="display:none;" onchange="WorkerPanel.previewPhoto(event)" />
               <div id="photo-preview-container" style="display:none;margin-top:15px;position:relative;">
                 <img id="photo-preview" src="" style="max-width:100%;border-radius:8px;max-height:200px;object-fit:cover;" />
-                <button class="btn btn-danger btn-xs" style="position:absolute;top:5px;right:5px;border-radius:50%;width:24px;height:24px;padding:0;justify-content:center;" onclick="document.getElementById('task-photo-upload').value='';document.getElementById('photo-preview-container').style.display='none';">✕</button>
+                <button class="btn btn-danger btn-xs" style="position:absolute;top:5px;right:5px;border-radius:50%;width:24px;height:24px;padding:0;justify-content:center;" onclick="document.getElementById('task-photo-upload').value='';document.getElementById('photo-preview-container').style.display='none';">Ô£ò</button>
               </div>
             </div>
 
             <div class="form-group">
-              <label>Observações (Opcional)</label>
+              <label>Observa├º├Áes (Opcional)</label>
               <textarea id="task-complete-obs" rows="2" placeholder="Algo a reportar?"></textarea>
             </div>
             
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.finalizeTask(${wIdParam})">Confirmar Conclusão</button>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.finalizeTask()">Confirmar Conclus├úo</button>
           </div>
         </div>
       </div>
@@ -666,9 +673,9 @@ window.WorkerPanel = (() => {
     }
   }
 
-  function finalizeTask(workerId) {
+  function finalizeTask() {
     const session = Auth.getSession();
-    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
+    const myWorker = getMyWorker(session);
     if (!myWorker || !myWorker.currentTaskId) return;
 
     const fileInput = document.getElementById('task-photo-upload');
@@ -695,7 +702,7 @@ window.WorkerPanel = (() => {
           horaFim: now.toISOString(),
           horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
           tipo: 'Trabalho',
-          observacao: 'Timer (Automático - Conclusão)'
+          observacao: 'Timer (Autom├ítico - Conclus├úo)'
         });
 
         if (t) {
@@ -759,7 +766,7 @@ window.WorkerPanel = (() => {
         }
 
         DB.tasks.update(t.id, {
-          status: 'Concluída',
+          status: 'Conclu├¡da',
           pctExecutado: 100,
           dataRealTermino: new Date().toISOString().slice(0,10),
           observacoes: newObs,
@@ -777,7 +784,7 @@ window.WorkerPanel = (() => {
       });
 
       closeModal('modal-worker-complete');
-      Toast.success('Sucesso', 'Tarefa concluída com sucesso!');
+      Toast.success('Sucesso', 'Tarefa conclu├¡da com sucesso!');
       Router.navigate('worker-panel', { force: true });
     };
 
@@ -816,7 +823,7 @@ window.WorkerPanel = (() => {
 
     window.GlobalEqFilter = '';
     const myWorker = getMyWorker(session);
-    if (!myWorker) return `<div class="page-container"><h3>Erro</h3><p>Seu cadastro não foi encontrado na base de mão de obra. Avise o PCM.</p></div>`;
+    if (!myWorker) return `<div class="page-container"><h3>Erro</h3><p>Seu cadastro n├úo foi encontrado na base de m├úo de obra. Avise o PCM.</p></div>`;
 
     const eqs = DB.equipment.list();
     const tasks = DB.tasks.getAll();
@@ -825,7 +832,7 @@ window.WorkerPanel = (() => {
     let myTasks = tasks.filter(t => myEqIds.includes(t.equipmentId));
     
     // Add tasks without equipment that the worker can execute
-    const unassignedTasks = tasks.filter(t => !t.equipmentId && t.status !== 'Concluída' && canExecuteTask(session, t));
+    const unassignedTasks = tasks.filter(t => !t.equipmentId && t.status !== 'Conclu├¡da' && canExecuteTask(session, t));
     unassignedTasks.forEach(t => {
       if (!myTasks.find(x => x.id === t.id)) myTasks.push(t);
     });
@@ -834,26 +841,19 @@ window.WorkerPanel = (() => {
 
     // Live Status Panel
     let statusPanelHtml = '';
+    const state = myWorker.currentState || 'Ocioso';
     
-    const allWorkers = window.DB.workforce.list();
-    const activeWorkers = allWorkers.filter(w => 
-      (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && 
-      w.currentTaskId && 
-      myTasks.find(t => t.id === w.currentTaskId)
-    );
-
     // Auto-update timer display
     if (!window.workerTimerInterval) {
       window.workerTimerInterval = setInterval(() => {
+        const session = window.Auth.getSession();
         const workers = window.DB.workforce.list();
-        
-        document.querySelectorAll('.live-timer-wp').forEach(el => {
-          const wId = el.getAttribute('data-worker-id');
-          const w = workers.find(wk => wk.id === wId);
-          if (w && w.currentActionStartTime) {
-            el.innerText = formatTimeDiff(w.currentActionStartTime);
-          }
-        });
+        const myW = workers.find(w => (w.matricula && session.matricula && w.matricula === session.matricula) || w.nome === session.nome);
+
+        const el = document.getElementById('live-timer-wp');
+        if (el && myW && myW.currentActionStartTime) {
+          el.innerText = formatTimeDiff(myW.currentActionStartTime);
+        }
 
         document.querySelectorAll('.live-pause-timer').forEach(span => {
           const start = span.getAttribute('data-start');
@@ -864,97 +864,92 @@ window.WorkerPanel = (() => {
       }, 1000);
     }
 
-    if (activeWorkers.length > 0) {
-      statusPanelHtml = activeWorkers.map(w => {
-        const state = w.currentState;
-        const currentT = tasks.find(t => t.id === w.currentTaskId);
-        const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
-        
-        if (state === 'Trabalhando') {
-          return `
-            <div class="active-task-card working" style="margin-bottom: 15px;">
-              <div class="pulse-indicator"></div>
-              <div class="task-state">EM EXECUÇÃO - ${w.nome}</div>
-              <div class="task-timer live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</div>
-              <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
-              <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
-              ${currentT && currentT.fotoPeca ? `
-                <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-                  <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
-                </div>
-              ` : ''}
-              
-              ${currentT && !canExecuteTask(session, currentT) && w.matricula === session.matricula ? `
-                <div class="action-buttons">
-                  <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                    Acesso Restrito ao Cargo
-                  </div>
-                </div>
-              ` : `
-              <div class="action-buttons">
-                <button class="btn-action cancel" onclick="WorkerPanel.cancelWork('${w.id}')" style="background-color: var(--color-danger); color: white;">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                  CANCELAR
-                </button>
-                <button class="btn-action pause" onclick="WorkerPanel.promptPause('${w.id}')">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  PAUSAR
-                </button>
-                <button class="btn-action complete" onclick="WorkerPanel.promptComplete('${w.id}')">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  CONCLUIR
-                </button>
-              </div>
-              `}
+    if (state === 'Trabalhando') {
+      const currentT = tasks.find(t => t.id === myWorker.currentTaskId);
+      const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
+      statusPanelHtml = `
+        <div class="active-task-card working">
+          <div class="pulse-indicator"></div>
+          <div class="task-state">EM EXECU├ç├âO</div>
+          <div class="task-timer" id="live-timer-wp">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
+          <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
+          <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
+          ${currentT && currentT.fotoPeca ? `
+            <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+              <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
             </div>
-          `;
-        } else if (state === 'Em Pausa') {
-          return `
-            <div class="active-task-card paused" style="margin-bottom: 15px;">
-              <div class="task-state">EM PAUSA: ${w.currentPauseReason} - ${w.nome}</div>
-              <div class="task-timer live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</div>
-              <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
-              <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
-              ${currentT && currentT.fotoPeca ? `
-                <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-                  <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
-                </div>
-              ` : ''}
-              
-              ${currentT && !canExecuteTask(session, currentT) && w.matricula === session.matricula ? `
-                <div class="action-buttons">
-                  <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                    Acesso Restrito ao Cargo
-                  </div>
-                </div>
-              ` : `
-              <div class="action-buttons">
-                <button class="btn-action cancel" onclick="WorkerPanel.cancelWork('${w.id}')" style="background-color: var(--color-danger); color: white;">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                  CANCELAR
-                </button>
-                <button class="btn-action resume" onclick="WorkerPanel.resumeWork('${w.id}')">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  RETOMAR
-                </button>
-                <button class="btn-action complete" onclick="WorkerPanel.promptComplete('${w.id}')">
-                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                  CONCLUIR
-                </button>
+          ` : ''}
+          
+          ${currentT && !canExecuteTask(session, currentT) ? `
+            <div class="action-buttons">
+              <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                Acesso Restrito ao Cargo
               </div>
-              `}
             </div>
-          `;
-        }
-        return '';
-      }).join('');
+          ` : `
+          <div class="action-buttons">
+            <button class="btn-action cancel" onclick="WorkerPanel.cancelWork()" style="background-color: var(--color-danger); color: white;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              CANCELAR
+            </button>
+            <button class="btn-action pause" onclick="WorkerPanel.promptPause()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              PAUSAR
+            </button>
+            <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              CONCLUIR
+            </button>
+          </div>
+          `}
+        </div>
+      `;
+    } else if (state === 'Em Pausa') {
+      const currentT = tasks.find(t => t.id === myWorker.currentTaskId);
+      const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
+      statusPanelHtml = `
+        <div class="active-task-card paused">
+          <div class="task-state">EM PAUSA: ${myWorker.currentPauseReason}</div>
+          <div class="task-timer" id="live-timer-wp">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
+          <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
+          <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
+          ${currentT && currentT.fotoPeca ? `
+            <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+              <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
+            </div>
+          ` : ''}
+          
+          ${currentT && !canExecuteTask(session, currentT) ? `
+            <div class="action-buttons">
+              <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                Acesso Restrito ao Cargo
+              </div>
+            </div>
+          ` : `
+          <div class="action-buttons">
+            <button class="btn-action cancel" onclick="WorkerPanel.cancelWork()" style="background-color: var(--color-danger); color: white;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              CANCELAR
+            </button>
+            <button class="btn-action resume" onclick="WorkerPanel.resumeWork()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              RETOMAR
+            </button>
+            <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              CONCLUIR
+            </button>
+          </div>
+          `}
+        </div>
+      `;
     } else {
       statusPanelHtml = `
-        <div class="active-task-card idle" style="margin-bottom: 15px;">
+        <div class="active-task-card idle">
           <div class="task-state" style="color:var(--text-muted);font-weight:700;">OCIOSO</div>
-          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Nenhuma tarefa em execução no momento. Escolha uma atividade na fila abaixo para iniciar seu trabalho.</p>
+          <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Nenhuma tarefa em execu├º├úo no momento. Escolha uma atividade na fila abaixo para iniciar seu trabalho.</p>
         </div>
       `;
     }
@@ -969,13 +964,13 @@ window.WorkerPanel = (() => {
           </div>
         `).join('')}
         <div class="machine-chip ${!eqFilter ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('')">
-          <strong>TODAS AS MÁQUINAS</strong>
+          <strong>TODAS AS M├üQUINAS</strong>
         </div>
       </div>
     `;
 
     // Tasks List
-    let listTasks = myTasks.filter(t => t.status !== 'Concluída' && t.id !== myWorker.currentTaskId);
+    let listTasks = myTasks.filter(t => t.status !== 'Conclu├¡da' && t.id !== myWorker.currentTaskId);
     
     listTasks.sort((a, b) => {
       const aCanExec = canExecuteTask(session, a) ? 1 : 0;
@@ -989,7 +984,7 @@ window.WorkerPanel = (() => {
       const isBlocked = blockedBy.length > 0;
       
       let actionBtn = '';
-      if (t.status === 'Aguardando Peça' || t.status === 'Pausada') {
+      if (t.status === 'Aguardando Pe├ºa' || t.status === 'Pausada') {
         const pauseReason = t.pauseReason || t.status;
         let timeStr = '';
         if (t.pauseStartTime) {
@@ -1014,13 +1009,13 @@ window.WorkerPanel = (() => {
         }
       }
 
-      const priorityClass = t.prioridade === 'Crítica' ? 'prio-crit' : (t.prioridade === 'Alta' ? 'prio-high' : 'prio-med');
+      const priorityClass = t.prioridade === 'Cr├¡tica' ? 'prio-crit' : (t.prioridade === 'Alta' ? 'prio-high' : 'prio-med');
 
       return `
         <div class="task-card-v4">
           <div class="task-card-header">
             <span class="task-discipline">${t.disciplina || 'Geral'}</span>
-            <span class="task-prio ${priorityClass}">${t.prioridade || 'Média'}</span>
+            <span class="task-prio ${priorityClass}">${t.prioridade || 'M├®dia'}</span>
           </div>
           ${t.fotoPeca ? `
           <div style="margin-top:10px;margin-bottom:10px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-card);">
@@ -1134,7 +1129,7 @@ window.WorkerPanel = (() => {
       <div class="wp-container">
         ${statusPanelHtml}
 
-        <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;margin-top:8px;">Suas Máquinas</h3>
+        <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;margin-top:8px;">Suas M├íquinas</h3>
         ${machinesHtml}
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:24px;">
@@ -1146,7 +1141,7 @@ window.WorkerPanel = (() => {
           <div style="text-align:center;padding:40px 20px;background:var(--bg-card);border:1px dashed var(--border-card);border-radius:16px;">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:48px;height:48px;margin:0 auto 16px;color:#cbd5e1;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
             <div style="color:var(--text-primary);font-weight:700;font-size:16px;margin-bottom:4px;">Tudo limpo!</div>
-            <div style="color:var(--text-secondary);font-size:14px;">Você não tem mais tarefas pendentes para hoje.</div>
+            <div style="color:var(--text-secondary);font-size:14px;">Voc├¬ n├úo tem mais tarefas pendentes para hoje.</div>
           </div>
         `}
       </div>
@@ -1191,13 +1186,13 @@ window.WorkerPanel = (() => {
 
               <div class="form-row">
                 <div class="form-group">
-                  <label>Código da Tarefa</label>
+                  <label>C├│digo da Tarefa</label>
                   <input id="w-new-cod" placeholder="Opcional" />
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Descrição *</label>
+                <label>Descri├º├úo *</label>
                 <input id="w-new-desc" placeholder="Descreva a atividade..." required />
               </div>
 
@@ -1207,7 +1202,7 @@ window.WorkerPanel = (() => {
                   <input value="${session.disciplina}" disabled style="opacity:0.6;cursor:not-allowed;background:var(--bg-base);" />
                 </div>
                 <div class="form-group">
-                  <label>Responsável</label>
+                  <label>Respons├ível</label>
                   <input value="${session.nome}" disabled style="opacity:0.6;cursor:not-allowed;background:var(--bg-base);" />
                 </div>
               </div>
@@ -1216,18 +1211,18 @@ window.WorkerPanel = (() => {
                 <div class="form-group">
                   <label>Prioridade</label>
                   <select id="w-new-prio">
-                    <option>Média</option>
+                    <option>M├®dia</option>
                     <option>Alta</option>
-                    <option>Crítica</option>
+                    <option>Cr├¡tica</option>
                     <option>Baixa</option>
                   </select>
                 </div>
                 <div class="form-group">
                   <label>Status Inicial</label>
                   <select id="w-new-status">
-                    <option>Não Iniciada</option>
+                    <option>N├úo Iniciada</option>
                     <option>Em Andamento</option>
-                    <option>Aguardando Peça</option>
+                    <option>Aguardando Pe├ºa</option>
                     <option>Bloqueada</option>
                   </select>
                 </div>
@@ -1235,11 +1230,11 @@ window.WorkerPanel = (() => {
 
               <div class="form-row">
                 <div class="form-group">
-                  <label>Início Planejado</label>
+                  <label>In├¡cio Planejado</label>
                   <input type="date" id="w-new-ip" value="${new Date().toISOString().slice(0,10)}" />
                 </div>
                 <div class="form-group">
-                  <label>Término Planejado</label>
+                  <label>T├®rmino Planejado</label>
                   <input type="date" id="w-new-tp" value="${new Date().toISOString().slice(0,10)}" />
                 </div>
               </div>
@@ -1257,12 +1252,12 @@ window.WorkerPanel = (() => {
 
               <div class="checkbox-wrap" style="margin-top:var(--space-2)">
                 <input type="checkbox" id="w-new-critico" />
-                <label for="w-new-critico" style="cursor:pointer;color:var(--color-danger);font-weight:600;">Atividade no Caminho Crítico</label>
+                <label for="w-new-critico" style="cursor:pointer;color:var(--color-danger);font-weight:600;">Atividade no Caminho Cr├¡tico</label>
               </div>
 
               <div class="form-group" style="margin-top:var(--space-2)">
-                <label>Observações Adicionais</label>
-                <textarea id="w-new-obs" rows="2" placeholder="Detalhes da execução..."></textarea>
+                <label>Observa├º├Áes Adicionais</label>
+                <textarea id="w-new-obs" rows="2" placeholder="Detalhes da execu├º├úo..."></textarea>
               </div>
 
             </div>
@@ -1287,7 +1282,7 @@ window.WorkerPanel = (() => {
     const myWorker = getMyWorker(session);
     const desc = document.getElementById('w-new-desc').value.trim();
     if (!desc) {
-      Toast.error('Erro', 'Descrição da atividade é obrigatória.');
+      Toast.error('Erro', 'Descri├º├úo da atividade ├® obrigat├│ria.');
       return;
     }
 
@@ -1323,7 +1318,7 @@ window.WorkerPanel = (() => {
       createdAt: DB.now()
     };
 
-    if (status === 'Concluída') {
+    if (status === 'Conclu├¡da') {
       data.pctExecutado = 100;
       data.dataRealTermino = new Date().toISOString().slice(0, 10);
     }
@@ -1390,15 +1385,15 @@ window.WorkerPanel = (() => {
           <div class="modal-body">
             <div style="display:flex;flex-direction:column;gap:var(--space-4);">
               <div class="form-group">
-                <label>Atividade (Descrição)</label>
+                <label>Atividade (Descri├º├úo)</label>
                 <input value="${t.descricao}" disabled style="opacity:0.6;background:var(--bg-base);cursor:not-allowed;" />
               </div>
               
               <div class="form-row">
                 <div class="form-group">
                   <label>Status</label>
-                  <select id="w-tk-status" onchange="const p=document.getElementById('w-tk-photo-group'); if(this.value==='Concluída'){p.style.display='block';}else{p.style.display='none';}">
-                    ${['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'].map(s => 
+                  <select id="w-tk-status" onchange="const p=document.getElementById('w-tk-photo-group'); if(this.value==='Conclu├¡da'){p.style.display='block';}else{p.style.display='none';}">
+                    ${['N├úo Iniciada','Em Andamento','Aguardando Pe├ºa','Aguardando Recurso','Aguardando Aprova├º├úo','Bloqueada','Conclu├¡da'].map(s => 
                       `<option ${t.status === s ? 'selected' : ''}>${s}</option>`
                     ).join('')}
                   </select>
@@ -1416,28 +1411,28 @@ window.WorkerPanel = (() => {
 
               <div style="border-top:1px solid var(--border-card);padding-top:var(--space-3);margin-top:var(--space-1);">
                 <div style="font-size:var(--text-xs);color:var(--color-warning);margin-bottom:var(--space-2);font-weight:700;">
-                  ⚠️ Alteração de datas planejadas exige justificativa de reprogramação obrigatória.
+                  ÔÜá´©Å Altera├º├úo de datas planejadas exige justificativa de reprograma├º├úo obrigat├│ria.
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label>Início Planejado</label>
+                    <label>In├¡cio Planejado</label>
                     <input type="date" id="w-tk-ip" value="${toDateInput(t.dataPlanejadaInicio)}" />
                   </div>
                   <div class="form-group">
-                    <label>Término Planejado</label>
+                    <label>T├®rmino Planejado</label>
                     <input type="date" id="w-tk-tp" value="${toDateInput(t.dataPlanejadaTermino)}" />
                   </div>
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Observações</label>
+                <label>Observa├º├Áes</label>
                 ${obsHistoryHtml}
-                <textarea id="w-tk-obs" rows="2" placeholder="${obsHistoryHtml ? 'Adicionar nova observação...' : 'Observações...'}">${obsTextValue}</textarea>
+                <textarea id="w-tk-obs" rows="2" placeholder="${obsHistoryHtml ? 'Adicionar nova observa├º├úo...' : 'Observa├º├Áes...'}">${obsTextValue}</textarea>
               </div>
 
-              <div class="form-group" id="w-tk-photo-group" style="display:${t.status === 'Concluída' ? 'block' : 'none'}; background:rgba(59,130,246,0.05); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid rgba(59,130,246,0.2);">
-                <label style="color:var(--brand-primary-light);font-weight:700;">📸 Foto de Comprovação (Obrigatória)</label>
+              <div class="form-group" id="w-tk-photo-group" style="display:${t.status === 'Conclu├¡da' ? 'block' : 'none'}; background:rgba(59,130,246,0.05); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid rgba(59,130,246,0.2);">
+                <label style="color:var(--brand-primary-light);font-weight:700;">­ƒô© Foto de Comprova├º├úo (Obrigat├│ria)</label>
                 <input type="file" id="w-tk-photo" accept="image/*" capture="environment" class="form-control" style="margin-top:4px;" />
                 <input type="hidden" id="w-tk-photo-b64" value="${t.fotoComprovacao || ''}" />
                 <div id="w-tk-photo-preview" style="margin-top:8px; width:100%; border-radius:8px; overflow:hidden; display:${t.fotoComprovacao ? 'block' : 'none'};">
@@ -1478,10 +1473,10 @@ window.WorkerPanel = (() => {
     const t = DB.tasks.get(id);
     if (!t) return;
     
-    if (t.status === 'Concluída') {
+    if (t.status === 'Conclu├¡da') {
       const session = window.Auth.getSession();
       if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-        Toast.error('Acesso Negado', 'Somente o Administrador do Sistema pode editar tarefas já concluídas.');
+        Toast.error('Acesso Negado', 'Somente o Administrador do Sistema pode editar tarefas j├í conclu├¡das.');
         return;
       }
     }
@@ -1494,8 +1489,8 @@ window.WorkerPanel = (() => {
     const obs = document.getElementById('w-tk-obs').value.trim();
     const photoB64 = document.getElementById('w-tk-photo-b64').value;
 
-    if (status === 'Concluída' && !photoB64) {
-      window.Toast.error('Foto Obrigatória', 'Para concluir a atividade, é obrigatório tirar uma foto para comprovação.');
+    if (status === 'Conclu├¡da' && !photoB64) {
+      window.Toast.error('Foto Obrigat├│ria', 'Para concluir a atividade, ├® obrigat├│rio tirar uma foto para comprova├º├úo.');
       return;
     }
 
@@ -1507,13 +1502,13 @@ window.WorkerPanel = (() => {
 
     if (dateChanged) {
       const promptJust = prompt(
-        `Justificativa de Reprogramação Obrigatória:\nModificando data de início/término da atividade:\nAnterior: ${formatDate(t.dataPlanejadaInicio)} a ${formatDate(t.dataPlanejadaTermino)}\nNova: ${formatDate(ip)} a ${formatDate(tp)}\n\nPor favor, digite o motivo:`
+        `Justificativa de Reprograma├º├úo Obrigat├│ria:\nModificando data de in├¡cio/t├®rmino da atividade:\nAnterior: ${formatDate(t.dataPlanejadaInicio)} a ${formatDate(t.dataPlanejadaTermino)}\nNova: ${formatDate(ip)} a ${formatDate(tp)}\n\nPor favor, digite o motivo:`
       );
       if (promptJust === null) return; // user cancelled saving task
 
       justification = promptJust.trim();
       if (!justification) {
-        Toast.error('Erro', 'A justificativa de reprogramação é obrigatória para salvar as novas datas.');
+        Toast.error('Erro', 'A justificativa de reprograma├º├úo ├® obrigat├│ria para salvar as novas datas.');
         return;
       }
     }
@@ -1576,7 +1571,7 @@ window.WorkerPanel = (() => {
 
     const data = {
       status,
-      pctExecutado: (status === 'Concluída') ? 100 : pct,
+      pctExecutado: (status === 'Conclu├¡da') ? 100 : pct,
       horasRealizadas: hr,
       dataPlanejadaInicio: ip,
       dataPlanejadaTermino: tp,
@@ -1584,20 +1579,20 @@ window.WorkerPanel = (() => {
       fotoComprovacao: photoB64 || t.fotoComprovacao
     };
 
-    if (status === 'Concluída') {
+    if (status === 'Conclu├¡da') {
       data.pctExecutado = 100;
       data.dataRealTermino = t.dataRealTermino || today;
       if (activeTimer && activeTimer.taskId === id) {
         saveTimer(null);
       }
       if (t.solicitacaoId && DB.solicitacoes) {
-        DB.solicitacoes.update(t.solicitacaoId, { status: 'Concluída', finalizadoAt: DB.now() });
+        DB.solicitacoes.update(t.solicitacaoId, { status: 'Conclu├¡da', finalizadoAt: DB.now() });
         const sol = DB.solicitacoes.list().find(s => s.id === t.solicitacaoId);
         if (sol && DB.notifications) {
           DB.notifications.add({
             userId: sol.solicitanteId,
-            title: 'Serviço Concluído',
-            message: `O serviço '${sol.descricao}' foi finalizado pelo setor ${sol.setorDestino}.`,
+            title: 'Servi├ºo Conclu├¡do',
+            message: `O servi├ºo '${sol.descricao}' foi finalizado pelo setor ${sol.setorDestino}.`,
             type: 'info',
             read: false,
             createdAt: DB.now()
@@ -1607,7 +1602,7 @@ window.WorkerPanel = (() => {
     }
 
     DB.tasks.update(id, data);
-    Toast.success('Tarefa Atualizada!', 'As alterações foram registradas com sucesso.');
+    Toast.success('Tarefa Atualizada!', 'As altera├º├Áes foram registradas com sucesso.');
     closeModal('modal-worker-task');
     Router.navigate('worker-panel', { force: true });
   }
@@ -1625,7 +1620,7 @@ window.WorkerPanel = (() => {
       <div class="modal-overlay" id="modal-worker-part">
         <div class="modal" style="box-shadow:var(--shadow-lg);">
           <div class="modal-header">
-            <div class="modal-title">Solicitar Peça</div>
+            <div class="modal-title">Solicitar Pe├ºa</div>
             <button class="modal-close" onclick="closeModal('modal-worker-part')">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -1639,12 +1634,12 @@ window.WorkerPanel = (() => {
                 </select>
               </div>
               <div class="form-group">
-                <label>Descrição da Peça *</label>
-                <input id="w-pt-desc" placeholder="Ex: Filtro de ar primário" required />
+                <label>Descri├º├úo da Pe├ºa *</label>
+                <input id="w-pt-desc" placeholder="Ex: Filtro de ar prim├írio" required />
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label>Part Number / Código</label>
+                  <label>Part Number / C├│digo</label>
                   <input id="w-pt-pn" placeholder="Ex: PN-98765" />
                 </div>
                 <div class="form-group">
@@ -1655,18 +1650,18 @@ window.WorkerPanel = (() => {
               
               <div class="checkbox-wrap">
                 <input type="checkbox" id="w-pt-critica" />
-                <label for="w-pt-critica" style="cursor:pointer;">Peça Crítica (Bloqueia o equipamento)</label>
+                <label for="w-pt-critica" style="cursor:pointer;">Pe├ºa Cr├¡tica (Bloqueia o equipamento)</label>
               </div>
 
               <div class="form-group">
-                <label>Observações / Justificativa</label>
-                <textarea id="w-pt-obs" rows="3" placeholder="Informações adicionais para o PCM..."></textarea>
+                <label>Observa├º├Áes / Justificativa</label>
+                <textarea id="w-pt-obs" rows="3" placeholder="Informa├º├Áes adicionais para o PCM..."></textarea>
               </div>
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-worker-part')">Cancelar</button>
-            <button class="btn btn-primary" onclick="WorkerPanel.savePartRequest()">Enviar Solicitação</button>
+            <button class="btn btn-primary" onclick="WorkerPanel.savePartRequest()">Enviar Solicita├º├úo</button>
           </div>
         </div>
       </div>
@@ -1682,7 +1677,7 @@ window.WorkerPanel = (() => {
   function savePartRequest() {
     const desc = document.getElementById('w-pt-desc').value.trim();
     if (!desc) {
-      Toast.error('Erro', 'Descrição da peça é obrigatória.');
+      Toast.error('Erro', 'Descri├º├úo da pe├ºa ├® obrigat├│ria.');
       return;
     }
 
@@ -1693,7 +1688,7 @@ window.WorkerPanel = (() => {
 
     const data = {
       equipmentId: eqId,
-      descricao: `Qtd: ${qty}x — ${desc}`,
+      descricao: `Qtd: ${qty}x ÔÇö ${desc}`,
       codigo: pn,
       status: 'Solicitada',
       critica: document.getElementById('w-pt-critica').checked,
@@ -1706,7 +1701,7 @@ window.WorkerPanel = (() => {
     };
 
     DB.parts.create(data);
-    Toast.success('Solicitação Enviada!', `Peça "${desc}" cadastrada com status Solicitada.`);
+    Toast.success('Solicita├º├úo Enviada!', `Pe├ºa "${desc}" cadastrada com status Solicitada.`);
     closeModal('modal-worker-part');
     Router.navigate('worker-panel', { force: true });
   }
@@ -1724,7 +1719,7 @@ window.WorkerPanel = (() => {
       <div class="modal-overlay" id="modal-worker-service">
         <div class="modal" style="box-shadow:var(--shadow-lg);">
           <div class="modal-header">
-            <div class="modal-title">Solicitar Serviço</div>
+            <div class="modal-title">Solicitar Servi├ºo</div>
             <button class="modal-close" onclick="closeModal('modal-worker-service')">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -1741,16 +1736,16 @@ window.WorkerPanel = (() => {
                 <label>Setor Destino *</label>
                 <select id="w-sv-setor">
                   <option value="Usinagem">Usinagem</option>
-                  <option value="Mecânica">Mecânica</option>
+                  <option value="Mec├ónica">Mec├ónica</option>
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
-                  <option value="Elétrica">Elétrica</option>
+                  <option value="El├®trica">El├®trica</option>
                 </select>
               </div>
               <div class="form-group">
-                <label>Descrição do Serviço / Peça *</label>
-                <input id="w-sv-desc" placeholder="Descreva com detalhes o serviço..." required />
+                <label>Descri├º├úo do Servi├ºo / Pe├ºa *</label>
+                <input id="w-sv-desc" placeholder="Descreva com detalhes o servi├ºo..." required />
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -1760,13 +1755,13 @@ window.WorkerPanel = (() => {
               </div>
               <div class="checkbox-wrap">
                 <input type="checkbox" id="w-sv-critica" />
-                <label for="w-sv-critica" style="cursor:pointer;color:var(--color-danger);font-weight:600;">Serviço Crítico (Bloqueia o andamento)</label>
+                <label for="w-sv-critica" style="cursor:pointer;color:var(--color-danger);font-weight:600;">Servi├ºo Cr├¡tico (Bloqueia o andamento)</label>
               </div>
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-worker-service')">Cancelar</button>
-            <button class="btn btn-primary" onclick="WorkerPanel.saveRequestService()">Enviar Solicitação</button>
+            <button class="btn btn-primary" onclick="WorkerPanel.saveRequestService()">Enviar Solicita├º├úo</button>
           </div>
         </div>
       </div>
@@ -1783,7 +1778,7 @@ window.WorkerPanel = (() => {
     const session = Auth.getSession();
     const desc = document.getElementById('w-sv-desc').value.trim();
     if (!desc) {
-      Toast.error('Erro', 'Descrição do serviço é obrigatória.');
+      Toast.error('Erro', 'Descri├º├úo do servi├ºo ├® obrigat├│ria.');
       return;
     }
 
@@ -1801,7 +1796,7 @@ window.WorkerPanel = (() => {
       setorDestino: setor,
       prazo: prazo,
       critico: critica,
-      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado',
+      status: setor === 'Usinagem' ? 'Aguardando Aprova├º├úo PCM' : 'Aguardando Encarregado',
       createdAt: DB.now()
     };
 
@@ -1809,7 +1804,7 @@ window.WorkerPanel = (() => {
       DB.solicitacoes.add(data);
     }
 
-    Toast.success('Serviço Solicitado!', 'A solicitação foi enviada com sucesso para o setor.');
+    Toast.success('Servi├ºo Solicitado!', 'A solicita├º├úo foi enviada com sucesso para o setor.');
     closeModal('modal-worker-service');
     Router.navigate('worker-panel', { force: true });
   }
@@ -1824,13 +1819,13 @@ window.WorkerPanel = (() => {
     const activeEqId = equipmentId || (myEqs.length > 0 ? myEqs[0].id : '');
     const tasks = DB.tasks.getAll().filter(t => t.equipmentId === activeEqId);
     
-    const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];
+    const tipos = ['Falta de Pe├ºa','Falta de M├úo de Obra','Falta de Ferramenta','Aguardando Aprova├º├úo','Equipamento N├úo Liberado','Depend├¬ncia N├úo Conclu├¡da','Outra'];
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-restriction">
         <div class="modal modal-lg" style="box-shadow:var(--shadow-lg);">
           <div class="modal-header">
-            <div class="modal-title">Registrar Impedimento (Restrição)</div>
+            <div class="modal-title">Registrar Impedimento (Restri├º├úo)</div>
             <button class="modal-close" onclick="closeModal('modal-worker-restriction')">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -1855,19 +1850,19 @@ window.WorkerPanel = (() => {
               <div class="form-group">
                 <label>Tarefa Bloqueada por este Impedimento</label>
                 <select id="w-rs-task">
-                  <option value="">Nenhuma tarefa específica</option>
+                  <option value="">Nenhuma tarefa espec├¡fica</option>
                   ${tasks.map(t => `<option value="${t.id}">${t.codigo ? t.codigo + ' - ' : ''}${t.descricao}</option>`).join('')}
                 </select>
               </div>
 
               <div class="form-group">
-                <label>Descrição do Impedimento / Detalhes *</label>
-                <textarea id="w-rs-desc" rows="4" placeholder="Descreva o que está impedindo a execução do serviço (ex: aguardando junta de vedação, sem guindaste alocado)..." required></textarea>
+                <label>Descri├º├úo do Impedimento / Detalhes *</label>
+                <textarea id="w-rs-desc" rows="4" placeholder="Descreva o que est├í impedindo a execu├º├úo do servi├ºo (ex: aguardando junta de veda├º├úo, sem guindaste alocado)..." required></textarea>
               </div>
 
               <div class="checkbox-wrap">
                 <input type="checkbox" id="w-rs-critico" />
-                <label for="w-rs-critico" style="cursor:pointer;">Esta restrição impacta o caminho crítico (atrasa a liberação)</label>
+                <label for="w-rs-critico" style="cursor:pointer;">Esta restri├º├úo impacta o caminho cr├¡tico (atrasa a libera├º├úo)</label>
               </div>
             </div>
           </div>
@@ -1890,14 +1885,14 @@ window.WorkerPanel = (() => {
     const select = document.getElementById('w-rs-task');
     if (!select) return;
     const tasks = DB.tasks.getAll().filter(t => t.equipmentId === eqId);
-    select.innerHTML = '<option value="">Nenhuma tarefa específica</option>' +
+    select.innerHTML = '<option value="">Nenhuma tarefa espec├¡fica</option>' +
       tasks.map(t => `<option value="${t.id}">${t.codigo ? t.codigo + ' - ' : ''}${t.descricao}</option>`).join('');
   }
 
   function saveRestriction() {
     const desc = document.getElementById('w-rs-desc').value.trim();
     if (!desc) {
-      Toast.error('Erro', 'Descrição do impedimento é obrigatória.');
+      Toast.error('Erro', 'Descri├º├úo do impedimento ├® obrigat├│ria.');
       return;
     }
 
@@ -1921,7 +1916,7 @@ window.WorkerPanel = (() => {
     };
 
     DB.restrictions.create(data);
-    Toast.success('Impedimento Registrado!', 'O PCM e Supervisão foram alertados sobre a restrição.');
+    Toast.success('Impedimento Registrado!', 'O PCM e Supervis├úo foram alertados sobre a restri├º├úo.');
     closeModal('modal-worker-restriction');
     Router.navigate('worker-panel', { force: true });
   }
@@ -1957,11 +1952,11 @@ window.WorkerPanel = (() => {
     promptComplete,
     previewPhoto,
     finalizeTask,
-    submitComplete,
     getMyEquipments,
     compressImage
   };
 })();
+
 // ================================================================
 // NEW MODULES FOR WORKER PARTS & SERVICES PAGES
 // ================================================================
@@ -1977,11 +1972,11 @@ window.WorkerParts = (() => {
     if (myEqs.length === 0) {
       return `
         <div class="page-container" style="animation:fadeIn 0.3s ease;">
-          <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-6);">Solicitar Peças</h1>
+          <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-6);">Solicitar Pe├ºas</h1>
           <div class="empty-state" style="padding:var(--space-8);text-align:center;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-xl);">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px;height:48px;margin:0 auto var(--space-4);color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <h3 style="color:var(--text-primary);font-weight:600;">Sem Equipamento Alocado</h3>
-            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:8px;">Você precisa estar alocado em um equipamento para solicitar peças.</p>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:8px;">Voc├¬ precisa estar alocado em um equipamento para solicitar pe├ºas.</p>
           </div>
         </div>
       `;
@@ -1991,7 +1986,7 @@ window.WorkerParts = (() => {
       document.getElementById('btn-w-pt-save').addEventListener('click', () => {
         const desc = document.getElementById('w-pt-desc').value.trim();
         if (!desc) {
-          window.Toast.error('Erro', 'Descrição da peça é obrigatória.');
+          window.Toast.error('Erro', 'Descri├º├úo da pe├ºa ├® obrigat├│ria.');
           return;
         }
 
@@ -2002,7 +1997,7 @@ window.WorkerParts = (() => {
 
         const data = {
           equipmentId: eqId,
-          descricao: `Qtd: ${qty}x — ${desc}`,
+          descricao: `Qtd: ${qty}x ÔÇö ${desc}`,
           codigo: pn,
           status: 'Solicitada',
           critica: document.getElementById('w-pt-critica').checked,
@@ -2015,7 +2010,7 @@ window.WorkerParts = (() => {
         };
 
         window.DB.parts.create(data);
-        window.Toast.success('Solicitação Enviada!', `Peça "${desc}" cadastrada com status Solicitada.`);
+        window.Toast.success('Solicita├º├úo Enviada!', `Pe├ºa "${desc}" cadastrada com status Solicitada.`);
         document.getElementById('w-pt-desc').value = '';
         document.getElementById('w-pt-pn').value = '';
         document.getElementById('w-pt-qty').value = '1';
@@ -2025,8 +2020,8 @@ window.WorkerParts = (() => {
 
     return `
       <div class="page-container" style="animation:fadeIn 0.3s ease;">
-        <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-2);">Solicitar Falta de Peça</h1>
-        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-6);">Informe as peças necessárias para o andamento do seu serviço.</p>
+        <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-2);">Solicitar Falta de Pe├ºa</h1>
+        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-6);">Informe as pe├ºas necess├írias para o andamento do seu servi├ºo.</p>
         
         <div class="card" style="max-width:600px;background:var(--bg-card);border:1px solid var(--border-card);">
           <div style="display:flex;flex-direction:column;gap:var(--space-4);">
@@ -2037,12 +2032,12 @@ window.WorkerParts = (() => {
               </select>
             </div>
             <div class="form-group">
-              <label>Descrição da Peça *</label>
-              <input id="w-pt-desc" class="form-control" placeholder="Ex: Filtro de ar primário" required />
+              <label>Descri├º├úo da Pe├ºa *</label>
+              <input id="w-pt-desc" class="form-control" placeholder="Ex: Filtro de ar prim├írio" required />
             </div>
             <div class="form-row">
               <div class="form-group">
-                <label>Part Number / Código</label>
+                <label>Part Number / C├│digo</label>
                 <input id="w-pt-pn" class="form-control" placeholder="Ex: PN-98765" />
               </div>
               <div class="form-group">
@@ -2053,18 +2048,18 @@ window.WorkerParts = (() => {
             
             <div class="checkbox-wrap" style="background:rgba(255,179,0,0.1);border:1px solid rgba(255,179,0,0.3);padding:var(--space-3);border-radius:var(--radius-md);">
               <input type="checkbox" id="w-pt-critica" />
-              <label for="w-pt-critica" style="cursor:pointer;color:var(--color-warning);font-weight:600;">Peça Crítica (Bloqueia o equipamento)</label>
+              <label for="w-pt-critica" style="cursor:pointer;color:var(--color-warning);font-weight:600;">Pe├ºa Cr├¡tica (Bloqueia o equipamento)</label>
             </div>
 
             <div class="form-group">
-              <label>Observações / Justificativa</label>
-              <textarea id="w-pt-obs" class="form-control" rows="3" placeholder="Informações adicionais para o PCM..."></textarea>
+              <label>Observa├º├Áes / Justificativa</label>
+              <textarea id="w-pt-obs" class="form-control" rows="3" placeholder="Informa├º├Áes adicionais para o PCM..."></textarea>
             </div>
             
             <div style="margin-top:var(--space-4);text-align:right;">
               <button class="btn btn-primary" id="btn-w-pt-save" style="width:100%;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;margin-right:8px;display:inline-block;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
-                Enviar Solicitação de Peça
+                Enviar Solicita├º├úo de Pe├ºa
               </button>
             </div>
           </div>
@@ -2086,11 +2081,11 @@ window.WorkerServices = (() => {
     if (myEqs.length === 0) {
       return `
         <div class="page-container" style="animation:fadeIn 0.3s ease;">
-          <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-6);">Solicitar Serviço de Terceiro</h1>
+          <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-6);">Solicitar Servi├ºo de Terceiro</h1>
           <div class="empty-state" style="padding:var(--space-8);text-align:center;background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-xl);">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:48px;height:48px;margin:0 auto var(--space-4);color:var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <h3 style="color:var(--text-primary);font-weight:600;">Sem Equipamento Alocado</h3>
-            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:8px;">Você precisa estar alocado em um equipamento para solicitar serviços.</p>
+            <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-top:8px;">Voc├¬ precisa estar alocado em um equipamento para solicitar servi├ºos.</p>
           </div>
         </div>
       `;
@@ -2103,14 +2098,14 @@ window.WorkerServices = (() => {
     if (myHistory.length > 0) {
       historyHtml = `
         <div class="card" style="margin-top:var(--space-6);background:var(--bg-card);border:1px solid var(--border-card);max-width:800px;">
-          <h2 style="font-size:var(--text-lg);font-weight:700;margin-bottom:var(--space-4);">Histórico de Solicitações</h2>
+          <h2 style="font-size:var(--text-lg);font-weight:700;margin-bottom:var(--space-4);">Hist├│rico de Solicita├º├Áes</h2>
           <div style="overflow-x:auto;">
             <table class="table" style="width:100%;text-align:left;border-collapse:collapse;">
               <thead>
                 <tr style="border-bottom:1px solid var(--border-card);">
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">DATA</th>
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">SETOR</th>
-                  <th style="padding:10px;font-size:12px;color:var(--text-muted);">DESCRIÇÃO</th>
+                  <th style="padding:10px;font-size:12px;color:var(--text-muted);">DESCRI├ç├âO</th>
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">STATUS</th>
                 </tr>
               </thead>
@@ -2119,8 +2114,8 @@ window.WorkerServices = (() => {
                   let badge = 'badge-ghost';
                   if (s.status.includes('PCM')) badge = 'badge-warning';
                   else if (s.status.includes('Encarregado')) badge = 'badge-primary';
-                  else if (s.status === 'Em Execução') badge = 'badge-info';
-                  else if (s.status === 'Concluída') badge = 'badge-success';
+                  else if (s.status === 'Em Execu├º├úo') badge = 'badge-info';
+                  else if (s.status === 'Conclu├¡da') badge = 'badge-success';
                   
                   return `
                   <tr style="border-bottom:1px solid var(--border-card);">
@@ -2154,20 +2149,20 @@ window.WorkerServices = (() => {
         const dest = document.getElementById('w-sv-dest').value;
 
         if (!desc) {
-          window.Toast.error('Erro', 'Descrição do serviço é obrigatória.');
+          window.Toast.error('Erro', 'Descri├º├úo do servi├ºo ├® obrigat├│ria.');
           return;
         }
         if (!dest) {
-          window.Toast.error('Erro', 'Setor de destino é obrigatório.');
+          window.Toast.error('Erro', 'Setor de destino ├® obrigat├│rio.');
           return;
         }
         if (!window._tempSvPhoto) {
-          window.Toast.error('Erro', 'É obrigatório anexar a foto da peça.');
+          window.Toast.error('Erro', '├ë obrigat├│rio anexar a foto da pe├ºa.');
           return;
         }
 
         const eqId = document.getElementById('w-sv-eq').value;
-        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
+        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprova├º├úo PCM' : 'Aguardando Encarregado';
         
         const payload = {
           id: window.DB.uid('sol'),
@@ -2182,7 +2177,7 @@ window.WorkerServices = (() => {
         };
 
         window.DB.solicitacoes.add(payload);
-        const msg = (dest === 'Usinagem') ? `Solicitação para Usinagem enviada ao PCM para aprovação.` : `Solicitação enviada direto para o encarregado de ${dest}.`;
+        const msg = (dest === 'Usinagem') ? `Solicita├º├úo para Usinagem enviada ao PCM para aprova├º├úo.` : `Solicita├º├úo enviada direto para o encarregado de ${dest}.`;
         window.Toast.success('Enviado!', msg);
         window._tempSvPhoto = null; // Clear temp photo
         window.Router.navigate('worker-services', { force: true });
@@ -2191,8 +2186,8 @@ window.WorkerServices = (() => {
 
     return `
       <div class="page-container" style="animation:fadeIn 0.3s ease;">
-        <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-2);">Solicitar Serviço Externo</h1>
-        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-6);">Abra uma requisição para outros setores de manutenção (Usinagem, Elétrica, etc).</p>
+        <h1 style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary);margin-bottom:var(--space-2);">Solicitar Servi├ºo Externo</h1>
+        <p style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-6);">Abra uma requisi├º├úo para outros setores de manuten├º├úo (Usinagem, El├®trica, etc).</p>
 
         <div class="card" style="max-width:800px;background:var(--bg-card);border:1px solid var(--border-card);">
           <div style="display:flex;flex-direction:column;gap:var(--space-4);">
@@ -2208,24 +2203,24 @@ window.WorkerServices = (() => {
                 <option value="">Selecione o setor...</option>
                 <option value="Usinagem">Usinagem</option>
                 <option value="Caldeiraria">Caldeiraria</option>
-                <option value="Mecânica">Mecânica</option>
+                <option value="Mec├ónica">Mec├ónica</option>
                 <option value="Teste">Teste</option>
                 <option value="Retrabalho">Retrabalho</option>
-                <option value="Elétrica">Elétrica</option>
-                <option value="Lubrificação">Lubrificação</option>
+                <option value="El├®trica">El├®trica</option>
+                <option value="Lubrifica├º├úo">Lubrifica├º├úo</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Descrição do que precisa ser feito *</label>
+              <label>Descri├º├úo do que precisa ser feito *</label>
               <textarea id="w-sv-desc" class="form-control" rows="3" placeholder="Detalhe a necessidade..."></textarea>
             </div>
             
             <div class="form-group">
-              <label>Foto da Peça / Serviço *</label>
-              <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Obrigatório tirar foto para a aprovação e visualização do Torneiro/Encarregado.</p>
+              <label>Foto da Pe├ºa / Servi├ºo *</label>
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Obrigat├│rio tirar foto para a aprova├º├úo e visualiza├º├úo do Torneiro/Encarregado.</p>
               <div class="file-upload-wrapper" style="position:relative;display:inline-block;width:100%;">
                 <button type="button" class="btn btn-outline" style="width:100%;border-style:dashed;color:var(--text-secondary);" onclick="document.getElementById('w-sv-photo').click()">
-                  📸 Tirar Foto ou Anexar
+                  ­ƒô© Tirar Foto ou Anexar
                 </button>
                 <input type="file" id="w-sv-photo" accept="image/*" capture="environment" style="display:none;" />
               </div>
@@ -2237,7 +2232,7 @@ window.WorkerServices = (() => {
             <div style="display:flex;justify-content:flex-end;margin-top:10px;">
               <button id="btn-w-sv-save" class="btn btn-primary" style="width:100%;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
-                Enviar Solicitação
+                Enviar Solicita├º├úo
               </button>
             </div>
           </div>

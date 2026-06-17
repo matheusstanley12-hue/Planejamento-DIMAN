@@ -301,7 +301,8 @@ window.WorkerPanel = (() => {
     startTaskForWorkers(taskId, targetWorkers);
   }
 
-  function promptPause() {
+  function promptPause(workerId) {
+    const wIdParam = workerId ? `'${workerId}'` : 'null';
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-pause">
         <div class="modal" style="box-shadow:var(--shadow-lg);">
@@ -312,14 +313,14 @@ window.WorkerPanel = (() => {
             </button>
           </div>
           <div class="modal-body" style="padding-top:10px;">
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Selecione abaixo por que você está parando a tarefa atual:</p>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Selecione abaixo por que a tarefa está sendo pausada:</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Almoço')">🍽️ Almoço</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Banheiro')">🚻 Banheiro</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptMissingParts()">⚙️ Falta de Peças</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('DSS')">🛡️ DSS</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Fim Expediente')">🏠 Fim Expediente</button>
-              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptOtherReason()">Outros</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Almoço', ${wIdParam})">🍽️ Almoço</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Banheiro', ${wIdParam})">🚻 Banheiro</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptMissingParts(${wIdParam})">⚙️ Falta de Peças</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('DSS', ${wIdParam})">🛡️ DSS</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.pauseWork('Fim Expediente', ${wIdParam})">🏠 Fim Expediente</button>
+              <button class="btn btn-outline" style="height:60px;flex-direction:column;gap:5px;border-color:var(--border-card);" onclick="WorkerPanel.promptOtherReason(${wIdParam})">Outros</button>
             </div>
           </div>
         </div>
@@ -331,87 +332,80 @@ window.WorkerPanel = (() => {
     openModal('modal-worker-pause');
   }
 
-  function promptMissingParts() {
+  function promptMissingParts(workerId) {
+    const wIdParam = workerId ? `'${workerId}'` : 'null';
     closeModal('modal-worker-pause');
-    const modalHtml = `
-      <div class="modal-overlay" id="modal-worker-missing-parts">
-        <div class="modal" style="box-shadow:var(--shadow-lg);">
-          <div class="modal-header">
-            <div class="modal-title">Justificar Falta de Peças</div>
-            <button class="modal-close" onclick="closeModal('modal-worker-missing-parts')">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-          <div class="modal-body" style="padding-top:10px;">
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, descreva qual peça está faltando para que possamos providenciar (código, nome, etc):</p>
-            <div class="form-group" style="margin-bottom:15px;">
-              <textarea id="missing-parts-desc" rows="4" placeholder="Ex: Filtro de óleo cód 12345, Junta do cabeçote, etc..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
+    setTimeout(() => {
+      const modalHtml = `
+        <div class="modal-overlay" id="modal-worker-missing-parts">
+          <div class="modal" style="box-shadow:var(--shadow-lg);">
+            <div class="modal-header">
+              <div class="modal-title">Falta de Peças</div>
+              <button class="modal-close" onclick="closeModal('modal-worker-missing-parts')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitMissingParts()">Confirmar Pausa</button>
+            <div class="modal-body" style="padding-top:10px;">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Especifique qual peça ou componente está faltando:</p>
+              <textarea id="missing-parts-desc" class="form-input" rows="3" placeholder="Ex: Correia do motor, parafusos M8..." style="margin-bottom:15px;"></textarea>
+              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.submitMissingParts(${wIdParam})">Pausar por Falta de Peças</button>
+            </div>
           </div>
         </div>
-      </div>
-    `;
-    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
-    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
-    container.innerHTML = modalHtml;
-    openModal('modal-worker-missing-parts');
+      `;
+      const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+      if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+      container.innerHTML = modalHtml;
+      openModal('modal-worker-missing-parts');
+    }, 100);
   }
 
-  function submitMissingParts() {
+  function submitMissingParts(workerId) {
     const desc = document.getElementById('missing-parts-desc').value.trim();
-    if (!desc) {
-      Toast.error('Erro', 'Por favor, descreva a peça que está faltando.');
-      return;
-    }
-    const reason = 'Falta de Peças: ' + desc;
+    if (!desc) return Toast.error('Erro', 'Por favor, descreva as peças faltantes.');
     closeModal('modal-worker-missing-parts');
-    pauseWork(reason);
+    pauseWork(`Falta de Peças: ${desc}`, workerId);
   }
 
-  function promptOtherReason() {
+  function promptOtherReason(workerId) {
+    const wIdParam = workerId ? `'${workerId}'` : 'null';
     closeModal('modal-worker-pause');
-    const modalHtml = `
-      <div class="modal-overlay" id="modal-worker-other-reason">
-        <div class="modal" style="box-shadow:var(--shadow-lg);">
-          <div class="modal-header">
-            <div class="modal-title">Justificar Pausa (Outros)</div>
-            <button class="modal-close" onclick="closeModal('modal-worker-other-reason')">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-          <div class="modal-body" style="padding-top:10px;">
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Por favor, descreva o motivo da pausa da atividade:</p>
-            <div class="form-group" style="margin-bottom:15px;">
-              <textarea id="other-reason-desc" rows="4" placeholder="Descreva o motivo detalhadamente..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
+    setTimeout(() => {
+      const modalHtml = `
+        <div class="modal-overlay" id="modal-worker-other-reason">
+          <div class="modal" style="box-shadow:var(--shadow-lg);">
+            <div class="modal-header">
+              <div class="modal-title">Outro Motivo</div>
+              <button class="modal-close" onclick="closeModal('modal-worker-other-reason')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitOtherReason()">Confirmar Pausa</button>
+            <div class="modal-body" style="padding-top:10px;">
+              <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Descreva o motivo da pausa:</p>
+              <textarea id="other-reason-desc" class="form-input" rows="3" placeholder="Ex: Aguardando liberação de área..." style="margin-bottom:15px;"></textarea>
+              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.submitOtherReason(${wIdParam})">Pausar Tarefa</button>
+            </div>
           </div>
         </div>
-      </div>
-    `;
-    const container = document.getElementById('worker-panel-modals') || document.createElement('div');
-    if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
-    container.innerHTML = modalHtml;
-    openModal('modal-worker-other-reason');
+      `;
+      const container = document.getElementById('worker-panel-modals') || document.createElement('div');
+      if (!container.id) { container.id = 'worker-panel-modals'; document.body.appendChild(container); }
+      container.innerHTML = modalHtml;
+      openModal('modal-worker-other-reason');
+    }, 100);
   }
 
-  function submitOtherReason() {
+  function submitOtherReason(workerId) {
     const desc = document.getElementById('other-reason-desc').value.trim();
-    if (!desc) {
-      Toast.error('Erro', 'Por favor, descreva o motivo da pausa.');
-      return;
-    }
-    const reason = 'Outros: ' + desc;
+    if (!desc) return Toast.error('Erro', 'Por favor, descreva o motivo.');
     closeModal('modal-worker-other-reason');
-    pauseWork(reason);
+    pauseWork(desc, workerId);
   }
 
 
-  function pauseWork(reason) {
-    closeModal('modal-worker-pause');
+  function pauseWork(reason, workerId) {
     const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
+    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
     if (!myWorker || myWorker.currentState !== 'Trabalhando') return;
 
     const t = DB.tasks.get(myWorker.currentTaskId);
@@ -543,50 +537,48 @@ window.WorkerPanel = (() => {
     Router.navigate('worker-panel', { force: true });
   }
 
-  function resumeWork() {
+  function resumeWork(workerId) {
     const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
+    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
     if (!myWorker || myWorker.currentState !== 'Em Pausa') return;
+      const t = DB.tasks.get(myWorker.currentTaskId);
+      const startTime = new Date(myWorker.currentActionStartTime);
+      const now = new Date();
+      const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
 
-    const t = DB.tasks.get(myWorker.currentTaskId);
-    const startTime = new Date(myWorker.currentActionStartTime);
-    const now = new Date();
-    const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+      DB.timesheets.create({
+        workerId: myWorker.id,
+        workerNome: session.nome,
+        equipmentId: t ? t.equipmentId : null,
+        taskId: t ? t.id : null,
+        data: now.toISOString().slice(0, 10),
+        horaInicio: startTime.toISOString(),
+        horaFim: now.toISOString(),
+        horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+        tipo: 'Pausa',
+        motivoPausa: myWorker.currentPauseReason,
+        observacao: `Pausa (${myWorker.currentPauseReason})`
+      });
 
-    // Save Timesheet (Pause)
-    DB.timesheets.create({
-      workerId: myWorker.id,
-      workerNome: session.nome,
-      equipmentId: t ? t.equipmentId : null,
-      taskId: t ? t.id : null,
-      data: now.toISOString().slice(0, 10),
-      horaInicio: startTime.toISOString(),
-      horaFim: now.toISOString(),
-      horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
-      tipo: 'Pausa',
-      motivoPausa: myWorker.currentPauseReason,
-      observacao: `Pausa (${myWorker.currentPauseReason})`
-    });
+      DB.workforce.update(myWorker.id, {
+        currentState: 'Trabalhando',
+        currentPauseReason: '',
+        currentActionStartTime: now.toISOString()
+      });
 
-    DB.workforce.update(myWorker.id, {
-      currentState: 'Trabalhando',
-      currentPauseReason: '',
-      currentActionStartTime: now.toISOString()
-    });
+      if (t && t.status !== 'Em Andamento') {
+        DB.tasks.update(t.id, { status: 'Em Andamento' });
+      }
 
-    if (t && t.status !== 'Em Andamento') {
-      DB.tasks.update(t.id, { status: 'Em Andamento' });
-    }
-
-    Toast.success('Retomado!', 'O cronômetro de trabalho voltou a rodar.');
-    Router.navigate('worker-panel', { force: true });
+      Toast.success('Retomado!', 'O cronômetro de trabalho voltou a rodar.');
+      Router.navigate('worker-panel', { force: true });
   }
 
-  function cancelWork() {
-    window.uiConfirm('Tem certeza que deseja cancelar este apontamento em andamento? As horas decorridas não serão registradas.', (res) => {
+  function cancelWork(workerId) {
+    window.uiConfirm('Tem certeza que deseja cancelar este apontamento em andamento?', (res) => {
       if (!res) return;
       const session = Auth.getSession();
-      const myWorker = getMyWorker(session);
+      const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
       if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
       const t = DB.tasks.get(myWorker.currentTaskId);
@@ -615,12 +607,13 @@ window.WorkerPanel = (() => {
     });
   }
 
-  function promptComplete() {
+  function promptComplete(workerId) {
     const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
+    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
     if (!myWorker || !myWorker.currentTaskId) return;
 
     const t = DB.tasks.get(myWorker.currentTaskId);
+    const wIdParam = workerId ? `'${workerId}'` : 'null';
 
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-complete">
@@ -652,7 +645,7 @@ window.WorkerPanel = (() => {
               <textarea id="task-complete-obs" rows="2" placeholder="Algo a reportar?"></textarea>
             </div>
             
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.finalizeTask()">Confirmar Conclusão</button>
+            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.finalizeTask(${wIdParam})">Confirmar Conclusão</button>
           </div>
         </div>
       </div>
@@ -673,9 +666,9 @@ window.WorkerPanel = (() => {
     }
   }
 
-  function finalizeTask() {
+  function finalizeTask(workerId) {
     const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
+    const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
     if (!myWorker || !myWorker.currentTaskId) return;
 
     const fileInput = document.getElementById('task-photo-upload');
@@ -841,19 +834,26 @@ window.WorkerPanel = (() => {
 
     // Live Status Panel
     let statusPanelHtml = '';
-    const state = myWorker.currentState || 'Ocioso';
     
+    const allWorkers = window.DB.workforce.list();
+    const activeWorkers = allWorkers.filter(w => 
+      (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && 
+      w.currentTaskId && 
+      myTasks.find(t => t.id === w.currentTaskId)
+    );
+
     // Auto-update timer display
     if (!window.workerTimerInterval) {
       window.workerTimerInterval = setInterval(() => {
-        const session = window.Auth.getSession();
         const workers = window.DB.workforce.list();
-        const myW = workers.find(w => (w.matricula && session.matricula && w.matricula === session.matricula) || w.nome === session.nome);
-
-        const el = document.getElementById('live-timer-wp');
-        if (el && myW && myW.currentActionStartTime) {
-          el.innerText = formatTimeDiff(myW.currentActionStartTime);
-        }
+        
+        document.querySelectorAll('.live-timer-wp').forEach(el => {
+          const wId = el.getAttribute('data-worker-id');
+          const w = workers.find(wk => wk.id === wId);
+          if (w && w.currentActionStartTime) {
+            el.innerText = formatTimeDiff(w.currentActionStartTime);
+          }
+        });
 
         document.querySelectorAll('.live-pause-timer').forEach(span => {
           const start = span.getAttribute('data-start');
@@ -864,90 +864,95 @@ window.WorkerPanel = (() => {
       }, 1000);
     }
 
-    if (state === 'Trabalhando') {
-      const currentT = tasks.find(t => t.id === myWorker.currentTaskId);
-      const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
-      statusPanelHtml = `
-        <div class="active-task-card working">
-          <div class="pulse-indicator"></div>
-          <div class="task-state">EM EXECUÇÃO</div>
-          <div class="task-timer" id="live-timer-wp">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
-          <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
-          <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
-          ${currentT && currentT.fotoPeca ? `
-            <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-              <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
-            </div>
-          ` : ''}
-          
-          ${currentT && !canExecuteTask(session, currentT) ? `
-            <div class="action-buttons">
-              <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                Acesso Restrito ao Cargo
+    if (activeWorkers.length > 0) {
+      statusPanelHtml = activeWorkers.map(w => {
+        const state = w.currentState;
+        const currentT = tasks.find(t => t.id === w.currentTaskId);
+        const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
+        
+        if (state === 'Trabalhando') {
+          return `
+            <div class="active-task-card working" style="margin-bottom: 15px;">
+              <div class="pulse-indicator"></div>
+              <div class="task-state">EM EXECUÇÃO - ${w.nome}</div>
+              <div class="task-timer live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</div>
+              <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
+              <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
+              ${currentT && currentT.fotoPeca ? `
+                <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                  <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
+                </div>
+              ` : ''}
+              
+              ${currentT && !canExecuteTask(session, currentT) && w.matricula === session.matricula ? `
+                <div class="action-buttons">
+                  <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                    Acesso Restrito ao Cargo
+                  </div>
+                </div>
+              ` : `
+              <div class="action-buttons">
+                <button class="btn-action cancel" onclick="WorkerPanel.cancelWork('${w.id}')" style="background-color: var(--color-danger); color: white;">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  CANCELAR
+                </button>
+                <button class="btn-action pause" onclick="WorkerPanel.promptPause('${w.id}')">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  PAUSAR
+                </button>
+                <button class="btn-action complete" onclick="WorkerPanel.promptComplete('${w.id}')">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  CONCLUIR
+                </button>
               </div>
+              `}
             </div>
-          ` : `
-          <div class="action-buttons">
-            <button class="btn-action cancel" onclick="WorkerPanel.cancelWork()" style="background-color: var(--color-danger); color: white;">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              CANCELAR
-            </button>
-            <button class="btn-action pause" onclick="WorkerPanel.promptPause()">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              PAUSAR
-            </button>
-            <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-              CONCLUIR
-            </button>
-          </div>
-          `}
-        </div>
-      `;
-    } else if (state === 'Em Pausa') {
-      const currentT = tasks.find(t => t.id === myWorker.currentTaskId);
-      const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
-      statusPanelHtml = `
-        <div class="active-task-card paused">
-          <div class="task-state">EM PAUSA: ${myWorker.currentPauseReason}</div>
-          <div class="task-timer" id="live-timer-wp">${formatTimeDiff(myWorker.currentActionStartTime)}</div>
-          <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
-          <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
-          ${currentT && currentT.fotoPeca ? `
-            <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-              <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
-            </div>
-          ` : ''}
-          
-          ${currentT && !canExecuteTask(session, currentT) ? `
-            <div class="action-buttons">
-              <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
-                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                Acesso Restrito ao Cargo
+          `;
+        } else if (state === 'Em Pausa') {
+          return `
+            <div class="active-task-card paused" style="margin-bottom: 15px;">
+              <div class="task-state">EM PAUSA: ${w.currentPauseReason} - ${w.nome}</div>
+              <div class="task-timer live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</div>
+              <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
+              <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
+              ${currentT && currentT.fotoPeca ? `
+                <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                  <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
+                </div>
+              ` : ''}
+              
+              ${currentT && !canExecuteTask(session, currentT) && w.matricula === session.matricula ? `
+                <div class="action-buttons">
+                  <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
+                    Acesso Restrito ao Cargo
+                  </div>
+                </div>
+              ` : `
+              <div class="action-buttons">
+                <button class="btn-action cancel" onclick="WorkerPanel.cancelWork('${w.id}')" style="background-color: var(--color-danger); color: white;">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                  CANCELAR
+                </button>
+                <button class="btn-action resume" onclick="WorkerPanel.resumeWork('${w.id}')">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  RETOMAR
+                </button>
+                <button class="btn-action complete" onclick="WorkerPanel.promptComplete('${w.id}')">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                  CONCLUIR
+                </button>
               </div>
+              `}
             </div>
-          ` : `
-          <div class="action-buttons">
-            <button class="btn-action cancel" onclick="WorkerPanel.cancelWork()" style="background-color: var(--color-danger); color: white;">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-              CANCELAR
-            </button>
-            <button class="btn-action resume" onclick="WorkerPanel.resumeWork()">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              RETOMAR
-            </button>
-            <button class="btn-action complete" onclick="WorkerPanel.promptComplete()">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-              CONCLUIR
-            </button>
-          </div>
-          `}
-        </div>
-      `;
+          `;
+        }
+        return '';
+      }).join('');
     } else {
       statusPanelHtml = `
-        <div class="active-task-card idle">
+        <div class="active-task-card idle" style="margin-bottom: 15px;">
           <div class="task-state" style="color:var(--text-muted);font-weight:700;">OCIOSO</div>
           <p style="color:var(--text-secondary);font-size:14px;margin-top:10px;">Nenhuma tarefa em execução no momento. Escolha uma atividade na fila abaixo para iniciar seu trabalho.</p>
         </div>
@@ -1952,11 +1957,11 @@ window.WorkerPanel = (() => {
     promptComplete,
     previewPhoto,
     finalizeTask,
+    submitComplete,
     getMyEquipments,
     compressImage
   };
 })();
-
 // ================================================================
 // NEW MODULES FOR WORKER PARTS & SERVICES PAGES
 // ================================================================
