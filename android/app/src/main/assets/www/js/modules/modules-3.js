@@ -386,47 +386,71 @@ window.SimulatorModule = (() => {
         </div>
 
         <!-- Results panel -->
-        <div>
-          ${impact ? `
-          <div class="card" style="margin-bottom:var(--space-4);">
-            <div class="card-header"><div class="card-title">📋 Estado Atual</div></div>
-            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-              <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Data Original 🔒</span><strong style="color:var(--color-danger)">${formatDate(impact.eq.dataLiberacaoPlanejada)}</strong></div>
-              <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Dias Restantes</span><strong>${impact.workDaysRemaining} dias</strong></div>
-              <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Avanço Atual</span><strong style="color:var(--brand-primary-light)">${impact.eq.pctAvanco||0}%</strong></div>
-            </div>
-          </div>
-
-          <div class="card" style="border-color:${impact.totalGain>0?'rgba(0,200,83,.3)':'rgba(244,67,54,.3)'};background:${impact.totalGain>0?'rgba(0,200,83,.05)':'rgba(244,67,54,.05)'};">
-            <div class="card-header"><div class="card-title">🎯 Resultado da Simulação</div></div>
-            <div style="text-align:center;padding:var(--space-4);">
-              <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-2)">Nova Data de Liberação</div>
-              <div style="font-size:2.5rem;font-weight:900;color:${impact.totalGain>0?'var(--color-success)':'var(--color-danger)'}">${formatDate(impact.newDate)}</div>
-              <div style="font-size:var(--text-xl);font-weight:700;color:${impact.totalGain>0?'var(--color-success)':'var(--color-danger)'};margin-top:var(--space-2);">${impact.totalGain > 0 ? `⬆️ Antecipa ${impact.totalGain} dias` : impact.totalGain < 0 ? `⬇️ Atrasa ${Math.abs(impact.totalGain)} dias` : '= Sem alteração'}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-3);">
-              ${[
-                {label:'Impacto dos Mecânicos', gain: impact.gainMechanics},
-                {label:'Impacto das Peças', gain: impact.gainParts},
-                {label:'Impacto das Horas Extras', gain: impact.gainOvertime},
-                {label:'Impacto dos Fins de Semana', gain: impact.gainWeekends},
-              ].map(item=>`<div style="display:flex;justify-content:space-between;font-size:var(--text-sm);">
-                <span style="color:var(--text-muted)">${item.label}</span>
-                <strong style="color:${item.gain>0?'var(--color-success)':item.gain<0?'var(--color-danger)':'var(--text-muted)'}">${item.gain>0?'-'+item.gain+' dias':item.gain<0?'+'+Math.abs(item.gain)+' dias':'0'}</strong>
-              </div>`).join('')}
-            </div>
-          </div>
-          <div style="margin-top:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-muted);">
-            ⚠️ NOTA: A Data Planejada Original não pode ser alterada. A simulação mostra apenas uma estimativa.
-          </div>
-          ` : '<div class="card"><div class="empty-state" style="padding:var(--space-8)"><p>Selecione um equipamento e ajuste os parâmetros para ver a simulação</p></div></div>'}
+        <div id="sim-results-container">
+          ${renderResultsPanel(impact)}
         </div>
       </div>
     </div>`;
   }
 
-  function setEq(id) { window.setGlobalEqFilter(id); }
-  function setParam(key, val) { params[key] = val; const eqId = window.GlobalEqFilter; if (eqId) { const r = calcImpact(); if (r) { /* update result panel in place */ } } }
+  function renderResultsPanel(impact) {
+    if (!impact) {
+      return '<div class="card"><div class="empty-state" style="padding:var(--space-8)"><p>Selecione um equipamento e ajuste os parâmetros para ver a simulação</p></div></div>';
+    }
+    
+    return `
+      <div class="card" style="margin-bottom:var(--space-4);">
+        <div class="card-header"><div class="card-title">📋 Estado Atual</div></div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+          <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Data Original 🔒</span><strong style="color:var(--color-danger)">${formatDate(impact.eq.dataLiberacaoPlanejada)}</strong></div>
+          <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Dias Restantes</span><strong>${impact.workDaysRemaining} dias</strong></div>
+          <div style="display:flex;justify-content:space-between;"><span style="font-size:var(--text-sm);color:var(--text-muted)">Avanço Atual</span><strong style="color:var(--brand-primary-light)">${impact.eq.pctAvanco||0}%</strong></div>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:${impact.totalGain>0?'rgba(0,200,83,.3)':'rgba(244,67,54,.3)'};background:${impact.totalGain>0?'rgba(0,200,83,.05)':'rgba(244,67,54,.05)'};">
+        <div class="card-header"><div class="card-title">🎯 Resultado da Simulação</div></div>
+        <div style="text-align:center;padding:var(--space-4);">
+          <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-2)">Nova Data de Liberação</div>
+          <div style="font-size:2.5rem;font-weight:900;color:${impact.totalGain>0?'var(--color-success)':'var(--color-danger)'}">${formatDate(impact.newDate)}</div>
+          <div style="font-size:var(--text-xl);font-weight:700;color:${impact.totalGain>0?'var(--color-success)':'var(--color-danger)'};margin-top:var(--space-2);">${impact.totalGain > 0 ? `⬆️ Antecipa ${impact.totalGain} dias` : impact.totalGain < 0 ? `⬇️ Atrasa ${Math.abs(impact.totalGain)} dias` : '= Sem alteração'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-3);">
+          ${[
+            {label:'Impacto dos Mecânicos', gain: impact.gainMechanics},
+            {label:'Impacto das Peças', gain: impact.gainParts},
+            {label:'Impacto das Horas Extras', gain: impact.gainOvertime},
+            {label:'Impacto dos Fins de Semana', gain: impact.gainWeekends},
+          ].map(item=>`<div style="display:flex;justify-content:space-between;font-size:var(--text-sm);">
+            <span style="color:var(--text-muted)">${item.label}</span>
+            <strong style="color:${item.gain>0?'var(--color-success)':item.gain<0?'var(--color-danger)':'var(--text-muted)'}">${item.gain>0?'-'+item.gain+' dias':item.gain<0?'+'+Math.abs(item.gain)+' dias':'0'}</strong>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="margin-top:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--text-muted);">
+        ⚠️ NOTA: A Data Planejada Original não pode ser alterada. A simulação mostra apenas uma estimativa.
+      </div>
+    `;
+  }
+
+  function setEq(id) { 
+    window.setGlobalEqFilter(id); 
+    if (window.Router) window.Router.navigate('simulator', { force: true });
+  }
+
+  function setParam(key, val) { 
+    params[key] = val; 
+    const eqId = window.GlobalEqFilter; 
+    if (eqId) { 
+      const impact = calcImpact(); 
+      if (impact) { 
+        const container = document.getElementById('sim-results-container');
+        if (container) {
+          container.innerHTML = renderResultsPanel(impact);
+        }
+      } 
+    } 
+  }
   return { render, setEq, setParam };
 })();
 
