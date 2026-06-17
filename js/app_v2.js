@@ -504,7 +504,7 @@ function renderShell(session) {
     { route:'lessons',    label:'Lições Aprendidas',     icon:'light-bulb',     perm:'lessons',     section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'GESTÃO' },
     { route:'bonus',      label:'Prêmio Produção',       icon:'currency-dollar', perm:'reports', section:'' },
-    { route:'attendance', label:'Controle de Frequência',icon:'users',           perm:'reports', section:'' },
+    { route:'attendance', label:'Controle de Frequência',icon:'users',           perm:'workforce', section:'' },
     { route:'users',      label:'Usuários',              icon:'user-group',     perm:'users',       section:'' },
   ];
 
