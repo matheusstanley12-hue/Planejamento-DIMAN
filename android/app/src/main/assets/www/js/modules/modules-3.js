@@ -589,13 +589,35 @@ window.AIAssistant = (() => {
         }
 
         if (eqParts.length > 0) {
-          resp += `\n📦 **Peças Pendentes:** ${eqParts.length} no total.\n`;
-          if (eqCritParts.length > 0) {
-            resp += `  **ATENÇÃO (Caminho Crítico):**\n`;
-            eqCritParts.forEach(p => resp += `  - ${p.descricao} (${p.status}) - Chega em: ${window.formatDate(p.prazoEntrega)}\n`);
-          }
+          resp += `\n📦 **Lista Detalhada de Peças Pendentes (${eqParts.length}):**\n`;
+          eqParts.forEach(p => {
+            const crit = p.critica ? '🚨 [CRÍTICA] ' : '';
+            resp += `  - ${crit}${p.descricao} (Qtd: ${p.quantidade})\n    Status: ${p.status} | Previsão: ${window.formatDate(p.prazoEntrega)}\n`;
+          });
         } else if (intents.includes('parts')) {
           resp += `\n✅ Nenhuma peça pendente aguardando entrega.\n`;
+        }
+
+        const eqTasks = allTasks.filter(t => t.equipmentId === eq.id);
+        const tasksEmAndamento = eqTasks.filter(t => t.status === 'Em Andamento');
+        if (tasksEmAndamento.length > 0) {
+          resp += `\n⚙️ **Trabalho em Execução Neste Momento:**\n`;
+          tasksEmAndamento.forEach(t => {
+            const workers = window.DB && DB.workforce ? DB.workforce.list().filter(w => w.currentTaskId === t.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa')) : [];
+            const workerNames = workers.length > 0 ? workers.map(w => `${w.nome} (${w.currentState})`).join(', ') : (t.responsavel || 'Sem executante logado');
+            resp += `  - **${t.descricao}** [${t.disciplina}]\n    Executante(s): ${workerNames}\n`;
+          });
+        } else {
+          resp += `\n⚙️ **Nenhuma tarefa sendo executada ativamente neste momento.**\n`;
+        }
+
+        const tasksPausadas = eqTasks.filter(t => t.status === 'Pausada' || t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor');
+        if (tasksPausadas.length > 0) {
+          resp += `\n⏸️ **Tarefas Pausadas/Aguardando (${tasksPausadas.length}):**\n`;
+          tasksPausadas.slice(0, 5).forEach(t => {
+            resp += `  - ${t.descricao} - Motivo: ${t.pauseReason || t.status}\n`;
+          });
+          if (tasksPausadas.length > 5) resp += `  - ... e mais ${tasksPausadas.length - 5} tarefa(s) pausada(s).\n`;
         }
 
         if (totalRealizado > 0) {
