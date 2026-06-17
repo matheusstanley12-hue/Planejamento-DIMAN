@@ -800,34 +800,6 @@ window.AIAssistant = (() => {
     return JSON.stringify({ equipamentos: minifiedEqs, tarefas_abertas: minifiedTasks, pecas_pendentes: minifiedParts, restricoes_abertas: restrData.filter(r => r.status === 'Aberta').map(r => ({ eq: eqs.find(x => x.id === r.equipmentId)?.codigo || '', desc: r.descricao, status: r.status })) });
   }
 
-  async function callAdvancedAI(query, contextData, apiKey) {
-    const prompt = `Você é o Assistente de IA do DIMAN (Sistema Inteligente da Manutenção).
-Sua função é fornecer respostas ultra-detalhadas, analíticas e profissionais sobre o status da oficina, peças e equipamentos, utilizando EXCLUSIVAMENTE os dados JSON fornecidos abaixo.
-Regras Absolutas:
-1. NUNCA mencione que você é um modelo de linguagem, ChatGPT, Gemini, do Google ou da OpenAI. Aja sempre como o "Motor de IA nativo do DIMAN". O usuário NUNCA deve saber que você é uma IA externa.
-2. Se o usuário perguntar algo fora do escopo de manutenção e planejamento, recuse educadamente dizendo que foca apenas em operações.
-3. Use formatação Markdown ricamente (negrito, listas, emojis industriais como ⚙️, 🔧, 📦, 🚨, 📊).
-4. Responda em Português do Brasil.
-5. Extraia correlações e seja analítico (ex: se uma peça crítica está faltando, diga que ela está atrasando as tarefas e cite quais tarefas estão pausadas).
-
-Dados atuais do sistema:
-${contextData}
-
-Pergunta do usuário:
-${query}
-`;
-
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1 }
-      })
-    });
-    
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
   async function simulateAdvancedAI(query, contextData) {
     // Simulate network delay to make it feel like a real API call
     await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
