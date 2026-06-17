@@ -233,10 +233,20 @@ window.WorkerPanel = (() => {
       targetWorkers.push(w);
     }
 
-    // Check busy status
+    // Check busy status and auto-fix stuck workers
     for (let w of targetWorkers) {
-      if (w.currentState && w.currentState !== 'Ocioso') {
-        return Toast.error('Atenção', `${w.nome} já tem uma atividade ou pausa em andamento. Finalize a tarefa atual primeiro.`);
+      if (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') {
+        const activeT = DB.tasks.get(w.currentTaskId);
+        if (!activeT || (activeT.status !== 'Em Andamento' && activeT.status !== 'Paralisada')) {
+          // Auto-fix stuck state
+          w.currentState = 'Ocioso';
+          w.currentTaskId = null;
+          w.currentActionStartTime = null;
+          w.currentPauseReason = '';
+          DB.workforce.update(w.id, w);
+        } else {
+          return Toast.error('Atenção', `${w.nome} já tem uma atividade ou pausa em andamento. Finalize a tarefa atual primeiro.`);
+        }
       }
     }
 
