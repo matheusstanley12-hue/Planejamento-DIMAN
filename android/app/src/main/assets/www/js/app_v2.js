@@ -602,6 +602,17 @@ function renderShell(session) {
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
         <div class="sidebar-footer" style="margin-top:auto;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);">
+          
+          <!-- Rescue Button -->
+          <div class="nav-item" onclick="window.RescueCloudData()" style="color:var(--color-warning);margin-bottom:8px;font-weight:700;border:1px solid var(--color-warning);border-radius:var(--radius-md);">
+            <span class="nav-icon" style="color:var(--color-warning);">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+              </svg>
+            </span>
+            <span class="nav-label">Resgatar Nuvem</span>
+          </div>
+
           <div class="nav-item" onclick="window.Auth.logout(); location.reload();" style="color:var(--color-danger);margin:0;font-weight:700;">
             <span class="nav-icon" style="color:var(--color-danger);">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
