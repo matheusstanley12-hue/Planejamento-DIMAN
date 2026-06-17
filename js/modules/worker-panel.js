@@ -847,7 +847,7 @@ window.WorkerPanel = (() => {
 
   function render() {
     const session = Auth.getSession();
-    if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso Restrito</div>`;
+    if (!session) return `<div class="page-container">Sessão expirada</div>`;
 
     window.GlobalEqFilter = '';
     const myWorker = getMyWorker(session);
@@ -2035,7 +2035,7 @@ window.WorkerPanel = (() => {
 window.WorkerParts = (() => {
   function render() {
     const session = window.Auth.getSession();
-    if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
+    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
 
     const eqs = window.DB.equipment.list() || [];
     const myEqs = window.WorkerPanel.getMyEquipments(session);
@@ -2144,7 +2144,7 @@ window.WorkerParts = (() => {
 window.WorkerServices = (() => {
   function render() {
     const session = window.Auth.getSession();
-    if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
+    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
 
     const eqs = window.DB.equipment.list() || [];
     const myEqs = window.WorkerPanel.getMyEquipments(session);

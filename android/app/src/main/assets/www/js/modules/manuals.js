@@ -154,8 +154,8 @@ window.ManualsAdmin = (() => {
 
 window.WorkerManuals = (() => {
   function render() {
-    const session = window.Auth.getSession();
-    if (!session || session.perfil !== 'Executante') return `<div class="page-container">Acesso restrito.</div>`;
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
 
     const allEquipments = window.DB.equipment.list() || [];
     const allManuals = window.DB.manuals.list() || [];
