@@ -143,7 +143,7 @@ window.DPanel = (() => {
     
     const workerCounts = {};
     concludedTasks.forEach(t => {
-      if (t.responsavel) {
+      if (t.responsavel && t.responsavel !== 'Não atribuído' && t.responsavel !== 'Sistema') {
         const wfList = window.DB.workforce ? window.DB.workforce.list() : [];
         const w = wfList.find(wf => wf.nome === t.responsavel);
         if (w) {
