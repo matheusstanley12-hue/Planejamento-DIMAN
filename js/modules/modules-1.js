@@ -1188,6 +1188,8 @@ window.TasksModule = (() => {
   }
 
   function renderTaskRow(t, equipMap) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
     const today = new Date().toISOString().slice(0,10);
     const isLate = t.dataPlanejadaTermino && t.dataPlanejadaTermino < today && t.status !== 'Concluída';
     
