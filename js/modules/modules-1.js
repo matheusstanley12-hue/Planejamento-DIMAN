@@ -1067,12 +1067,12 @@ window.TasksModule = (() => {
 
   function setViewMode(mode) {
     _viewMode = mode;
-    if (window.Router) window.Router.navigate(window.Router.current, { force: true });
+    if (window.Router) window.Router.navigate(window.Router.getCurrent(), { force: true });
   }
 
   function setTaskFilter(filter) {
     _taskStatusFilter = filter;
-    if (window.Router) window.Router.navigate(window.Router.current, { force: true });
+    if (window.Router) window.Router.navigate(window.Router.getCurrent(), { force: true });
   }
 
   function render() {

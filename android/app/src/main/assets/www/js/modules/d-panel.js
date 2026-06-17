@@ -131,24 +131,36 @@ window.DPanel = (() => {
   function getTopPerformers() {
     const today = new Date();
     const currentMonthPrefix = today.toISOString().slice(0, 7); // "YYYY-MM"
-    const ts = window.DB.timesheets ? window.DB.timesheets.list().filter(t => t.data && t.data.startsWith(currentMonthPrefix) && t.tipo === 'Trabalho') : [];
+    
+    const tasks = window.DB.tasks ? window.DB.tasks.getAll() : [];
+    
+    // Filtra tarefas concluídas no mês atual
+    const concludedTasks = tasks.filter(t => {
+      // Se não tiver dataRealTermino preenchida, assume que a conclusão foi feita mas sem data (usa hoje como fallback)
+      const dataTermino = t.dataRealTermino || t.dataAtualizacao || today.toISOString();
+      return t.status === 'Concluída' && dataTermino.startsWith(currentMonthPrefix);
+    });
     
     const workerCounts = {};
-    ts.forEach(t => {
-      if (t.workerId) {
-        workerCounts[t.workerId] = (workerCounts[t.workerId] || 0) + 1;
+    concludedTasks.forEach(t => {
+      if (t.responsavel) {
+        const wfList = window.DB.workforce ? window.DB.workforce.list() : [];
+        const w = wfList.find(wf => wf.nome === t.responsavel);
+        if (w) {
+          workerCounts[w.id] = (workerCounts[w.id] || 0) + 1;
+        } else {
+          workerCounts[`name:${t.responsavel}`] = (workerCounts[`name:${t.responsavel}`] || 0) + 1;
+        }
       }
     });
 
     const ranking = [];
     Object.keys(workerCounts).forEach(wId => {
-      const w = window.DB.workforce ? window.DB.workforce.get(wId) : null;
-      if (w) {
-        ranking.push({
-          id: wId,
-          nome: w.nome,
-          count: workerCounts[wId]
-        });
+      if (wId.startsWith('name:')) {
+        ranking.push({ id: wId, nome: wId.replace('name:', ''), count: workerCounts[wId] });
+      } else {
+        const w = window.DB.workforce.get(wId);
+        if (w) ranking.push({ id: wId, nome: w.nome, count: workerCounts[wId] });
       }
     });
 
@@ -479,7 +491,22 @@ window.DPanel = (() => {
 
   function renderTop5Card() {
     const top = getTopPerformers();
-    if (top.length === 0) return '';
+    if (top.length === 0) {
+      return `
+        <div class="card" style="margin-top:var(--space-5);">
+          <div class="card-header">
+            <div class="card-title">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="color:var(--brand-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+              Top 5 Executantes
+            </div>
+            <span style="font-size:var(--text-xs);color:var(--text-muted)">Ranking do Mês (Tarefas Concluídas)</span>
+          </div>
+          <div style="padding: 30px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; background: var(--bg-body); border-radius: 8px;">
+            Nenhuma tarefa concluída neste mês ainda.
+          </div>
+        </div>
+      `;
+    }
     
     const emojis = ['🥇', '🥈', '🥉', '🏅', '🏅'];
     const colors = ['#eab308', '#94a3b8', '#b45309', '#64748b', '#64748b'];
