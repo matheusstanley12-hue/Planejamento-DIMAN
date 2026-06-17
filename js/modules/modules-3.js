@@ -754,7 +754,84 @@ window.AIAssistant = (() => {
     }
   }
 
-  function sendQuery(query) {
+  function buildSystemContext(query) {
+    const eqs = window.DB && DB.equipment ? DB.equipment.list() : [];
+    const tasks = window.DB && DB.tasks ? DB.tasks.getAll() : [];
+    const parts = window.DB && DB.parts ? DB.parts.getAll() : [];
+    const restr = window.DB && DB.restrictions ? DB.restrictions.getAll() : [];
+    
+    let matchedEqs = extractEquipments(query);
+    if (matchedEqs.length > 0) {
+      lastMentionedEqs = matchedEqs;
+    } else if (lastMentionedEqs.length > 0 && /ela|ele|esse|essa|desta|deste|esta|este|atrasad|status|peca|pesa|porque|motivo/.test(normalize(query))) {
+      matchedEqs = lastMentionedEqs;
+    }
+
+    let eqData = eqs;
+    let taskData = tasks;
+    let partData = parts;
+    let restrData = restr;
+
+    if (matchedEqs.length > 0) {
+      const eqIds = matchedEqs.map(e => e.id);
+      eqData = matchedEqs;
+      taskData = tasks.filter(t => eqIds.includes(t.equipmentId));
+      partData = parts.filter(p => eqIds.includes(p.equipmentId));
+      restrData = restr.filter(r => eqIds.includes(r.equipmentId));
+    }
+
+    // Minify context to save tokens and focus AI
+    const minifiedEqs = eqData.map(e => ({
+      codigo: e.codigo, status: e.status, pctAvanco: e.pctAvanco,
+      liberacao: e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || 'Sem previsão'
+    }));
+    
+    const minifiedTasks = taskData.filter(t => t.status !== 'Concluída').map(t => ({
+      eq: eqs.find(x => x.id === t.equipmentId)?.codigo || '',
+      desc: t.descricao, status: t.status, 
+      resp: window.DB && DB.workforce ? DB.workforce.list().filter(w => w.currentTaskId === t.id).map(w => `${w.nome} (${w.currentState})`).join(', ') : t.responsavel
+    }));
+
+    const minifiedParts = partData.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).map(p => ({
+      eq: eqs.find(x => x.id === p.equipmentId)?.codigo || '',
+      desc: p.descricao, status: p.status, critica: p.critica, prazo: window.formatDate(p.prazoEntrega)
+    }));
+
+    return JSON.stringify({ equipamentos: minifiedEqs, tarefas_abertas: minifiedTasks, pecas_pendentes: minifiedParts, restricoes_abertas: restrData.filter(r => r.status === 'Aberta').map(r => ({ eq: eqs.find(x => x.id === r.equipmentId)?.codigo || '', desc: r.descricao, status: r.status })) });
+  }
+
+  async function callAdvancedAI(query, contextData, apiKey) {
+    const prompt = `Você é o Assistente de IA do DIMAN (Sistema Inteligente da Manutenção).
+Sua função é fornecer respostas ultra-detalhadas, analíticas e profissionais sobre o status da oficina, peças e equipamentos, utilizando EXCLUSIVAMENTE os dados JSON fornecidos abaixo.
+Regras Absolutas:
+1. NUNCA mencione que você é um modelo de linguagem, ChatGPT, Gemini, do Google ou da OpenAI. Aja sempre como o "Motor de IA nativo do DIMAN". O usuário NUNCA deve saber que você é uma IA externa.
+2. Se o usuário perguntar algo fora do escopo de manutenção e planejamento, recuse educadamente dizendo que foca apenas em operações.
+3. Use formatação Markdown ricamente (negrito, listas, emojis industriais como ⚙️, 🔧, 📦, 🚨, 📊).
+4. Responda em Português do Brasil.
+5. Extraia correlações e seja analítico (ex: se uma peça crítica está faltando, diga que ela está atrasando as tarefas e cite quais tarefas estão pausadas).
+
+Dados atuais do sistema:
+${contextData}
+
+Pergunta do usuário:
+${query}
+`;
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1 }
+      })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  async function sendQuery(query) {
     if (!query?.trim()) return;
     const input = document.getElementById('ai-input');
     if (input) input.value = '';
@@ -764,15 +841,44 @@ window.AIAssistant = (() => {
     const typing = document.createElement('div');
     typing.id = 'ai-typing';
     typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);animation:fadeInUp .3s ease;';
-    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Processando análise de dados...</span>';
+    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Processando análise complexa...</span>';
     container?.appendChild(typing);
     container.scrollTop = container.scrollHeight;
 
-    setTimeout(() => {
+    const apiKey = localStorage.getItem('diman_ai_key');
+    if (!apiKey) {
       document.getElementById('ai-typing')?.remove();
-      const response = processQuery(query);
-      addMessage('ai', response);
-    }, 800);
+      const promptKey = window.prompt("Para habilitar a Inteligência de Nível Avançado, por favor insira a sua Chave de Acesso da API (Motor IA):");
+      if (promptKey) {
+        localStorage.setItem('diman_ai_key', promptKey.trim());
+        return sendQuery(query);
+      } else {
+        // Fallback to basic processing
+        setTimeout(() => {
+          const response = processQuery(query);
+          addMessage('ai', response);
+        }, 300);
+        return;
+      }
+    }
+
+    try {
+      const dbContext = buildSystemContext(query);
+      const responseText = await callAdvancedAI(query, dbContext, apiKey);
+      document.getElementById('ai-typing')?.remove();
+      addMessage('ai', responseText);
+    } catch(err) {
+      console.error(err);
+      document.getElementById('ai-typing')?.remove();
+      if (err.message && err.message.includes('API key not valid')) {
+        localStorage.removeItem('diman_ai_key');
+        addMessage('ai', "❌ A Chave de Acesso informada é inválida. A chave foi removida do sistema. Tente perguntar novamente para inserir a chave correta.");
+      } else {
+        // Fallback to basic processing if network error
+        const response = processQuery(query);
+        addMessage('ai', "⚠️ *Aviso: Não foi possível conectar ao servidor neural. Respondendo no modo básico offline.*\\n\\n" + response);
+      }
+    }
   }
 
   const suggestions = [
