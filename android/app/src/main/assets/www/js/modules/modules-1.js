@@ -1063,9 +1063,15 @@ window.EquipmentModule = (() => {
 window.TasksModule = (() => {
 
   let _viewMode = 'equipments'; // 'equipments' | 'realtime'
+  let _taskStatusFilter = 'Todos';
 
   function setViewMode(mode) {
     _viewMode = mode;
+    if (window.Router) window.Router.navigate(window.Router.current, { force: true });
+  }
+
+  function setTaskFilter(filter) {
+    _taskStatusFilter = filter;
     if (window.Router) window.Router.navigate(window.Router.current, { force: true });
   }
 
@@ -1188,6 +1194,12 @@ window.TasksModule = (() => {
     const emAndamento = filteredTasks.filter(t => t.status === 'Em Andamento').length;
     const bloqueadas = filteredTasks.filter(t => t.status === 'Bloqueada').length;
     const criticas = filteredTasks.filter(t => t.critico).length;
+
+    let displayTasks = filteredTasks;
+    if (_taskStatusFilter === 'Não Iniciada') displayTasks = displayTasks.filter(t => t.status === 'Não Iniciada');
+    else if (_taskStatusFilter === 'Em Andamento') displayTasks = displayTasks.filter(t => t.status === 'Em Andamento');
+    else if (_taskStatusFilter === 'Falta de Peças') displayTasks = displayTasks.filter(t => t.status === 'Aguardando Peça');
+    else if (_taskStatusFilter === 'Paradas') displayTasks = displayTasks.filter(t => ['Pausada', 'Aguardando Setor', 'Bloqueada'].includes(t.status));
     
     return `
       <div class="page-container">
@@ -1209,7 +1221,7 @@ window.TasksModule = (() => {
           <button class="btn btn-primary" onclick="TasksModule.openCreate('${eqFilter}')">+ Nova Tarefa</button>
         </div>
 
-        <div class="filter-row" style="margin-bottom:var(--space-5);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
+        <div class="filter-row" style="margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
           <span style="color:var(--text-muted);font-size:var(--text-sm)">${filteredTasks.length} tarefas</span>
           <span class="badge badge-success">${concluded} concluídas</span>
           <span class="badge badge-primary">${emAndamento} em andamento</span>
@@ -1217,9 +1229,17 @@ window.TasksModule = (() => {
           <span class="badge badge-danger">${criticas} críticas</span>
         </div>
 
+        <div style="margin-bottom:var(--space-5);display:flex;gap:var(--space-2);flex-wrap:wrap;">
+          <button class="btn btn-sm ${_taskStatusFilter === 'Todos' ? 'btn-primary' : 'btn-outline'}" onclick="TasksModule.setTaskFilter('Todos')">Todos os Status</button>
+          <button class="btn btn-sm ${_taskStatusFilter === 'Não Iniciada' ? 'btn-primary' : 'btn-outline'}" onclick="TasksModule.setTaskFilter('Não Iniciada')">Não Iniciada</button>
+          <button class="btn btn-sm ${_taskStatusFilter === 'Em Andamento' ? 'btn-primary' : 'btn-outline'}" onclick="TasksModule.setTaskFilter('Em Andamento')">Em Andamento</button>
+          <button class="btn btn-sm ${_taskStatusFilter === 'Falta de Peças' ? 'btn-primary' : 'btn-outline'}" onclick="TasksModule.setTaskFilter('Falta de Peças')">Falta de Peças</button>
+          <button class="btn btn-sm ${_taskStatusFilter === 'Paradas' ? 'btn-primary' : 'btn-outline'}" onclick="TasksModule.setTaskFilter('Paradas')">Paradas</button>
+        </div>
+
         <div style="display:flex;flex-direction:column;gap:var(--space-2);" class="stagger">
-          ${filteredTasks.length === 0 ? '<div class="empty-state"><p>Nenhuma tarefa cadastrada para este equipamento.</p></div>' : ''}
-          ${filteredTasks.map(t => renderTaskRow(t, equipMap)).join('')}
+          ${displayTasks.length === 0 ? '<div class="empty-state"><p>Nenhuma tarefa encontrada com os filtros atuais.</p></div>' : ''}
+          ${displayTasks.map(t => renderTaskRow(t, equipMap)).join('')}
         </div>
       </div>
 
@@ -1756,5 +1776,15 @@ window.TasksModule = (() => {
     }
   }
 
-  return { render, openCreate, openEdit, save, deleteTask, setEq, onFormChange, setViewMode };
+  return {
+    render,
+    openCreate,
+    openEdit,
+    save,
+    deleteTask,
+    setEq,
+    onFormChange,
+    setViewMode,
+    setTaskFilter
+  };
 })();
