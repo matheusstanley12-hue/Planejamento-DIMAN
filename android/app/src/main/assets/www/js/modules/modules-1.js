@@ -1286,36 +1286,71 @@ window.TasksModule = (() => {
     // Fallback for photos that were saved in anexos array before fix
     const fotoConclusaoFinal = t?.fotoComprovacao || (t?.anexos && t.anexos.length > 0 ? t.anexos[t.anexos.length - 1].url : null);
     
-    // Obter apontamentos desta tarefa
-    const tTimesheets = (window.DB.timesheets ? window.DB.timesheets.list() : []).filter(ts => ts.taskId === t?.id && ts.tipo === 'Trabalho');
+    // Obter apontamentos desta tarefa (inclui Trabalho e Pausas)
+    const allTimesheets = (window.DB.timesheets ? window.DB.timesheets.list() : []).filter(ts => ts.taskId === t?.id);
+    
+    // Sum of hours logic
+    const summary = {};
+    allTimesheets.filter(ts => ts.tipo === 'Trabalho').forEach(ts => {
+      if(!summary[ts.workerNome]) summary[ts.workerNome] = 0;
+      summary[ts.workerNome] += Number(ts.horasTrabalhadas) || 0;
+    });
+
+    // Timeline logic
+    const timelineItems = allTimesheets.sort((a, b) => new Date(b.horaInicio) - new Date(a.horaInicio)).map(ts => {
+      const isPause = ts.tipo !== 'Trabalho';
+      const color = isPause ? 'var(--color-warning)' : 'var(--color-success)';
+      const icon = isPause ? '⏸️' : '▶️';
+      const dataStr = ts.data ? ts.data.split('-').reverse().join('/') : '';
+      const hStart = ts.horaInicio ? new Date(ts.horaInicio).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+      const hEnd = ts.horaFim ? new Date(ts.horaFim).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+      const dur = Number(ts.horasTrabalhadas).toFixed(2);
+      
+      return `
+        <div style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span style="font-weight:700; font-size:0.8rem; color:${color};">${icon} ${ts.tipo === 'Trabalho' ? 'Execução' : (ts.motivoPausa || 'Pausa')}</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">${dataStr} | ${hStart} até ${hEnd} (${dur}h)</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-primary);">Executante: <span style="font-weight:600;">${ts.workerNome}</span></div>
+          ${ts.observacao && ts.observacao !== 'Timer (Automático)' ? `<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:4px; font-style:italic;">" ${ts.observacao} "</div>` : ''}
+        </div>
+      `;
+    }).join('');
+
     let executores = '';
-    if (tTimesheets.length > 0) {
-      const summary = {};
-      tTimesheets.forEach(ts => {
-        if(!summary[ts.workerNome]) summary[ts.workerNome] = 0;
-        summary[ts.workerNome] += Number(ts.horasTrabalhadas) || 0;
-      });
-      executores = `<div style="margin-top:12px; border:1px solid var(--border-default); border-radius:4px; overflow:hidden;">
-        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
-          <thead>
-            <tr style="background:var(--bg-base); border-bottom:1px solid var(--border-default);">
-              <th style="padding:6px 10px; font-weight:700; color:var(--text-secondary);">Executante</th>
-              <th style="padding:6px 10px; font-weight:700; color:var(--text-secondary); text-align:center;">Horas Dedicadas</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${Object.entries(summary).map(([nome, horas]) => `
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.02);">
-                <td style="padding:6px 10px;">${nome}</td>
-                <td style="padding:6px 10px; text-align:center; font-weight:700;">${horas.toFixed(2)}h</td>
+    if (Object.keys(summary).length > 0) {
+      executores = `
+        <div style="margin-top:12px; border:1px solid var(--border-default); border-radius:4px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
+            <thead>
+              <tr style="background:var(--bg-base); border-bottom:1px solid var(--border-default);">
+                <th style="padding:6px 10px; font-weight:700; color:var(--text-secondary);">Executante</th>
+                <th style="padding:6px 10px; font-weight:700; color:var(--text-secondary); text-align:center;">Horas Trabalhadas</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>`;
-    } else {
-      executores = `<p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Nenhum apontamento registrado.</p>`;
+            </thead>
+            <tbody>
+              ${Object.entries(summary).map(([nome, horas]) => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.02);">
+                  <td style="padding:6px 10px;">${nome}</td>
+                  <td style="padding:6px 10px; text-align:center; font-weight:700;">${horas.toFixed(2)}h</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>`;
     }
+
+    let timelineHtml = timelineItems ? `
+      <div style="margin-top:16px;">
+        <h5 style="margin:0 0 8px; font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Histórico de Apontamentos</h5>
+        <div style="max-height: 250px; overflow-y: auto; background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 6px; padding: 12px;">
+          ${timelineItems}
+        </div>
+      </div>
+    ` : `<p style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Nenhum apontamento registrado.</p>`;
+
+    executores += timelineHtml;
 
     return `
     <div style="display:flex;flex-direction:column;gap:var(--space-4);">
