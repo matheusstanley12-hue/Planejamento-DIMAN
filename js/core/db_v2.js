@@ -134,7 +134,14 @@ window.DB = (() => {
       if (val) return JSON.parse(val);
       return INITIAL_DATA[key] || [];
     }
-    catch { return INITIAL_DATA[key] || []; }
+    catch (e) { 
+      console.error('Storage error for key: ' + key, e);
+      const val = localStorage.getItem(key);
+      if (val) {
+        localStorage.setItem(key + '_corrupted_' + Date.now(), val);
+      }
+      return INITIAL_DATA[key] || []; 
+    }
   }
   function getObj(key) {
     try { return JSON.parse(localStorage.getItem(key) || '{}'); }
