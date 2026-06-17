@@ -1957,7 +1957,6 @@ window.WorkerPanel = (() => {
     promptComplete,
     previewPhoto,
     finalizeTask,
-    submitComplete,
     getMyEquipments,
     compressImage
   };
