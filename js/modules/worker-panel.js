@@ -1005,6 +1005,20 @@ window.WorkerPanel = (() => {
             <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">RETOMAR TAREFA</button>
           </div>
         `;
+      } else if (t.status === 'Em Andamento') {
+        const executingWorkers = activeWorkers.filter(w => w.currentTaskId === t.id);
+        const names = executingWorkers.map(w => w.nome.split(' ')[0]).join(', ');
+        actionBtn = `
+          <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+            <div style="font-size:12px;color:#10b981;font-weight:800;display:flex;align-items:center;gap:6px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;"></div>
+              EM EXECUÇÃO ${names ? '(' + names + ')' : ''}
+            </div>
+            <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
+              ENTRAR NA TAREFA
+            </button>
+          </div>
+        `;
       } else if (state === 'Ocioso' || (state === 'Trabalhando' && myWorker.currentTaskId !== t.id) || (state === 'Em Pausa' && myWorker.currentTaskId !== t.id)) {
         if (!canExecuteTask(session, t)) {
           actionBtn = `<div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>`;
