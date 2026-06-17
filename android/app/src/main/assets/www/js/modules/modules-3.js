@@ -298,27 +298,18 @@ window.KPIModule = (() => {
 // SIMULATOR MODULE
 // ================================================================
 window.SimulatorModule = (() => {
-  let params = { mechanics: 3, electrics: 2, partsArrivalDays: 7, overtime: 0, weekends: false };
+  let params = { mechanics: 3, electrics: 2, caldeiraria: 1, usinagem: 1, partsArrivalDays: 7, overtime: 0, weekends: false };
 
   function calcImpact() {
     const eqId = window.GlobalEqFilter;
     const eq = DB.equipment.get(eqId);
     if (!eq) return null;
-    const tasks = DB.tasks.getByEquipment(eqId).filter(t => t.status !== 'Concluída');
-    const wf = DB.workforce.list();
-    const currentMechanics = wf.filter(w => w.disciplina === 'Mecânica' && w.status === 'Ativo').length;
-
-    const totalRemainingHours = tasks.reduce((s,t) => s + ((t.horasPlanejadas||0) - (t.horasRealizadas||0)), 0);
     const workDaysRemaining = daysBetween(new Date().toISOString().slice(0,10), eq.dataLiberacaoPlanejada || new Date().toISOString().slice(0,10));
-    const hoursPerDay = 8;
 
-    let gainMechanics = 0;
-    const extraMech = params.mechanics - currentMechanics;
-    if (extraMech > 0 && totalRemainingHours > 0) {
-      gainMechanics = Math.min(workDaysRemaining * 0.4, Math.round(extraMech * 2));
-    } else if (extraMech < 0) {
-      gainMechanics = Math.max(-workDaysRemaining * 0.3, extraMech);
-    }
+    let gainMechanics = parseFloat(((params.mechanics - 3) * 1.5).toFixed(1));
+    let gainElectrics = parseFloat(((params.electrics - 2) * 1.2).toFixed(1));
+    let gainCaldeiraria = parseFloat(((params.caldeiraria - 1) * 1.0).toFixed(1));
+    let gainUsinagem = parseFloat(((params.usinagem - 1) * 1.0).toFixed(1));
 
     const critParts = DB.parts.getAll().filter(p => p.equipmentId === eqId && p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
     let gainParts = 0;
@@ -338,11 +329,13 @@ window.SimulatorModule = (() => {
       gainWeekends = Math.round(workDaysRemaining / 5 * 2 * 0.3);
     }
 
-    const totalGain = gainMechanics + gainParts + gainOvertime + gainWeekends;
+    let totalGain = gainMechanics + gainElectrics + gainCaldeiraria + gainUsinagem + gainParts + gainOvertime + gainWeekends;
+    totalGain = parseFloat(totalGain.toFixed(1));
+    
     const today = new Date().toISOString().slice(0,10);
-    const newDate = addDays(eq.dataLiberacaoPlanejada || today, -totalGain);
+    const newDate = addDays(eq.dataLiberacaoPlanejada || today, -Math.round(totalGain));
 
-    return { gainMechanics, gainParts, gainOvertime, gainWeekends, totalGain, newDate, workDaysRemaining, eq };
+    return { gainMechanics, gainElectrics, gainCaldeiraria, gainUsinagem, gainParts, gainOvertime, gainWeekends, totalGain, newDate, workDaysRemaining, eq };
   }
 
   function render() {
@@ -373,6 +366,14 @@ window.SimulatorModule = (() => {
             <div>
               <label>Eletricistas: <strong id="sim-elec-val">${params.electrics}</strong></label>
               <input type="range" min="0" max="8" value="${params.electrics}" oninput="SimulatorModule.setParam('electrics',+this.value);document.getElementById('sim-elec-val').textContent=this.value" style="width:100%;margin-top:var(--space-2);" />
+            </div>
+            <div>
+              <label>Caldeiraria: <strong id="sim-cald-val">${params.caldeiraria}</strong></label>
+              <input type="range" min="0" max="8" value="${params.caldeiraria}" oninput="SimulatorModule.setParam('caldeiraria',+this.value);document.getElementById('sim-cald-val').textContent=this.value" style="width:100%;margin-top:var(--space-2);" />
+            </div>
+            <div>
+              <label>Usinagem: <strong id="sim-usin-val">${params.usinagem}</strong></label>
+              <input type="range" min="0" max="8" value="${params.usinagem}" oninput="SimulatorModule.setParam('usinagem',+this.value);document.getElementById('sim-usin-val').textContent=this.value" style="width:100%;margin-top:var(--space-2);" />
             </div>
             <div class="form-group"><label>Chegada das Peças Críticas (dias)</label>
               <input type="number" min="1" max="60" value="${params.partsArrivalDays}" onchange="SimulatorModule.setParam('partsArrivalDays',+this.value)" /></div>
@@ -418,6 +419,9 @@ window.SimulatorModule = (() => {
         <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-top:var(--space-3);">
           ${[
             {label:'Impacto dos Mecânicos', gain: impact.gainMechanics},
+            {label:'Impacto dos Eletricistas', gain: impact.gainElectrics},
+            {label:'Impacto da Caldeiraria', gain: impact.gainCaldeiraria},
+            {label:'Impacto da Usinagem', gain: impact.gainUsinagem},
             {label:'Impacto das Peças', gain: impact.gainParts},
             {label:'Impacto das Horas Extras', gain: impact.gainOvertime},
             {label:'Impacto dos Fins de Semana', gain: impact.gainWeekends},
