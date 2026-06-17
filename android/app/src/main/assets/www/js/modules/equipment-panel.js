@@ -1159,70 +1159,7 @@ window.EquipmentPanel = (() => {
       status: finalStatus,
       pctExecutado: inputPct
     };
-
     const targetEqId = eqId || currentEqId;
-
-    // Single assignment lock removed
-
-    const eq = DB.equipment.get(targetEqId);
-    const defaultWorker = eq && eq.workforceMap ? eq.workforceMap[taskData.disciplina] : '';
-    
-    let previousWorker = null;
-    if (editingTaskId) {
-      const t = DB.tasks.get(editingTaskId);
-      previousWorker = t ? t.responsavel : null;
-    }
-    
-    let isWorkerChanged = false;
-    if (editingTaskId) {
-      if (previousWorker && previousWorker !== 'Não atribuído' && selectedWorker !== previousWorker) {
-        isWorkerChanged = true;
-      }
-    } else {
-      if (selectedWorker && selectedWorker !== 'Não atribuído' && selectedWorker !== defaultWorker) {
-        isWorkerChanged = true;
-      }
-    }
-
-    if (isWorkerChanged) {
-      const justification = await window.uiPromptAsync(
-        'Justificativa',
-        `Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${selectedWorker || 'Ninguém'}"):`,
-        'Digite a justificativa...'
-      );
-      if (justification === null) {
-        return; // Abort saving!
-      }
-      const justTrimmed = justification.trim();
-      if (!justTrimmed) {
-        Toast.error('Erro', 'Justificativa é obrigatória para alterar a Mão de Obra.');
-        return; // Abort saving!
-      }
-      
-      taskData.justificativaMaoDeObra = justTrimmed;
-      const dateStr = new Date().toLocaleString('pt-BR');
-      
-      let comments = [];
-      let isJson = false;
-      try {
-        comments = JSON.parse(taskData.observacoes);
-        if (Array.isArray(comments)) isJson = true;
-      } catch(e) {}
-      
-      if (isJson) {
-        const session = window.Auth.getSession();
-        comments.push({
-          id: 'c-sys-' + Date.now(),
-          text: `[M.O. Alterada]: ${justTrimmed}`,
-          user: session ? session.nome : 'Sistema',
-          userId: session ? session.userId : 'system',
-          createdAt: new Date().toISOString()
-        });
-        taskData.observacoes = JSON.stringify(comments);
-      } else {
-        taskData.observacoes = (taskData.observacoes ? taskData.observacoes : '') + `\n[M.O. Alterada em ${dateStr}]: ${justTrimmed}`;
-      }
-    }
 
     if (editingTaskId) {
       const t = DB.tasks.get(editingTaskId);

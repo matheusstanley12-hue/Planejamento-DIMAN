@@ -693,7 +693,7 @@ window.EquipmentModule = (() => {
     </div>`;
   }
 
-  function save() {
+  async function save() {
     const id = document.getElementById('eq-editing-id').value;
     const data = {
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
@@ -728,8 +728,50 @@ window.EquipmentModule = (() => {
     };
     if (!data.codigo || !data.os) { Toast.error('Erro', 'Código e O.S. são obrigatórios.'); return; }
 
-    // Workforce lock removed
-    
+    // Workforce change check
+    if (id) {
+      const existingEq = DB.equipment.get(id);
+      let changedDisc = null;
+      let oldWorker = null;
+      let newWorker = null;
+
+      for (const disc of ['Mecânica', 'Elétrica', 'Caldeiraria', 'Usinagem', 'Pintor', 'Lavador', 'Montagem', 'Subconjunto']) {
+        const oldW = existingEq.workforceMap ? existingEq.workforceMap[disc] : '';
+        const newW = data.workforceMap[disc];
+        // If changed and the new worker is not empty/Não atribuído
+        if (oldW !== newW && newW && newW !== 'Não atribuído') {
+          changedDisc = disc;
+          oldWorker = oldW;
+          newWorker = newW;
+          break; // just check the first one that changed
+        }
+      }
+
+      if (changedDisc) {
+        const justification = await window.uiPromptAsync(
+          'Justificativa',
+          `Justificativa para alteração de Mão de Obra em ${changedDisc} (de "${oldWorker || 'Ninguém'}" para "${newWorker || 'Ninguém'}"):`,
+          'Digite a justificativa...'
+        );
+        if (justification === null) return;
+        if (!justification.trim()) {
+          Toast.error('Erro', 'Justificativa é obrigatória para alterar a Mão de Obra do equipamento.');
+          return;
+        }
+        
+        // Log in timeline
+        if (window.DB && window.DB.timeline) {
+          window.DB.timeline.create({
+            equipmentId: id || data.codigo,
+            tipo: 'ATUALIZAÇÃO',
+            titulo: 'Alteração de Mão de Obra',
+            descricao: `Mão de obra de ${changedDisc} alterada de "${oldWorker || 'Ninguém'}" para "${newWorker}". Justificativa: ${justification.trim()}`,
+            timestamp: new Date().toISOString(),
+            responsavel: window.Auth && window.Auth.getSession() ? window.Auth.getSession().nome : 'Sistema'
+          });
+        }
+      }
+    }
     // Check if status is Liberado and validate pending tasks
     if (data.status === 'Liberado') {
       const eqTasks = id ? DB.tasks.getByEquipment(id) : [];
@@ -1560,65 +1602,7 @@ window.TasksModule = (() => {
 
     // Single assignment lock removed
 
-    const eq = DB.equipment.get(data.equipmentId);
-    const defaultWorker = eq && eq.workforceMap ? eq.workforceMap[data.disciplina] : '';
-    
-    let previousWorker = null;
-    if (id) {
-      const t = DB.tasks.get(id);
-      previousWorker = t ? t.responsavel : null;
-    }
-    
-    let isWorkerChanged = false;
-    if (id) {
-      if (previousWorker && previousWorker !== 'Não atribuído' && data.responsavel !== previousWorker) {
-        isWorkerChanged = true;
-      }
-    } else {
-      if (data.responsavel && data.responsavel !== 'Não atribuído' && data.responsavel !== defaultWorker) {
-        isWorkerChanged = true;
-      }
-    }
-
-    if (isWorkerChanged) {
-      const justification = await window.uiPromptAsync(
-        'Justificativa',
-        `Justificativa para alteração de Mão de Obra (de "${previousWorker || defaultWorker || 'Ninguém'}" para "${data.responsavel || 'Ninguém'}"):`,
-        'Digite a justificativa...'
-      );
-      if (justification === null) {
-        return; // Abort saving!
-      }
-      const justTrimmed = justification.trim();
-      if (!justTrimmed) {
-        Toast.error('Erro', 'Justificativa é obrigatória para alterar a Mão de Obra.');
-        return; // Abort saving!
-      }
-      
-      data.justificativaMaoDeObra = justTrimmed;
-      const dateStr = new Date().toLocaleString('pt-BR');
-      
-      let comments = [];
-      let isJson = false;
-      try {
-        comments = JSON.parse(data.observacoes);
-        if (Array.isArray(comments)) isJson = true;
-      } catch(e) {}
-      
-      if (isJson) {
-        const session = window.Auth.getSession();
-        comments.push({
-          id: 'c-sys-' + Date.now(),
-          text: `[M.O. Alterada]: ${justTrimmed}`,
-          user: session ? session.nome : 'Sistema',
-          userId: session ? session.userId : 'system',
-          createdAt: new Date().toISOString()
-        });
-        data.observacoes = JSON.stringify(comments);
-      } else {
-        data.observacoes = (data.observacoes ? data.observacoes : '') + `\n[M.O. Alterada em ${dateStr}]: ${justTrimmed}`;
-      }
-    }
+    // Worker change justification removed for tasks
 
     if (id) { DB.tasks.update(id, data); Toast.success('Tarefa atualizada!'); }
     else { DB.tasks.create(data); Toast.success('Tarefa criada!'); }
