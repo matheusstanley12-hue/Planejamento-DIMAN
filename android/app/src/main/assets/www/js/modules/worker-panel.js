@@ -880,8 +880,8 @@ window.WorkerPanel = (() => {
               <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
               <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
               ${currentT && currentT.fotoPeca ? `
-                <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-                  <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
+                <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                  <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
                 </div>
               ` : ''}
               
@@ -918,8 +918,8 @@ window.WorkerPanel = (() => {
               <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
               <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
               ${currentT && currentT.fotoPeca ? `
-                <div style="margin-bottom:15px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
-                  <img src="${currentT.fotoPeca}" style="width:100%;height:120px;object-fit:cover;display:block;" />
+                <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                  <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
                 </div>
               ` : ''}
               
@@ -1042,8 +1042,8 @@ window.WorkerPanel = (() => {
         .wp-container { padding-bottom: 100px; animation: fadeIn 0.3s ease; }
         
         .active-task-card {
-          margin-bottom: 24px; border-radius: 20px; padding: 24px; position: relative; overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.05); color: #fff;
+          margin-bottom: 15px; border-radius: 16px; padding: 15px; position: relative; overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.05); color: #fff;
         }
         .active-task-card.working {
           background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -1057,7 +1057,7 @@ window.WorkerPanel = (() => {
         }
         
         .pulse-indicator {
-          position: absolute; top: 24px; right: 24px; width: 12px; height: 12px; border-radius: 50%;
+          position: absolute; top: 15px; right: 15px; width: 10px; height: 10px; border-radius: 50%;
           background: #10b981; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); animation: pulseGreen 2s infinite;
         }
         @keyframes pulseGreen {
@@ -1066,25 +1066,25 @@ window.WorkerPanel = (() => {
           100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         
-        .task-state { font-size: 13px; font-weight: 800; letter-spacing: 1px; opacity: 0.9; margin-bottom: 8px; }
+        .task-state { font-size: 12px; font-weight: 800; letter-spacing: 0.5px; opacity: 0.9; margin-bottom: 6px; }
         .active-task-card.working .task-state { color: #38bdf8; }
         .active-task-card.paused .task-state { color: #fff; }
         
-        .task-timer { font-size: 48px; font-weight: 900; font-family: 'Inter', sans-serif; letter-spacing: -1px; margin-bottom: 12px; line-height: 1; }
+        .task-timer { font-size: 32px; font-weight: 900; font-family: 'Inter', sans-serif; letter-spacing: -0.5px; margin-bottom: 8px; line-height: 1; }
         .active-task-card.working .task-timer { color: #10b981; }
         .active-task-card.paused .task-timer { color: #fff; }
         
-        .task-desc { font-size: 18px; font-weight: 600; line-height: 1.3; margin-bottom: 6px; }
-        .task-meta { font-size: 14px; opacity: 0.7; margin-bottom: 24px; }
+        .task-desc { font-size: 16px; font-weight: 600; line-height: 1.2; margin-bottom: 4px; }
+        .task-meta { font-size: 13px; opacity: 0.7; margin-bottom: 15px; }
         
-        .action-buttons { display: flex; gap: 12px; }
+        .action-buttons { display: flex; gap: 8px; }
         .btn-action {
-          flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-          padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 800; border: none; cursor: pointer;
+          flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+          padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 800; border: none; cursor: pointer;
           transition: transform 0.1s, filter 0.1s;
         }
         .btn-action:active { transform: scale(0.96); }
-        .btn-action svg { width: 20px; height: 20px; }
+        .btn-action svg { width: 16px; height: 16px; }
         
         .btn-action.pause { background: #f59e0b; color: #fff; }
         .btn-action.complete { background: #10b981; color: #fff; }
