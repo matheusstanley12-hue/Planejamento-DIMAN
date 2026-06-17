@@ -269,6 +269,31 @@ window.DB = (() => {
     }
   }
 
+  window.RescueCloudData = async function() {
+    if (!supabaseClient) {
+      alert("Erro: Sistema não está conectado à nuvem.");
+      return;
+    }
+    try {
+      const { data, error } = await supabaseClient.from('diman_store').select('*');
+      if (error) throw error;
+      if (data && data.length > 0) {
+        data.forEach(row => {
+          if (row.key === 'all') {
+            localStorage.setItem(row.collection, JSON.stringify(row.data));
+          }
+        });
+        localStorage.setItem('diman_unsynced', 'false');
+        alert("Restruturação concluída com sucesso! Suas tarefas foram recuperadas da nuvem.");
+        window.location.reload();
+      } else {
+        alert("Nenhum dado encontrado na nuvem.");
+      }
+    } catch (e) {
+      alert("Erro ao recuperar: " + e.message);
+    }
+  };
+
   // ==================== EQUIPMENT ====================
   const equipment = {
     list: () => get(KEYS.equipment),
