@@ -814,7 +814,7 @@ function showUserMenu() {
 // ================================================================
 // PUBLIC QR VIEW (no login)
 // ================================================================
-function renderPublicQrView(eqId) {
+async function renderPublicQrView(eqId) {
   document.body.innerHTML = '';
   document.body.style.background = '#0f172a';
   document.body.style.margin = '0';
@@ -823,12 +823,42 @@ function renderPublicQrView(eqId) {
   const container = document.createElement('div');
   container.id = 'page-content';
   document.body.appendChild(container);
-  if (typeof QrViewModule !== 'undefined') {
-    const html = QrViewModule.render({ id: eqId });
-    container.innerHTML = html;
-  } else {
+  
+  if (typeof QrViewModule === 'undefined') {
     container.innerHTML = '<div style="color:red;padding:20px;text-align:center">Erro ao carregar módulo QR.</div>';
+    return;
   }
+
+  let eq = window.DB.equipment.get(eqId);
+  let retries = 0;
+
+  if (!eq) {
+    container.innerHTML = '<div style="color:#94a3b8;padding:50px;text-align:center;font-size:1.1rem;"><div style="margin-bottom:15px;width:40px;height:40px;border:4px solid #334155;border-top:4px solid #dc2626;border-radius:50%;animation:spin 1s linear infinite;margin-left:auto;margin-right:auto;"></div>Sincronizando base de dados...<br><small style="font-size:0.85rem;color:#64748b;margin-top:10px;display:block;">Isso pode levar alguns segundos em conexões lentas.</small></div>';
+    
+    // Force a re-fetch just in case
+    if (window.DB && window.DB.initSupabase) {
+      await window.DB.initSupabase();
+    }
+
+    while (!eq && retries < 3) {
+      await new Promise(r => setTimeout(r, 1000));
+      eq = window.DB.equipment.get(eqId);
+      retries++;
+    }
+  }
+
+  if (!eq) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:50px;color:#fff;">
+        <h3 style="color:#ef4444;margin-bottom:10px;">Equipamento não encontrado</h3>
+        <p style="color:#94a3b8;margin-bottom:25px;">Verifique sua conexão com a internet ou se o QR Code é válido.</p>
+        <button onclick="location.reload()" style="padding:12px 24px; border-radius:8px; border:none; background:#dc2626; color:white; font-weight:bold; cursor:pointer; font-size:1rem; box-shadow:0 4px 6px rgba(0,0,0,0.1);">Tentar Novamente (Recarregar)</button>
+      </div>`;
+    return;
+  }
+
+  const html = QrViewModule.render({ id: eqId });
+  container.innerHTML = html;
 }
 
 // ================================================================
@@ -926,10 +956,3 @@ window.gerarDadosDeTeste = function() {
   location.reload();
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
-  // Apply saved theme
-  const savedTheme = localStorage.getItem('diman_theme') || 'light';
-  document.documentElement.dataset.theme = savedTheme;
-
-  await initApp();
-});
