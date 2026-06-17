@@ -1032,7 +1032,7 @@ window.WorkerPanel = (() => {
       const isBlocked = blockedBy.length > 0;
       
       let actionBtn = '';
-      if (t.status === 'Aguardando Peça' || t.status === 'Pausada') {
+      if (t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor' || t.status === 'Pausada') {
         const pauseReason = t.pauseReason || t.status;
         let timeStr = '';
         if (t.pauseStartTime) {
