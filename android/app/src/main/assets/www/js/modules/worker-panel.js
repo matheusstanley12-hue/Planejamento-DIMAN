@@ -856,8 +856,13 @@ window.WorkerPanel = (() => {
 
     window.GlobalEqFilter = '';
     const myWorker = getMyWorker(session);
-    if (!myWorker) return `<div class="page-container"><h3>Erro</h3><p>Seu cadastro não foi encontrado na base de mão de obra. Avise o PCM.</p></div>`;
-
+    if (!myWorker) {
+      if (session.perfil !== 'Executante') {
+        setTimeout(() => { if (window.Router) window.Router.navigate('home', {force:true}); }, 50);
+        return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Redirecionando para a página inicial...</div></div>`;
+      }
+      return `<div class="page-container"><h3>Erro</h3><p>Seu cadastro não foi encontrado na base de mão de obra. Avise o PCM.</p></div>`;
+    }
     const eqs = DB.equipment.list();
     const tasks = DB.tasks.getAll();
     const myEqs = getMyEquipments(session);
