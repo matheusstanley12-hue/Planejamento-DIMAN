@@ -1722,13 +1722,13 @@ window.UsersModule = (() => {
           <div class="modal-overlay" id="modal-edit-user">
             <div class="modal">
               <div class="modal-header">
-                <div class="modal-title">Editar Nível do Usuário</div>
+                <div class="modal-title">Editar Usuário</div>
                 <button class="modal-close" onclick="closeModal('modal-edit-user')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
               </div>
               <div class="modal-body">
                 <div style="display:flex;flex-direction:column;gap:var(--space-3);">
                   <input type="hidden" id="eu-id" />
-                  <div class="form-group"><label>Usuário</label><input type="text" id="eu-nome" readonly style="background:var(--bg-base);color:var(--text-muted);" /></div>
+                  <div class="form-group"><label>Nome do Usuário *</label><input type="text" id="eu-nome" /></div>
                   <div class="form-group"><label>Nível / Perfil de Acesso *</label><select id="eu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
                 </div>
               </div>
@@ -1926,20 +1926,22 @@ window.UsersModule = (() => {
 
   function saveEditUser() {
     const id = document.getElementById('eu-id').value;
+    const newNome = document.getElementById('eu-nome').value.trim();
     const newPerfil = document.getElementById('eu-perfil').value;
     
-    if(!id || !newPerfil) return;
+    if(!id || !newPerfil || !newNome) return;
     
     let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
     const userIndex = users.findIndex(u => u.id === id);
     if(userIndex === -1) return;
     
+    users[userIndex].nome = newNome;
     users[userIndex].perfil = newPerfil;
     
     localStorage.setItem('diman_users', JSON.stringify(users));
     if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
     
-    Toast && Toast.success('Sucesso', 'Nível do usuário atualizado.');
+    Toast && Toast.success('Sucesso', 'Usuário atualizado com sucesso.');
     closeModal('modal-edit-user');
     Router.navigate('users', { force: true });
   }
