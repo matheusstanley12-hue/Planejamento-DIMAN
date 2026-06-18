@@ -882,10 +882,21 @@ window.WorkerPanel = (() => {
     const state = myWorker.currentState || 'Ocioso';
     
     const allWorkers = window.DB.workforce.list();
-    // Apenas o worker logado deve aparecer na área principal com botões de ação
-    const activeWorkers = (state === 'Trabalhando' || state === 'Em Pausa') && myWorker.currentTaskId && tasks.find(t => t.id === myWorker.currentTaskId) ? [myWorker] : [];
     
-    // Todos os executantes ativos na fila para mostrar "EM EXECUÇÃO" (usado abaixo)
+    // Mostra no topo:
+    // 1. A tarefa do próprio usuário logado (mesmo se filtrada, para não perder o controle)
+    // 2. Tarefas de outros executantes que pertençam aos equipamentos/filtros atuais (myTasks)
+    const activeWorkers = allWorkers.filter(w => {
+      if (w.currentState !== 'Trabalhando' && w.currentState !== 'Em Pausa') return false;
+      if (!w.currentTaskId) return false;
+      
+      if (myWorker && w.id === myWorker.id && tasks.find(t => t.id === w.currentTaskId)) return true;
+      if (myTasks.find(t => t.id === w.currentTaskId)) return true;
+      
+      return false;
+    });
+    
+    // Todos os executantes ativos na fila para mostrar "EM EXECUÇÃO" na lista
     const allActiveWorkers = allWorkers.filter(w => 
       (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && 
       w.currentTaskId && 
@@ -941,7 +952,7 @@ window.WorkerPanel = (() => {
                 </div>
               ` : ''}
               
-              ${currentT && !canExecuteTask(session, currentT) && w.matricula === session.matricula ? `
+              ${currentT && !canExecuteTask(session, currentT) ? `
                 <div class="action-buttons">
                   <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -979,7 +990,7 @@ window.WorkerPanel = (() => {
                 </div>
               ` : ''}
               
-              ${currentT && !canExecuteTask(session, currentT) && w.matricula === session.matricula ? `
+              ${currentT && !canExecuteTask(session, currentT) ? `
                 <div class="action-buttons">
                   <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
