@@ -773,7 +773,8 @@ window.WorkforceModule = (() => {
             <thead><tr><th>Funcionário</th><th>Disciplina</th><th>Horas no Mês</th><th>Apontamentos</th></tr></thead>
             <tbody>
               ${workers.map(w => {
-                const wHours = monthTs.filter(t=>t.workerId===w.id).reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
+                const wTs = monthTs.filter(t=>t.workerId===w.id);
+                const wHours = wTs.reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
                 return `<tr>
                   <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(w.nome)}</div><span>${w.nome}</span></div></td>
                   <td>${w.disciplina}</td>
