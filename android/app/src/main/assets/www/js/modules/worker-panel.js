@@ -1091,9 +1091,14 @@ window.WorkerPanel = (() => {
           t.status = 'Aberta';
           actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
         } else {
+          const allPaused = executingWorkers.every(w => w.currentState === 'Em Pausa');
+          const statusLabel = allPaused ? 'EM PAUSA' : 'EM EXECUÇÃO';
+          const statusColor = allPaused ? '#f59e0b' : '#10b981';
+          
           const namesHtml = executingWorkers.map(w => {
             if (canExecuteTask(session, t)) {
-              return `<span>${w.nome.split(' ')[0]} (<span class="live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</span>)</span>`;
+              const stateSuffix = w.currentState === 'Em Pausa' ? ` <span style="font-size:10px;font-weight:600;opacity:0.8;">[${w.currentPauseReason || 'Pausado'}]</span>` : '';
+              return `<span>${w.nome.split(' ')[0]}${stateSuffix} (<span class="live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</span>)</span>`;
             } else {
               return `<span>${w.nome.split(' ')[0]}</span>`;
             }
@@ -1101,9 +1106,9 @@ window.WorkerPanel = (() => {
           
           actionBtn = `
             <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
-              <div style="font-size:12px;color:#10b981;font-weight:800;display:flex;align-items:center;gap:6px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;"></div>
-                EM EXECUÇÃO: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+              <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
+                <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
+                ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
               </div>
               <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
                 ENTRAR NA TAREFA
