@@ -29,6 +29,7 @@ window.DB = (() => {
     users: 'diman_users',
     audit: 'diman_audit',
     manuals: 'diman_manuals',
+    manualFolders: 'diman_manual_folders',
     vacations: 'diman_vacations'
   };
 
@@ -921,6 +922,13 @@ window.DB = (() => {
     delete: (id) => { const m = get(KEYS.manuals); set(KEYS.manuals, m.filter(r => r.id !== id)); }
   };
 
+  const manualFolders = {
+    list: () => get(KEYS.manualFolders),
+    add: (data) => { const m = get(KEYS.manualFolders); m.push({ ...data, createdAt: now() }); set(KEYS.manualFolders, m); },
+    update: (id, updates) => { let m = get(KEYS.manualFolders); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.manualFolders, m); } },
+    delete: (id) => { const m = get(KEYS.manualFolders); set(KEYS.manualFolders, m.filter(r => r.id !== id)); }
+  };
+
   const meetingTasks = {
     list: () => get(KEYS.meetingTasks),
     add: (data) => { const m = get(KEYS.meetingTasks); m.push({ ...data, createdAt: now() }); set(KEYS.meetingTasks, m); },
@@ -936,7 +944,7 @@ window.DB = (() => {
   };
 
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, meetingTasks, vacations, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, vacations, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);
