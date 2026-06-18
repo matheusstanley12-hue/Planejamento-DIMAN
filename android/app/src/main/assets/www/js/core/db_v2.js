@@ -149,10 +149,10 @@ window.DB = (() => {
   }
   const syncTimeouts = {};
   async function syncToSupabase(collection, data) {
-    if (!supabaseClient) {
-      localStorage.setItem('diman_unsynced', 'true');
-      return;
-    }
+    // Marcar IMEDIATAMENTE como não sincronizado para evitar perda de dados se o usuário der F5 antes do debounce terminar
+    localStorage.setItem('diman_unsynced', 'true');
+    
+    if (!supabaseClient) return;
     
     // Debounce sync requests to prevent data loss race conditions during batch updates
     if (syncTimeouts[collection]) clearTimeout(syncTimeouts[collection]);
