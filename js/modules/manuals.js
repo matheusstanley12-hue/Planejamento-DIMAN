@@ -81,7 +81,7 @@ window.ManualsAdmin = (() => {
     const equipments = window.DB.equipment.list() || [];
     const modalId = `modal-${Date.now()}`;
     const modalHTML = `
-      <div id="${modalId}" class="modal-overlay" style="display:flex;animation:fadeIn 0.2s ease;">
+      <div id="${modalId}" class="modal-overlay open" style="display:flex;animation:fadeIn 0.2s ease;">
         <div class="modal" style="width:100%;max-width:500px;animation:slideUp 0.3s ease;">
           <div class="modal-header" style="border-bottom:1px solid var(--border-hover);">
             <h3 style="font-weight:700;color:var(--text-primary);">Adicionar Manual</h3>
