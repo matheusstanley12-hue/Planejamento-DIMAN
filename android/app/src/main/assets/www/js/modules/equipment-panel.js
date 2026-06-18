@@ -141,7 +141,9 @@ window.EquipmentPanel = (() => {
     const today = new Date().toISOString().slice(0,10);
 
     const dtPlan = eq.dataLiberacaoPlanejada;
-    const dtPrev = eq.dataLiberacaoAtual || dtPlan;
+    const taskDates = tasks.map(t => t.dataPlanejadaTermino).filter(Boolean).sort();
+    const maxTaskDate = taskDates.length > 0 ? taskDates[taskDates.length - 1] : null;
+    const dtPrev = maxTaskDate || eq.dataLiberacaoAtual || dtPlan;
     const desvio = dtPlan && dtPrev ? daysBetween(dtPlan, dtPrev) : 0;
     const replanCount = (eq.replanning || []).length;
     const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
