@@ -567,6 +567,37 @@ function renderShell(session) {
     return html;
   }
 
+  window.filterSidebar = function(query) {
+    query = query.toLowerCase();
+    const nav = document.querySelector('.sidebar-nav');
+    if (!nav) return;
+    
+    const sections = nav.querySelectorAll('.sidebar-section-label');
+    const items = nav.querySelectorAll('.nav-item');
+    
+    items.forEach(item => {
+      if (item.classList.contains('logout-btn')) return; // ignore if added to nav
+      const text = item.querySelector('.nav-label').textContent.toLowerCase();
+      if (text.includes(query)) {
+        item.style.display = 'flex';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+    
+    sections.forEach(section => {
+      let hasVisibleItem = false;
+      let next = section.nextElementSibling;
+      while (next && !next.classList.contains('sidebar-section-label')) {
+        if (next.style.display !== 'none') {
+          hasVisibleItem = true;
+        }
+        next = next.nextElementSibling;
+      }
+      section.style.display = hasVisibleItem || query === '' ? 'block' : 'none';
+    });
+  };
+
   document.body.innerHTML = `
     <style>
       #topbar {
@@ -597,6 +628,14 @@ function renderShell(session) {
           </div>
           <div onclick="toggleSidebar()" style="cursor:pointer;color:rgba(255,255,255,0.4);display:flex;align-items:center;transition:color 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.4)'" title="Recolher Menu Lateral">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg>
+          </div>
+        </div>
+        <div style="padding: 12px 16px 4px 16px;">
+          <div style="position:relative;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.4);">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+            <input type="text" placeholder="Buscar menu..." onkeyup="window.filterSidebar(this.value)" style="width:100%;padding:8px 12px 8px 30px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.2);color:white;font-size:12px;outline:none;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--brand-primary-light)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'" />
           </div>
         </div>
         <div class="sidebar-nav">${buildNav()}</div>
