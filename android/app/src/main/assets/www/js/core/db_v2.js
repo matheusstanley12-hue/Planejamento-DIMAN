@@ -147,24 +147,36 @@ window.DB = (() => {
     try { return JSON.parse(localStorage.getItem(key) || '{}'); }
     catch { return {}; }
   }
+  const syncTimeouts = {};
   async function syncToSupabase(collection, data) {
-    if (supabaseClient) {
+    if (!supabaseClient) {
+      localStorage.setItem('diman_unsynced', 'true');
+      return;
+    }
+    
+    // Debounce sync requests to prevent data loss race conditions during batch updates
+    if (syncTimeouts[collection]) clearTimeout(syncTimeouts[collection]);
+    
+    syncTimeouts[collection] = setTimeout(async () => {
       try {
         const { error } = await supabaseClient.from('diman_store')
           .upsert({ collection: collection, key: 'all', data: data }, { onConflict: 'collection,key' });
+        
         if (error) {
           console.error('Supabase Sync Error:', error);
           localStorage.setItem('diman_unsynced', 'true');
         } else {
-          localStorage.setItem('diman_unsynced', 'false');
+          // If no other pending syncs exist, we can mark as fully synced
+          if (Object.values(syncTimeouts).length === 0 || localStorage.getItem('diman_unsynced') !== 'true') {
+             localStorage.setItem('diman_unsynced', 'false');
+          }
         }
       } catch (err) {
         console.error('Supabase Sync Exception:', err);
         localStorage.setItem('diman_unsynced', 'true');
       }
-    } else {
-      localStorage.setItem('diman_unsynced', 'true');
-    }
+      delete syncTimeouts[collection];
+    }, 1000);
   }
   function set(key, data) { 
     localStorage.setItem(key, JSON.stringify(data)); 
