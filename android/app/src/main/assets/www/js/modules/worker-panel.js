@@ -885,13 +885,17 @@ window.WorkerPanel = (() => {
     
     // Mostra no topo:
     // 1. A tarefa do próprio usuário logado (mesmo se filtrada, para não perder o controle)
-    // 2. Tarefas de outros executantes que pertençam aos equipamentos/filtros atuais (myTasks)
+    // 2. Tarefas de outros executantes que pertençam aos equipamentos/filtros atuais E que sejam do mesmo setor (canExecuteTask)
     const activeWorkers = allWorkers.filter(w => {
       if (w.currentState !== 'Trabalhando' && w.currentState !== 'Em Pausa') return false;
       if (!w.currentTaskId) return false;
       
-      if (myWorker && w.id === myWorker.id && tasks.find(t => t.id === w.currentTaskId)) return true;
-      if (myTasks.find(t => t.id === w.currentTaskId)) return true;
+      const t = tasks.find(t => t.id === w.currentTaskId);
+      if (!t) return false;
+
+      if (myWorker && w.id === myWorker.id) return true;
+      
+      if (myTasks.find(mt => mt.id === t.id) && canExecuteTask(session, t)) return true;
       
       return false;
     });
@@ -1088,7 +1092,11 @@ window.WorkerPanel = (() => {
           actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
         } else {
           const namesHtml = executingWorkers.map(w => {
-            return `<span>${w.nome.split(' ')[0]} (<span class="live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</span>)</span>`;
+            if (canExecuteTask(session, t)) {
+              return `<span>${w.nome.split(' ')[0]} (<span class="live-timer-wp" data-worker-id="${w.id}">${formatTimeDiff(w.currentActionStartTime)}</span>)</span>`;
+            } else {
+              return `<span>${w.nome.split(' ')[0]}</span>`;
+            }
           }).join(', ');
           
           actionBtn = `
