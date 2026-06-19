@@ -1147,20 +1147,32 @@ window.WorkerPanel = (() => {
           timeStr = `<span class="live-pause-timer" data-start="${t.pauseStartTime}"> - ${formatTimeDiff(t.pauseStartTime)}</span>`;
         }
         
-        // Verifica quem deve retomar vs quem deve continuar
-        const myWorkerName = myWorker ? myWorker.nome : session.nome;
-        const isMyTask = t.responsavel === myWorkerName;
-        const btnText = isMyTask ? 'RETOMAR TAREFA' : 'CONTINUAR TAREFA';
-
-        actionBtn = `
-          <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
-            <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              ${pauseReason}${timeStr}
+        if (!canExecuteTask(session, t)) {
+          actionBtn = `
+            <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                ${pauseReason}${timeStr}
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>
             </div>
-            <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">${btnText}</button>
-          </div>
-        `;
+          `;
+        } else {
+          // Verifica quem deve retomar vs quem deve continuar
+          const myWorkerName = myWorker ? myWorker.nome : session.nome;
+          const isMyTask = t.responsavel === myWorkerName;
+          const btnText = isMyTask ? 'RETOMAR TAREFA' : 'CONTINUAR TAREFA';
+
+          actionBtn = `
+            <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                ${pauseReason}${timeStr}
+              </div>
+              <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">${btnText}</button>
+            </div>
+          `;
+        }
       } else if (t.status === 'Em Andamento') {
         const executingWorkers = allActiveWorkers.filter(w => w.currentTaskId === t.id);
         
@@ -1168,7 +1180,11 @@ window.WorkerPanel = (() => {
         if (executingWorkers.length === 0) {
           DB.tasks.update(t.id, { status: 'Aberta' });
           t.status = 'Aberta';
-          actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
+          if (!canExecuteTask(session, t)) {
+             actionBtn = `<div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>`;
+          } else {
+             actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
+          }
         } else {
           const allPaused = executingWorkers.every(w => w.currentState === 'Em Pausa');
           const statusLabel = allPaused ? 'EM PAUSA' : 'EM EXECUÇÃO';
@@ -1183,17 +1199,29 @@ window.WorkerPanel = (() => {
             }
           }).join(', ');
           
-          actionBtn = `
-            <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
-              <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
-                ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+          if (!canExecuteTask(session, t)) {
+            actionBtn = `
+              <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
+                  ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>
               </div>
-              <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
-                ENTRAR NA TAREFA
-              </button>
-            </div>
-          `;
+            `;
+          } else {
+            actionBtn = `
+              <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
+                  ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+                </div>
+                <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
+                  ENTRAR NA TAREFA
+                </button>
+              </div>
+            `;
+          }
         }
       } else if (state === 'Ocioso' || (state === 'Trabalhando' && myWorker.currentTaskId !== t.id) || (state === 'Em Pausa' && myWorker.currentTaskId !== t.id)) {
         if (!canExecuteTask(session, t)) {
