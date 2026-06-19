@@ -74,8 +74,8 @@ window.ManualsAdmin = (() => {
     let currentFolder = currentFolderId ? allFolders.find(f => f.id === currentFolderId) : null;
     if (currentFolderId && !currentFolder) currentFolderId = null;
 
-    const childFolders = allFolders.filter(f => (f.parentId || null) === currentFolderId);
-    const childManuals = allManuals.filter(m => (m.folderId || null) === currentFolderId);
+    const childFolders = allFolders.filter(f => f && (f.parentId || null) === currentFolderId);
+    const childManuals = allManuals.filter(m => m && (m.folderId || null) === currentFolderId);
 
     // Breadcrumbs
     let breadcrumbs = [];
@@ -388,15 +388,15 @@ window.WorkerManuals = (() => {
 
     // Filter logic
     // Worker sees a folder if: it has no equipmentId (Global) OR its equipmentId is in eqIds (Allocated Eq)
-    let childFolders = allFolders.filter(f => (f.parentId || null) === currentFolderId);
+    let childFolders = allFolders.filter(f => f && (f.parentId || null) === currentFolderId);
     if (currentFolderId === null) {
-      childFolders = childFolders.filter(f => !f.equipmentId || eqIds.includes(f.equipmentId));
+      childFolders = childFolders.filter(f => f && (!f.equipmentId || eqIds.includes(f.equipmentId)));
     }
     
     // For manual files without folderId (legacy), filter similarly
-    let childManuals = allManuals.filter(m => (m.folderId || null) === currentFolderId);
+    let childManuals = allManuals.filter(m => m && (m.folderId || null) === currentFolderId);
     if (currentFolderId === null) {
-      childManuals = childManuals.filter(m => !m.equipmentId || eqIds.includes(m.equipmentId));
+      childManuals = childManuals.filter(m => m && (!m.equipmentId || eqIds.includes(m.equipmentId)));
     }
 
     if (currentFolderId === null && childFolders.length === 0 && childManuals.length === 0) {
