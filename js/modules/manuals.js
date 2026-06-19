@@ -1,6 +1,8 @@
 window.openManualViewer = function(link, title) {
   try {
-    const renderModal = (finalLink, isBlob = false) => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    const renderModal = (finalLink, isBlob = false, usePdfJs = false, rawBase64 = null) => {
       const modalId = 'manual-viewer-modal';
       if(document.getElementById(modalId)) document.getElementById(modalId).remove();
       
@@ -10,8 +12,8 @@ window.openManualViewer = function(link, title) {
       
       const modalHTML = `
         <div id="${modalId}" class="modal-overlay open" style="display:flex;animation:fadeIn 0.2s ease;z-index:9999;">
-          <div class="modal" style="width:100%;height:95%;max-width:1200px;margin:20px;animation:slideUp 0.3s ease;display:flex;flex-direction:column;padding:0;">
-            <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;">
+          <div class="modal" style="width:100%;height:95%;max-width:1200px;margin:20px;animation:slideUp 0.3s ease;display:flex;flex-direction:column;padding:0;background:#323639;">
+            <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;background:#fff;">
               <h3 style="font-weight:700;color:var(--text-primary);margin:0;font-size:16px;">${title || 'Visualizador de Arquivo'}</h3>
               <div style="display:flex;gap:15px;align-items:center;">
                  <a href="${rawLink}" ${downloadAttr} class="btn btn-primary" style="font-size:13px;padding:6px 12px;display:flex;align-items:center;gap:6px;text-decoration:none;">
@@ -21,13 +23,69 @@ window.openManualViewer = function(link, title) {
                  <button class="modal-close" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" onclick="document.getElementById('${modalId}').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
               </div>
             </div>
-            <div class="modal-body" style="flex:1;padding:0;overflow:hidden;background:#f8f9fa;">
-               <iframe src="${finalLink}" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>
+            <div class="modal-body" id="manual-modal-body" style="flex:1;padding:0;overflow:auto;background:#525659;text-align:center;">
+               ${usePdfJs ? '<div style="padding:40px;color:#fff;font-family:sans-serif;">Renderizando PDF, aguarde um instante...</div>' : `<iframe src="${finalLink}" style="width:100%;height:100%;border:none;background:#fff;" allowfullscreen></iframe>`}
             </div>
           </div>
         </div>
       `;
       document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+      if (usePdfJs) {
+         const loadPdf = () => {
+             const pdfjsLib = window['pdfjs-dist/build/pdf'];
+             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+             
+             let loadingTask;
+             if (rawBase64 && rawBase64.startsWith('data:application/pdf;base64,')) {
+                 const base64Data = rawBase64.replace('data:application/pdf;base64,', '');
+                 const binary = atob(base64Data);
+                 const array = new Uint8Array(binary.length);
+                 for(let i=0; i<binary.length; i++) array[i] = binary.charCodeAt(i);
+                 loadingTask = pdfjsLib.getDocument({data: array});
+             } else {
+                 loadingTask = pdfjsLib.getDocument(rawBase64 || finalLink);
+             }
+
+             loadingTask.promise.then(pdf => {
+                 const container = document.getElementById('manual-modal-body');
+                 if(!container) return;
+                 container.innerHTML = '';
+                 container.style.padding = '20px 0';
+
+                 for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                     pdf.getPage(pageNum).then(page => {
+                         const canvas = document.createElement('canvas');
+                         canvas.style.display = 'block';
+                         canvas.style.margin = '0 auto 20px auto';
+                         canvas.style.maxWidth = '95%';
+                         canvas.style.boxShadow = '0 2px 10px rgba(0,0,0,0.5)';
+                         canvas.style.background = '#fff';
+                         container.appendChild(canvas);
+                         
+                         const viewport = page.getViewport({ scale: 1.5 });
+                         const context = canvas.getContext('2d');
+                         canvas.height = viewport.height;
+                         canvas.width = viewport.width;
+                         
+                         page.render({ canvasContext: context, viewport: viewport });
+                     });
+                 }
+             }).catch(err => {
+                 const container = document.getElementById('manual-modal-body');
+                 if(container) container.innerHTML = `<div style="padding:40px;color:#ff6b6b;">Erro ao renderizar PDF: ${err.message}.<br><br>Use o botão "Baixar Arquivo" acima.</div>`;
+             });
+         };
+
+         if (!window['pdfjs-dist/build/pdf']) {
+             const script = document.createElement('script');
+             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+             script.onload = loadPdf;
+             document.head.appendChild(script);
+         } else {
+             loadPdf();
+         }
+      }
     };
 
     if (link && typeof link === 'string') {
@@ -39,21 +97,28 @@ window.openManualViewer = function(link, title) {
                 renderModal(link);
             }
         } else if (link.startsWith('data:application/pdf')) {
-            // Convert to Blob URL to safely append toolbar=0 without crashing WebViews
-            fetch(link)
-              .then(res => res.blob())
-              .then(blob => {
-                  const blobUrl = URL.createObjectURL(blob);
-                  renderModal(blobUrl + '#toolbar=0&navpanes=0', true);
-              })
-              .catch(err => {
-                  console.error(err);
-                  renderModal(link, true); // fallback
-              });
+            if (isMobile) {
+                renderModal(link, false, true, link);
+            } else {
+                fetch(link)
+                  .then(res => res.blob())
+                  .then(blob => {
+                      const blobUrl = URL.createObjectURL(blob);
+                      renderModal(blobUrl + '#toolbar=0&navpanes=0', true);
+                  })
+                  .catch(err => {
+                      console.error(err);
+                      renderModal(link, true); // fallback
+                  });
+            }
         } else if (link.startsWith('data:')) {
             renderModal(link, true);
         } else if (link.startsWith('http') && link.toLowerCase().endsWith('.pdf')) {
-            renderModal(link + (link.includes('#') ? '&' : '#') + 'toolbar=0&navpanes=0');
+            if (isMobile) {
+                renderModal(link, false, true, link);
+            } else {
+                renderModal(link + (link.includes('#') ? '&' : '#') + 'toolbar=0&navpanes=0');
+            }
         } else {
             renderModal(link);
         }
