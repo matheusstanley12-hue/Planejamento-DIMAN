@@ -238,7 +238,7 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('resumo', 'RESUMO EXECUTIVO', 'chart-bar', renderResumo(eq, tasks, openRestr, pendingParts, adherencia, hPlan, hReal))}
           
-          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'].map(disc => {
+          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Teste','Retrabalho'].map(disc => {
             const discTasks = tasks.filter(t => t.disciplina === disc);
             const discHPlan = discTasks.reduce((s,t) => s + (t.horasPlanejadas||0), 0);
             const discHReal = discTasks.reduce((s,t) => s + (t.horasRealizadas||0), 0);
@@ -260,14 +260,6 @@ window.EquipmentPanel = (() => {
           }).join('')}
 
           ${renderAccordion('pecas', `FALTA DE PEÇAS <span class="badge badge-${pendingParts>0?'danger':'success'}" style="margin-left:8px;">${pendingParts} pendentes</span>`, 'cube', renderPecas(parts))}
-          
-          ${renderAccordion('workforce', 'MÃO DE OBRA', 'users', renderMaoDeObra())}
-          
-          ${renderAccordion('followup', 'FOLLOW-UP (DIÁRIO DE BORDO)', 'clipboard-list', renderFollowUp(eq))}
-          
-          ${renderAccordion('restricoes', `RESTRIÇÕES <span class="badge badge-${openRestr>0?'danger':'success'}" style="margin-left:8px;">${openRestr} abertas</span>`, 'exclamation-triangle', renderRestricoes(restrictions))}
-          
-          ${renderAccordion('cronograma', 'CRONOGRAMA & CAMINHO CRÍTICO', 'calendar', renderCronograma(tasks, eq))}
           
           ${renderAccordion('svrequests', 'SOLICITAÇÕES DE SERVIÇO', 'clipboard', renderSvRequests(eq.id))}
           
