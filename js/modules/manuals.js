@@ -393,11 +393,6 @@ window.ManualsAdmin = (() => {
          if(!fileInput.files || fileInput.files.length === 0) return window.Toast && window.Toast.error('Erro', 'Selecione um arquivo.');
          
          let validFiles = Array.from(fileInput.files);
-         for (let f of validFiles) {
-            if (f.size > 1536000) {
-               return window.Toast && window.Toast.error('Erro', `O arquivo ${f.name} excede o limite de 1.5MB.`);
-            }
-         }
          
          let processed = 0;
          let hasError = false;
