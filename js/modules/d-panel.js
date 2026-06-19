@@ -588,7 +588,7 @@ window.DPanel = (() => {
         ${renderAIAlerts()}
 
         <!-- Top Performers Ticker -->
-        ${window.Router && window.Router.current === 'presentation' ? renderTopPerformersTicker() : ''}
+        ${renderTopPerformersTicker()}
       </div>
 
       <!-- Meeting mode overlay (rendered separately by MeetingMode module) -->
