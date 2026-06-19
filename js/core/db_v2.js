@@ -163,6 +163,8 @@ window.DB = (() => {
         let upsertPayload = [];
         if (Array.isArray(data) && data.length > 0 && data[0] && data[0].id) {
            upsertPayload = data.filter(Boolean).map(item => ({ collection: collection, key: item.id, data: item, updated_at: new Date().toISOString() }));
+           // Clear out legacy 'all' key to prevent deleted items from coming back
+           upsertPayload.push({ collection: collection, key: 'all', data: [], updated_at: new Date().toISOString() });
         } else {
            upsertPayload = { collection: collection, key: 'all', data: data, updated_at: new Date().toISOString() };
         }
