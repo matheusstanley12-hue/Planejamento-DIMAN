@@ -107,6 +107,8 @@ window.Auth = (() => {
   }
 
   function saveUsers(users) {
+    // Garantir que todos os usuários tenham ID para não dar erro no UPSERT do Supabase
+    users.forEach(u => { if (!u.id) u.id = window.DB && window.DB.uid ? window.DB.uid('u') : 'u-' + Date.now() + Math.random().toString(36).substring(2); });
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
     if (window.DB && window.DB.syncToSupabase) {
       window.DB.syncToSupabase(USERS_KEY, users);

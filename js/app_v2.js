@@ -159,6 +159,7 @@ function showFirstAccessPasswordChange(matricula, session, loginPage) {
       document.getElementById('first-access-modal').remove();
       loginPage.remove();
       session.mustChangePassword = false;
+      sessionStorage.setItem('diman_session', JSON.stringify(session));
       window.renderShell(session);
       window.Router.navigate(session.perfil === 'Executante' ? 'worker-panel' : 'home');
     } else {
