@@ -272,17 +272,34 @@ window.DB = (() => {
           await forceSyncAll();
         } else {
           const groupedData = {};
+          const allData = {};
+          
           data.forEach(row => {
             if (row.key === 'all') {
-              localStorage.setItem(row.collection, JSON.stringify(row.data));
+              allData[row.collection] = row.data;
             } else {
               if (!groupedData[row.collection]) groupedData[row.collection] = [];
               groupedData[row.collection].push(row.data);
             }
           });
           
-          for (const [collection, arr] of Object.entries(groupedData)) {
+          // First set the 'all' collections
+          for (const [collection, arr] of Object.entries(allData)) {
             localStorage.setItem(collection, JSON.stringify(arr));
+          }
+          
+          // Then merge the individual rows into them
+          for (const [collection, arr] of Object.entries(groupedData)) {
+            let baseArr = [];
+            try { baseArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
+            if (!Array.isArray(baseArr)) baseArr = [];
+            
+            // Map by id to prevent duplicates and prefer individual rows
+            const mergedMap = new Map();
+            baseArr.forEach(item => { if (item.id) mergedMap.set(item.id, item); });
+            arr.forEach(item => { if (item.id) mergedMap.set(item.id, item); });
+            
+            localStorage.setItem(collection, JSON.stringify(Array.from(mergedMap.values())));
           }
         }
       }
