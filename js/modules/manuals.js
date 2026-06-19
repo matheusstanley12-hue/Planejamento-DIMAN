@@ -190,9 +190,23 @@ window.ManualsAdmin = (() => {
               <input type="text" id="man-title" class="form-control" placeholder="Ex: Catálogo de Peças SSM" required />
             </div>
             <div class="form-group">
-              <label>Caminho do Arquivo ou Link *</label>
-              <input type="text" id="man-link" class="form-control" placeholder="Ex: C:\\Manuais\\arquivo.pdf ou https://" required />
-              <small style="color:var(--text-muted);display:block;margin-top:4px;">Cole o link da web ou o caminho da pasta no seu computador.</small>
+              <label>Tipo de Anexo</label>
+              <select id="man-type" class="form-control" onchange="
+                document.getElementById('man-link-wrap').style.display = this.value === 'link' ? 'block' : 'none';
+                document.getElementById('man-file-wrap').style.display = this.value === 'file' ? 'block' : 'none';
+              ">
+                  <option value="link">Link da Web (Google Drive, etc)</option>
+                  <option value="file">Arquivo do Computador</option>
+              </select>
+            </div>
+            <div class="form-group" id="man-link-wrap">
+              <label>Endereço do Link *</label>
+              <input type="url" id="man-link" class="form-control" placeholder="Ex: https://drive.google.com/..." />
+            </div>
+            <div class="form-group" id="man-file-wrap" style="display:none;">
+              <label>Selecione o Arquivo *</label>
+              <input type="file" id="man-file" class="form-control" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png" />
+              <small style="color:#d9534f;display:block;margin-top:4px;">Aviso: Sem um servidor em nuvem (Bucket), os arquivos ficam no cachê. Limite máximo: 1MB.</small>
             </div>
             <div class="form-group">
               <label>Descrição (Opcional)</label>
