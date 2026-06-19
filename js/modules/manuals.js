@@ -288,7 +288,7 @@ window.ManualsAdmin = (() => {
          const link = document.getElementById('man-link').value.trim();
          if(!link) return window.Toast && window.Toast.error('Erro', 'Preencha o link.');
          
-         window.DB.manuals.add({
+         const success = window.DB.manuals.add({
            id: window.DB.uid('man'),
            folderId: currentFolderId,
            title: title,
@@ -296,9 +296,13 @@ window.ManualsAdmin = (() => {
            link: link,
            equipmentId: null
          });
-         if(window.Toast) window.Toast.success('Sucesso', 'Link anexado com sucesso!');
-         document.getElementById(modalId).remove();
-         window.Router.navigate('manuals', { force: true });
+         
+         if (success !== false) {
+            if(window.Toast) window.Toast.success('Sucesso', 'Link anexado com sucesso!');
+            const modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+            window.Router.navigate('manuals', { force: true });
+         }
          
       } else {
          const fileInput = document.getElementById('man-file');
@@ -312,10 +316,12 @@ window.ManualsAdmin = (() => {
          }
          
          let processed = 0;
+         let hasError = false;
          validFiles.forEach(file => {
             const reader = new FileReader();
             reader.onload = function(e) {
-                window.DB.manuals.add({
+                if (hasError) return;
+                const success = window.DB.manuals.add({
                   id: window.DB.uid('man'),
                   folderId: currentFolderId,
                   title: file.name,
@@ -323,10 +329,17 @@ window.ManualsAdmin = (() => {
                   link: e.target.result,
                   equipmentId: null
                 });
+                
+                if (success === false) {
+                   hasError = true;
+                   return; // Stop processing further files if quota is exceeded
+                }
+                
                 processed++;
                 if (processed === validFiles.length) {
                    if(window.Toast) window.Toast.success('Sucesso', 'Arquivo(s) anexado(s) com sucesso!');
-                   document.getElementById(modalId).remove();
+                   const modal = document.getElementById(modalId);
+                   if (modal) modal.remove();
                    window.Router.navigate('manuals', { force: true });
                 }
             };

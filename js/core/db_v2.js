@@ -207,8 +207,18 @@ window.DB = (() => {
        });
     }
 
-    localStorage.setItem(key, JSON.stringify(data)); 
+    try {
+      localStorage.setItem(key, JSON.stringify(data)); 
+    } catch(err) {
+      if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos ou use links do Google Drive/OneDrive.', 8000);
+        // Do not proceed with syncing if local save failed
+        return false;
+      }
+      throw err;
+    }
     syncToSupabase(key, data);
+    return true;
   }
   function uid(prefix = 'id') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
 
@@ -1005,7 +1015,11 @@ window.DB = (() => {
 
   const manuals = {
     list: () => get(KEYS.manuals),
-    add: (data) => { const m = get(KEYS.manuals); m.push({ ...data, createdAt: now() }); set(KEYS.manuals, m); },
+    add: (data) => {
+      const m = get(KEYS.manuals);
+      m.push({ ...data, createdAt: now() });
+      return set(KEYS.manuals, m);
+    },
     update: (id, updates) => { let m = get(KEYS.manuals); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.manuals, m); } },
     delete: (id) => { const m = get(KEYS.manuals); set(KEYS.manuals, m.filter(r => r.id !== id)); }
   };
