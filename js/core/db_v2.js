@@ -162,7 +162,7 @@ window.DB = (() => {
       try {
         let upsertPayload = [];
         if (Array.isArray(data) && data.length > 0 && data[0] && data[0].id) {
-           upsertPayload = data.map(item => ({ collection: collection, key: item.id, data: item, updated_at: new Date().toISOString() }));
+           upsertPayload = data.filter(Boolean).map(item => ({ collection: collection, key: item.id, data: item, updated_at: new Date().toISOString() }));
         } else {
            upsertPayload = { collection: collection, key: 'all', data: data, updated_at: new Date().toISOString() };
         }
@@ -200,8 +200,8 @@ window.DB = (() => {
     try { oldData = JSON.parse(localStorage.getItem(key)) || []; } catch(e){}
     
     if (Array.isArray(oldData) && Array.isArray(data)) {
-       const newIds = new Set(data.map(i => i.id).filter(Boolean));
-       const deletedItems = oldData.filter(i => i.id && !newIds.has(i.id));
+       const newIds = new Set(data.filter(Boolean).map(i => i.id).filter(Boolean));
+       const deletedItems = oldData.filter(i => i && i.id && !newIds.has(i.id));
        deletedItems.forEach(item => {
            deleteFromSupabase(key, item.id);
        });
