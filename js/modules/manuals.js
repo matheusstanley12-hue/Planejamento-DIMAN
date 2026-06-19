@@ -1,38 +1,53 @@
 window.openManualViewer = function(link, title) {
   try {
-    let finalLink = link;
-    // Auto convert drive links to preview mode to bypass iframe restrictions
+    const renderModal = (finalLink) => {
+      const modalId = 'manual-viewer-modal';
+      if(document.getElementById(modalId)) document.getElementById(modalId).remove();
+      
+      const modalHTML = `
+        <div id="${modalId}" class="modal-overlay open" style="display:flex;animation:fadeIn 0.2s ease;z-index:9999;">
+          <div class="modal" style="width:100%;height:95%;max-width:1200px;margin:20px;animation:slideUp 0.3s ease;display:flex;flex-direction:column;padding:0;">
+            <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;">
+              <h3 style="font-weight:700;color:var(--text-primary);margin:0;">${title || 'Visualizador de Arquivo'}</h3>
+              <div style="display:flex;gap:10px;align-items:center;">
+                 <button class="modal-close" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" onclick="document.getElementById('${modalId}').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+            </div>
+            <div class="modal-body" style="flex:1;padding:0;overflow:hidden;background:#f8f9fa;">
+               <iframe src="${finalLink}" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHTML);
+    };
+
     if (link && typeof link === 'string') {
         if (link.includes('drive.google.com/file/d/')) {
             const match = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
-                finalLink = `https://drive.google.com/file/d/${match[1]}/preview`;
+                renderModal(`https://drive.google.com/file/d/${match[1]}/preview`);
+            } else {
+                renderModal(link);
             }
+        } else if (link.startsWith('data:application/pdf')) {
+            // Convert to Blob URL to safely append toolbar=0 without crashing WebViews
+            fetch(link)
+              .then(res => res.blob())
+              .then(blob => {
+                  const blobUrl = URL.createObjectURL(blob);
+                  renderModal(blobUrl + '#toolbar=0&navpanes=0');
+              })
+              .catch(err => {
+                  console.error(err);
+                  renderModal(link); // fallback
+              });
         } else if (link.startsWith('http') && link.toLowerCase().endsWith('.pdf')) {
-            // Hide native PDF viewer toolbar to prevent easy downloading/printing (only for http/https, not data:)
-            finalLink = link + (link.includes('#') ? '&' : '#') + 'toolbar=0&navpanes=0';
+            renderModal(link + (link.includes('#') ? '&' : '#') + 'toolbar=0&navpanes=0');
+        } else {
+            renderModal(link);
         }
     }
-    
-    const modalId = 'manual-viewer-modal';
-    if(document.getElementById(modalId)) document.getElementById(modalId).remove();
-    
-    const modalHTML = `
-      <div id="${modalId}" class="modal-overlay open" style="display:flex;animation:fadeIn 0.2s ease;z-index:9999;">
-        <div class="modal" style="width:100%;height:95%;max-width:1200px;margin:20px;animation:slideUp 0.3s ease;display:flex;flex-direction:column;padding:0;">
-          <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;">
-            <h3 style="font-weight:700;color:var(--text-primary);margin:0;">${title || 'Visualizador de Arquivo'}</h3>
-            <div style="display:flex;gap:10px;align-items:center;">
-               <button class="modal-close" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" onclick="document.getElementById('${modalId}').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-            </div>
-          </div>
-          <div class="modal-body" style="flex:1;padding:0;overflow:hidden;background:#f8f9fa;">
-             <iframe src="${finalLink}" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
   } catch (err) {
     alert('Erro no visualizador: ' + err.message + '\n' + err.stack);
   }
