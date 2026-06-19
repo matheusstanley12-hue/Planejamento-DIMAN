@@ -16,10 +16,6 @@ window.openManualViewer = function(link, title) {
             <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;background:#fff;">
               <h3 style="font-weight:700;color:var(--text-primary);margin:0;font-size:16px;">${title || 'Visualizador de Arquivo'}</h3>
               <div style="display:flex;gap:15px;align-items:center;">
-                 <a href="${rawLink}" ${downloadAttr} class="btn btn-primary" style="font-size:13px;padding:6px 12px;display:flex;align-items:center;gap:6px;text-decoration:none;">
-                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                   Baixar Arquivo
-                 </a>
                  <button class="modal-close" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" onclick="document.getElementById('${modalId}').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
               </div>
             </div>
