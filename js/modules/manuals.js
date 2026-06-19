@@ -1,3 +1,35 @@
+window.openManualViewer = function(link, title) {
+    let finalLink = link;
+    // Auto convert drive links to preview mode to bypass iframe restrictions
+    if (link.includes('drive.google.com/file/d/')) {
+        const match = link.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            finalLink = `https://drive.google.com/file/d/${match[1]}/preview`;
+        }
+    }
+    
+    const modalId = 'manual-viewer-modal';
+    if(document.getElementById(modalId)) document.getElementById(modalId).remove();
+    
+    const modalHTML = `
+      <div id="${modalId}" class="modal-overlay open" style="display:flex;animation:fadeIn 0.2s ease;z-index:9999;">
+        <div class="modal" style="width:100%;height:95%;max-width:1200px;margin:20px;animation:slideUp 0.3s ease;display:flex;flex-direction:column;padding:0;">
+          <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="font-weight:700;color:var(--text-primary);margin:0;">${title || 'Visualizador de Arquivo'}</h3>
+            <div style="display:flex;gap:10px;align-items:center;">
+               <a href="${link}" target="_blank" class="btn btn-ghost" style="padding:4px 8px;font-size:12px;">Abrir em nova aba</a>
+               <button class="modal-close" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" onclick="document.getElementById('${modalId}').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            </div>
+          </div>
+          <div class="modal-body" style="flex:1;padding:0;overflow:hidden;background:#f8f9fa;">
+             <iframe src="${finalLink}" style="width:100%;height:100%;border:none;" allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+};
+
 window.ManualsAdmin = (() => {
   let currentFolderId = null;
 
@@ -82,7 +114,7 @@ window.ManualsAdmin = (() => {
               ${m.description ? `<p style="font-size:var(--text-sm);color:var(--text-secondary);margin-top:8px;line-height:1.4;">${m.description}</p>` : '<div style="margin-bottom:var(--space-4);"></div>'}
             </div>
             <div style="display:flex;gap:var(--space-2);margin-top:10px;">
-              <a href="${m.link}" target="_blank" class="btn btn-ghost" style="flex:1;display:flex;justify-content:center;gap:4px;font-size:var(--text-sm);background:rgba(59,130,246,0.1);color:var(--brand-primary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> Abrir</a>
+              <button data-link="${m.link}" data-title="${m.title}" onclick="window.openManualViewer(this.dataset.link, this.dataset.title)" class="btn btn-ghost" style="flex:1;display:flex;justify-content:center;gap:4px;font-size:var(--text-sm);background:rgba(59,130,246,0.1);color:var(--brand-primary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> Abrir</button>
               <button onclick="ManualsAdmin.deleteManual('${m.id}')" class="btn btn-ghost" style="padding:0 var(--space-3);color:var(--color-danger);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.158 0c-.31-.08-.62-.15-.93-.21m-14.158 0c.31-.08.62-.15.93-.21m14.158 0c-1.3-.31-2.6-.61-3.9-.91M6.83 5.79c1.3-.31 2.6-.61 3.9-.91M9 3h6m-6 0c0-.55-.45-1-1-1H8c-.55 0-1 .45-1 1zm6 0c0-.55.45-1 1-1h1c.55 0 1 .45 1 1z"/></svg></button>
             </div>
           </div>
@@ -403,10 +435,10 @@ window.WorkerManuals = (() => {
               <h3 style="font-weight:700;color:var(--text-primary);font-size:var(--text-base);line-height:1.3;margin-bottom:var(--space-2);">${m.title}</h3>
               ${m.description ? `<p style="font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-4);line-height:1.4;">${m.description}</p>` : '<div style="margin-bottom:var(--space-4);"></div>'}
             </div>
-            <a href="${m.link}" target="_blank" class="btn btn-primary" style="width:100%;display:flex;justify-content:center;gap:8px;margin-top:10px;">
+            <button data-link="${m.link}" data-title="${m.title}" onclick="window.openManualViewer(this.dataset.link, this.dataset.title)" class="btn btn-primary" style="width:100%;display:flex;justify-content:center;gap:8px;margin-top:10px;">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
               Acessar
-            </a>
+            </button>
           </div>
         `;
       });
