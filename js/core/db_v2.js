@@ -433,7 +433,7 @@ window.DB = (() => {
     },
     update(id, data) {
       const items = get(KEYS.equipment);
-      const idx = items.findIndex(e => e.id === id);
+      const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
@@ -460,8 +460,8 @@ window.DB = (() => {
     },
     delete(id) {
       const items = get(KEYS.equipment);
-      const eq = items.find(e => e.id === id);
-      set(KEYS.equipment, items.filter(e => e.id !== id));
+      const eq = items.find(e => String(e.id) === String(id));
+      set(KEYS.equipment, items.filter(e => String(e.id) !== String(id)));
       if (eq) { 
         if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('DELETE_EQUIPMENT', `Equipamento ${eq.nome} removido`, null); 
         if (window.events && window.events.emit) window.events.emit('equipment:deleted', id); 
@@ -470,7 +470,7 @@ window.DB = (() => {
     },
     addTimeline(id, event) {
       const items = get(KEYS.equipment);
-      const idx = items.findIndex(e => e.id === id);
+      const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return;
       if (!items[idx].timeline) items[idx].timeline = [];
       items[idx].timeline.push({ id: uid('tl'), ...event, timestamp: now() });
@@ -480,7 +480,7 @@ window.DB = (() => {
     },
     addReplanning(id, data) {
       const items = get(KEYS.equipment);
-      const idx = items.findIndex(e => e.id === id);
+      const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return;
       if (!items[idx].replanning) items[idx].replanning = [];
       const n = items[idx].replanning.length + 1;
@@ -626,6 +626,7 @@ window.DB = (() => {
       if (filters.date)        items = items.filter(t => t.data === filters.date);
       return items;
     },
+    getAll: () => get(KEYS.timesheets),
     create(data) {
       const items = get(KEYS.timesheets);
       const item = { id: uid('ts'), ...data, createdAt: now() };
