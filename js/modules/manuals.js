@@ -6,6 +6,9 @@ window.openManualViewer = function(link, title) {
         if (match && match[1]) {
             finalLink = `https://drive.google.com/file/d/${match[1]}/preview`;
         }
+    } else if (link.startsWith('data:application/pdf') || link.toLowerCase().endsWith('.pdf')) {
+        // Hide native PDF viewer toolbar to prevent easy downloading/printing
+        finalLink = link + (link.includes('#') ? '&' : '#') + 'toolbar=0&navpanes=0';
     }
     
     const modalId = 'manual-viewer-modal';
@@ -17,7 +20,6 @@ window.openManualViewer = function(link, title) {
           <div class="modal-header" style="border-bottom:1px solid var(--border-hover);padding:15px 20px;display:flex;justify-content:space-between;align-items:center;">
             <h3 style="font-weight:700;color:var(--text-primary);margin:0;">${title || 'Visualizador de Arquivo'}</h3>
             <div style="display:flex;gap:10px;align-items:center;">
-               <a href="${link}" target="_blank" class="btn btn-ghost" style="padding:4px 8px;font-size:12px;">Abrir em nova aba</a>
                <button class="modal-close" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);" onclick="document.getElementById('${modalId}').remove()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
             </div>
           </div>
