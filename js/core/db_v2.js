@@ -722,7 +722,7 @@ window.DB = (() => {
       const eqFilter = window.GlobalEqFilter;
       return get(KEYS.lessons).filter(l => !eqFilter || l.equipmentId === eqFilter);
     },
-    get: id => get(KEYS.lessons).find(l => l.id === id),
+    get: id => get(KEYS.lessons).find(l => String(l.id) === String(id)),
     create(data) {
       const items = get(KEYS.lessons);
       const item = { id: uid('ll'), ...data, createdAt: now() };
@@ -733,13 +733,13 @@ window.DB = (() => {
     },
     update(id, data) {
       const items = get(KEYS.lessons);
-      const idx = items.findIndex(l => l.id === id);
+      const idx = items.findIndex(l => String(l.id) === String(id));
       if (idx === -1) return null;
       items[idx] = { ...items[idx], ...data };
       set(KEYS.lessons, items);
       return items[idx];
     },
-    delete(id) { set(KEYS.lessons, get(KEYS.lessons).filter(l => l.id !== id)); },
+    delete(id) { set(KEYS.lessons, get(KEYS.lessons).filter(l => String(l.id) !== String(id))); },
     search(query) {
       const q = query.toLowerCase();
       return get(KEYS.lessons).filter(l =>
