@@ -172,7 +172,7 @@ window.WorkforceTimeModule = (() => {
             <div style="font-size:2rem;font-weight:900;color:#d97706;margin-top:4px;">${pausaCount}</div>
           </div>
           <div style="flex:1;min-width:180px;background:#fef2f2;border:1px solid #fecaca;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:0.5px;">FALTA DE PEÇA</div>
+            <div style="font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:0.5px;">TAREFAS AGUARDANDO PEÇAS</div>
             <div style="font-size:2rem;font-weight:900;color:#ef4444;margin-top:4px;">${faltaDePecaCount}</div>
           </div>
           <div style="flex:1;min-width:180px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
