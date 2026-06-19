@@ -319,7 +319,7 @@ window.DB = (() => {
             let localArr = [];
             try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
             if (Array.isArray(localArr)) {
-               localArr = localArr.filter(i => i.id !== row.key);
+               localArr = localArr.filter(i => i && i.id !== row.key);
                localStorage.setItem(row.collection, JSON.stringify(localArr));
             }
           } else if (payload.new) {
@@ -334,7 +334,7 @@ window.DB = (() => {
               try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
               if (!Array.isArray(localArr)) localArr = [];
               
-              const idx = localArr.findIndex(i => i.id === row.key);
+              const idx = localArr.findIndex(i => i && i.id === row.key);
               if (idx !== -1) {
                  localArr[idx] = row.data;
               } else {
