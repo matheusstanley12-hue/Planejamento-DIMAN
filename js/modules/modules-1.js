@@ -638,7 +638,11 @@ window.EquipmentModule = (() => {
         </div>
       </div>
       <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
-        <div class="form-group"><label>🔒 Data Planejada ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
+        ${(() => {
+          const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador'].includes(window.Auth.getSession().perfil);
+          const isBlocked = eq && !isDev;
+          return `<div class="form-group"><label>${isBlocked ? '🔒 Data Planejada (BLOQUEADA)' : 'Data Planejada'}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${isBlocked ? 'readonly style="opacity:.6;cursor:not-allowed;"' : ''} /></div>`;
+        })()}
         <div class="form-group"><label>Data Real Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
         <div class="form-group">
           <label>Status</label>
@@ -807,8 +811,19 @@ window.EquipmentModule = (() => {
       }
     }
 
-    if (id) { DB.equipment.update(id, data); Toast.success('Equipamento atualizado!', data.codigo); }
-    else { data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; DB.equipment.create(data); Toast.success('Equipamento criado!', data.codigo); }
+    if (id) { 
+      const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador'].includes(window.Auth.getSession().perfil);
+      if (isDev && document.getElementById('eq-data-plan')) {
+        data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value;
+      }
+      DB.equipment.update(id, data); 
+      Toast.success('Equipamento atualizado!', data.codigo); 
+    }
+    else { 
+      data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; 
+      DB.equipment.create(data); 
+      Toast.success('Equipamento criado!', data.codigo); 
+    }
     closeModal('modal-equipment');
     const currentRoute = Router.getCurrent();
     if (currentRoute === 'home') {
