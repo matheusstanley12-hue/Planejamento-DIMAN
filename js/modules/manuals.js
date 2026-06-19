@@ -149,16 +149,16 @@ window.ManualsAdmin = (() => {
        if (!f) return false;
        let pId = f.parentId;
        if (pId === 'null' || pId === 'undefined') pId = null;
-       if (pId && !allFolders.find(x => x.id === pId)) pId = null;
-       return (pId || null) === currentFolderId;
+       if (pId && !allFolders.find(x => x && String(x.id) === String(pId))) pId = null;
+       return (pId ? String(pId) : null) === (currentFolderId ? String(currentFolderId) : null);
     });
     
     const childManuals = allManuals.filter(m => {
        if (!m) return false;
        let fId = m.folderId;
        if (fId === 'null' || fId === 'undefined') fId = null;
-       if (fId && !allFolders.find(x => x.id === fId)) fId = null;
-       return (fId || null) === currentFolderId;
+       if (fId && !allFolders.find(x => x && String(x.id) === String(fId))) fId = null;
+       return (fId ? String(fId) : null) === (currentFolderId ? String(currentFolderId) : null);
     });
 
     // Breadcrumbs
