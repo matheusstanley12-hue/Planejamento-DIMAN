@@ -488,7 +488,7 @@ function renderShell(session) {
     { route:'parts',      label:'Falta de Peças',   icon:'cube',           perm:'parts',       section:'' },
     { route:'meetings',   label:'Ata de Reunião',   icon:'clipboard-list', perm:'planning',    section:'' },
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO' },
-    { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
+
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
     { route:'workforce-time', label:'Gestão de Horas',   icon:'clock',          perm:'workforce',   section:'' },
     { route:'vacations',  label:'Gestão de Férias',      icon:'calendar-days',  perm:'workforce',   section:'' },
@@ -557,8 +557,7 @@ function renderShell(session) {
         html += `<div class="sidebar-section-label">${item.section}</div>`;
         lastSection = item.section;
       }
-      const badge = item.route === 'restrictions' ?
-        `<span class="nav-badge" id="nav-badge-restrictions">${(DB && DB.restrictions ? DB.restrictions.getAll().filter(r=>r.status==='Aberta').length : 0) || ''}</span>` : '';
+      const badge = '';
       html += `<div class="nav-item" data-route="${item.route}" onclick="window.Router.navigate('${item.route}')">
         <span class="nav-icon">${icon(item.icon)}</span>
         <span class="nav-label">${item.label}</span>
@@ -767,7 +766,7 @@ function renderShell(session) {
   if (typeof GanttModule !== 'undefined') Router.register('gantt', () => GanttModule.render());
   if (typeof CriticalPath !== 'undefined') Router.register('critical', () => CriticalPath.render());
   if (typeof PlanningModule !== 'undefined') Router.register('planning', () => PlanningModule.render());
-  if (typeof RestrictionsModule !== 'undefined') Router.register('restrictions', () => RestrictionsModule.render());
+
   if (typeof PartsModule !== 'undefined') Router.register('parts', () => PartsModule.render());
   if (typeof WorkforceModule !== 'undefined') Router.register('workforce', () => WorkforceModule.render());
   if (typeof WorkforceTimeModule !== 'undefined') Router.register('workforce-time', () => WorkforceTimeModule.render());

@@ -217,10 +217,7 @@ window.EquipmentPanel = (() => {
                 <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Reprogramações</div>
                 <div style="font-size:1.1rem;font-weight:700;color:${replanCount>0?'var(--color-warning)':'var(--text-primary)'};">${replanCount}</div>
               </div>
-              <div>
-                <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Restrições Abertas</div>
-                <div style="font-size:1.1rem;font-weight:700;color:${openRestr>0?'var(--color-danger)':'var(--color-success)'};">${openRestr}</div>
-              </div>
+
               <div>
                 <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Peças Pendentes</div>
                 <div style="font-size:1.1rem;font-weight:700;color:${pendingParts>0?'var(--color-warning)':'var(--color-success)'};">${pendingParts}</div>
