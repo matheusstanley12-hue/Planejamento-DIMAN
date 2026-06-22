@@ -262,146 +262,103 @@ window.DPanel = (() => {
     `;
   }
 
-  function renderDSection(tasks) {
+  function renderDSection_Equipments() {
     const todayStr = today();
-    const total = tasks.length;
-    const iniciadas = tasks.filter(t => t.status !== 'Não Iniciada').length;
-    const emAndamento = tasks.filter(t => t.status === 'Em Andamento').length;
-    const concluidas = tasks.filter(t => t.status === 'Concluída').length;
-    const criticas = tasks.filter(t => window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length;
-    const equipMap = {};
-    DB.equipment.list().forEach(e => { equipMap[e.id] = e; });
+    const currentMonth = todayStr.slice(0,7);
+    
+    const allEqs = DB.equipment.list();
+    const eqMonth = allEqs.filter(e => {
+      const isLiberado = e.status === 'Liberado';
+      if (isLiberado) return false;
+      const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
+      return dataPrazo.startsWith(currentMonth);
+    });
 
     return `
-      <div class="card" style="border-top:3px solid var(--brand-primary-light);height:100%;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+      <div class="card" style="border-top:3px solid var(--brand-primary-light);height:100%;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);flex-shrink:0;">
           <div>
-            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-primary-light)">D — HOJE</div>
-            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">${formatDate(todayStr)}</div>
+            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-primary-light)">Em Manutenção</div>
+            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">Mês Atual</div>
           </div>
           <div id="live-clock" style="font-size:var(--text-xl);font-weight:800;color:var(--brand-primary-light);font-family:var(--font-mono)"></div>
         </div>
 
-        <!-- KPI row -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
+        <div style="display:grid;grid-template-columns:repeat(1,1fr);gap:var(--space-2);margin-bottom:var(--space-4);flex-shrink:0;">
           <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${total}</div>
-            <div style="font-size:10px;color:var(--text-muted)">Total</div>
-          </div>
-          <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-info)">${emAndamento}</div>
-            <div style="font-size:10px;color:var(--color-info)">Em Andamento</div>
-          </div>
-          <div style="background:var(--color-success-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-success)">${concluidas}</div>
-            <div style="font-size:10px;color:var(--color-success)">Concluídas</div>
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${eqMonth.length}</div>
+            <div style="font-size:10px;color:var(--text-muted)">Programados para o Mês</div>
           </div>
         </div>
 
-        <!-- Semáforos por equipamento -->
-        ${tasks.length === 0 ? `<div class="empty-state" style="padding:var(--space-6)"><p>Nenhuma atividade programada para hoje</p></div>` : `
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:320px;overflow-y:auto;">
-          ${tasks.map(t => {
-            const eq = equipMap[t.equipmentId];
-            const daysLeft = daysBetween(todayStr, t.dataPlanejadaTermino);
-            let sem = 'success', semIcon = '🟢';
-            if (t.status === 'Bloqueada' || t.status === 'Aguardando Peça') { sem='danger'; semIcon='🔴'; }
-            else if (t.status === 'Não Iniciada' && daysLeft <= 1) { sem='danger'; semIcon='🔴'; }
-            else if (t.pctExecutado < 50 && daysLeft <= 1) { sem='warning'; semIcon='🟡'; }
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-2);padding-right:4px;">
+          ${eqMonth.length > 0 ? eqMonth.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
+            const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
             return `
-              <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);border-left:3px solid var(--color-${sem});">
-                <span style="font-size:1.1rem;flex-shrink:0">${semIcon}</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${eq ? eq.codigo : '—'} · ${t.disciplina}</div>
+              <div style="padding:var(--space-2) var(--space-3);background:var(--bg-base);border-radius:var(--radius-sm);border-left:3px solid var(--brand-primary-light);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                  <span style="font-weight:700;color:var(--text-primary);font-size:var(--text-sm);">${e.codigo}</span>
+                  <span style="font-size:var(--text-xs);font-weight:600;color:var(--text-muted)">Prazo: <span style="color:var(--brand-primary-light)">${dataStr}</span></span>
                 </div>
-                <div style="text-align:right;flex-shrink:0;">
-                  <div style="font-size:var(--text-xs);font-weight:700;color:var(--brand-primary-light);font-family:var(--font-mono)">${t.pctExecutado}%</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${t.responsavel?.split(' ')[0] || '—'}</div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);">
+                  Cliente: <strong style="color:var(--text-secondary)">${e.cliente || 'Não Informado'}</strong>
                 </div>
               </div>
             `;
-          }).join('')}
+          }).join('') : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);margin-top:20px;">Nenhum equipamento programado</div>`}
         </div>
-        `}
-        ${criticas > 0 ? `<div style="margin-top:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-danger-bg);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--color-danger);font-weight:600;">⚠️ ${criticas} atividade${criticas>1?'s':''} crítica${criticas>1?'s':''} hoje — monitorar de perto</div>` : ''}
       </div>
     `;
   }
 
-  function renderD1Section_Tomorrow(tasks) {
-    const d1 = dateOf(1);
-    const alerts = getTomorrowAlerts(tasks);
-    const restrictions = DB.restrictions.getAll().filter(r => r.status === 'Aberta');
-    const equipNames = {};
-    DB.equipment.list().forEach(e => { equipNames[e.id] = e.codigo; });
-
-    const partsOk = tasks.filter(t => {
-      const taskParts = DB.parts.getAll().filter(p => p.equipmentId === t.equipmentId && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-      return taskParts.length === 0;
-    }).length;
-    const partsNotOk = tasks.length - partsOk;
-    const restricted = tasks.filter(t => restrictions.some(r => r.equipmentId === t.equipmentId)).length;
+  function renderD1Section_Released() {
+    const todayStr = today();
+    const currentMonth = todayStr.slice(0,7);
+    
+    const allEqs = DB.equipment.list();
+    const eqReleased = allEqs.filter(e => {
+      const isLiberado = e.status === 'Liberado';
+      if (!isLiberado) return false;
+      const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
+      return dataPrazo.startsWith(currentMonth);
+    });
 
     return `
-      <div class="card" style="border-top:3px solid var(--color-purple);height:100%;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+      <div class="card" style="border-top:3px solid var(--color-success);height:100%;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);flex-shrink:0;">
           <div>
-            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--color-purple)">D+1</div>
-            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">Amanhã · ${formatDate(d1)}</div>
+            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--color-success)">Equip. Liberados</div>
+            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">Mês Atual</div>
           </div>
-          <div style="font-size:2rem;">📋</div>
+          <div style="font-size:2rem;">✅</div>
         </div>
 
-        <!-- Validation summary -->
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
-          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">Programadas</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--text-primary)">${tasks.length}</div>
-          </div>
-          <div style="background:${partsNotOk > 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">Peças OK</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${partsOk}/${tasks.length}</div>
-          </div>
-          <div style="background:${restricted > 0 ? 'var(--color-warning-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'}">Restrições</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'}">${restricted}</div>
-          </div>
-          <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--color-info)">Críticas</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-info)">${tasks.filter(t=>window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length}</div>
+        <div style="display:grid;grid-template-columns:repeat(1,1fr);gap:var(--space-2);margin-bottom:var(--space-4);flex-shrink:0;">
+          <div style="background:var(--color-success-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-success)">${eqReleased.length}</div>
+            <div style="font-size:10px;color:var(--color-success)">Liberados no Mês</div>
           </div>
         </div>
 
-        <!-- Alerts -->
-        ${alerts.length > 0 ? `
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-bottom:var(--space-3);">
-          ${alerts.map(a => `
-            <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-${a.type === 'danger' ? 'danger' : 'warning'}-bg);border-radius:var(--radius-md);border-left:3px solid var(--color-${a.type === 'danger' ? 'danger' : 'warning'});">
-              <span style="flex-shrink:0;font-size:1rem;">${a.type === 'danger' ? '🔴' : '🟡'}</span>
-              <span style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.5">${a.msg}</span>
-            </div>
-          `).join('')}
-        </div>` : `<div class="alert alert-success" style="margin-bottom:var(--space-3);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg><div class="alert-content"><div class="alert-title">Programação de amanhã sem restrições identificadas!</div></div></div>`}
-
-        <!-- Task list -->
-        ${tasks.length > 0 ? `
-        <div style="display:flex;flex-direction:column;gap:var(--space-1);max-height:200px;overflow-y:auto;">
-          ${tasks.map(t => {
-            const hasIssue = DB.parts.getAll().some(p => p.equipmentId === t.equipmentId && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-2);padding-right:4px;">
+          ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
+            const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
             return `
-              <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);background:var(--bg-base);border-radius:var(--radius-sm);">
-                <span style="font-size:.9rem">${hasIssue ? '🔴' : '✅'}</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${equipNames[t.equipmentId] || ''} · ${t.disciplina}</div>
+              <div style="padding:var(--space-2) var(--space-3);background:var(--color-success-bg);border-radius:var(--radius-sm);border-left:3px solid var(--color-success);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                  <span style="font-weight:700;color:var(--text-primary);font-size:var(--text-sm);">${e.codigo}</span>
+                  <span style="font-size:var(--text-xs);font-weight:600;color:var(--color-success)">Data: ${dataStr}</span>
                 </div>
-              </div>`;
-          }).join('')}
-        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);">Nenhuma atividade programada para amanhã</div>`}
+                <div style="font-size:var(--text-xs);color:var(--text-muted);">
+                  Cliente: <strong style="color:var(--text-secondary)">${e.cliente || 'Não Informado'}</strong>
+                </div>
+              </div>
+            `;
+          }).join('') : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);margin-top:20px;">Nenhum equipamento liberado</div>`}
+        </div>
       </div>
     `;
-  }
+  }  
 
   function renderIndicators() {
     const allTasks = DB.tasks.getAll();
@@ -572,8 +529,8 @@ window.DPanel = (() => {
         <!-- Three columns -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5);align-items:start;">
           ${renderD1Section(d1Tasks)}
-          ${renderDSection(dTasks)}
-          ${renderD1Section_Tomorrow(d1pTasks)}
+          ${renderDSection_Equipments()}
+          ${renderD1Section_Released()}
         </div>
 
         <!-- Indicators -->
