@@ -28,8 +28,7 @@ window.HomeModule = (() => {
     const currentMonthStr = new Date().toISOString().slice(0, 7);
     const eqs = [...window.DB.equipment.list()].filter(e => {
       if (e.status === 'Liberado') return false; // always hide released
-      if (!e.dataLiberacaoPlanejada) return true; // show if no date
-      return e.dataLiberacaoPlanejada.startsWith(currentMonthStr);
+      return true; // show all active equipment regardless of date
     });
     // Sort equipment by estimated release date ascending (soonest to leave first)
     eqs.sort((a, b) => {
