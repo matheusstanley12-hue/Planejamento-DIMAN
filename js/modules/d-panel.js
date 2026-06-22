@@ -262,6 +262,159 @@ window.DPanel = (() => {
     `;
   }
 
+  function renderDSection(tasks) {
+    const todayStr = today();
+    const total = tasks.length;
+    const iniciadas = tasks.filter(t => t.status !== 'Não Iniciada').length;
+    const emAndamento = tasks.filter(t => t.status === 'Em Andamento').length;
+    const concluidas = tasks.filter(t => t.status === 'Concluída').length;
+    const criticas = tasks.filter(t => window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length;
+    const equipMap = {};
+    DB.equipment.list().forEach(e => { equipMap[e.id] = e; });
+
+    return `
+      <div class="card" style="border-top:3px solid var(--brand-primary-light);height:100%;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+          <div>
+            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-primary-light)">D — HOJE</div>
+            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">${formatDate(todayStr)}</div>
+          </div>
+          <div id="live-clock" style="font-size:var(--text-xl);font-weight:800;color:var(--brand-primary-light);font-family:var(--font-mono)"></div>
+        </div>
+
+        <!-- KPI row -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
+          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${total}</div>
+            <div style="font-size:10px;color:var(--text-muted)">Total</div>
+          </div>
+          <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-info)">${emAndamento}</div>
+            <div style="font-size:10px;color:var(--color-info)">Em Andamento</div>
+          </div>
+          <div style="background:var(--color-success-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-success)">${concluidas}</div>
+            <div style="font-size:10px;color:var(--color-success)">Concluídas</div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
+          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">Iniciadas</div>
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${iniciadas}/${total}</div>
+          </div>
+          <div style="background:${criticas > 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:${criticas > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">Ativ. Críticas</div>
+            <div style="font-size:var(--text-xl);font-weight:800;color:${criticas > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${criticas}</div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        ${total > 0 ? `
+        <div class="progress-bar-wrap" style="margin-bottom:var(--space-4);">
+          <div class="progress-bar-header"><span class="progress-bar-label">Progresso do Dia</span><span class="progress-bar-value">${Math.round((concluidas/total)*100)}%</span></div>
+          <div class="progress-track lg"><div class="progress-fill success" style="width:${(concluidas/total)*100}%"></div></div>
+        </div>` : ''}
+
+        <!-- Active tasks list -->
+        ${emAndamento > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:220px;overflow-y:auto;">
+          ${tasks.filter(t => t.status === 'Em Andamento').map(t => {
+            const perc = t.percentual || 0;
+            return `
+              <div style="padding:var(--space-2) var(--space-3);background:var(--bg-base);border-radius:var(--radius-sm);border-left:3px solid var(--color-${t.critico ? 'danger' : 'info'});">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                  <span style="font-weight:600;color:var(--text-primary);font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</span>
+                  <span style="font-size:var(--text-xs);font-weight:700;color:var(--color-info)">${perc}%</span>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;">
+                  <span>${equipMap[t.equipmentId]?.codigo || ''} · ${t.disciplina}</span>
+                  <span style="text-transform:uppercase">${t.responsavel || 'Não atr.'}</span>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);">Nenhuma atividade em andamento</div>`}
+
+        ${criticas > 0 ? `<div style="margin-top:var(--space-3);padding:var(--space-2);background:var(--color-danger-bg);color:var(--color-danger);font-size:var(--text-xs);border-radius:var(--radius-sm);font-weight:600;text-align:center;">⚠️ ${criticas} atividades críticas hoje — monitorar de perto</div>` : ''}
+      </div>
+    `;
+  }
+
+  function renderD1Section_Tomorrow(tasks) {
+    const d1 = dateOf(1);
+    const alerts = getTomorrowAlerts(tasks);
+    const restrictions = DB.restrictions.getAll().filter(r => r.status === 'Aberta');
+    const equipNames = {};
+    DB.equipment.list().forEach(e => { equipNames[e.id] = e.codigo; });
+
+    const partsOk = tasks.filter(t => {
+      const taskParts = DB.parts.getAll().filter(p => p.equipmentId === t.equipmentId && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+      return taskParts.length === 0;
+    }).length;
+    const partsNotOk = tasks.length - partsOk;
+    const restricted = tasks.filter(t => restrictions.some(r => r.equipmentId === t.equipmentId)).length;
+
+    return `
+      <div class="card" style="border-top:3px solid var(--color-purple);height:100%;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+          <div>
+            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--color-purple)">D+1</div>
+            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">Amanhã · ${formatDate(d1)}</div>
+          </div>
+          <div style="font-size:2rem;">📋</div>
+        </div>
+
+        <!-- Validation summary -->
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
+          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">Programadas</div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--text-primary)">${tasks.length}</div>
+          </div>
+          <div style="background:${partsNotOk > 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">Peças OK</div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${partsOk}/${tasks.length}</div>
+          </div>
+          <div style="background:${restricted > 0 ? 'var(--color-warning-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'}">Restrições</div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'}">${restricted}</div>
+          </div>
+          <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:var(--color-info)">Críticas</div>
+            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-info)">${tasks.filter(t=>window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length}</div>
+          </div>
+        </div>
+
+        <!-- Alerts -->
+        ${alerts.length > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-bottom:var(--space-3);">
+          ${alerts.map(a => `
+            <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-${a.type === 'danger' ? 'danger' : 'warning'}-bg);border-radius:var(--radius-md);border-left:3px solid var(--color-${a.type === 'danger' ? 'danger' : 'warning'});">
+              <span style="flex-shrink:0;font-size:1rem;">${a.type === 'danger' ? '🔴' : '🟡'}</span>
+              <span style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.5">${a.msg}</span>
+            </div>
+          `).join('')}
+        </div>` : `<div class="alert alert-success" style="margin-bottom:var(--space-3);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg><div class="alert-content"><div class="alert-title">Programação de amanhã sem restrições identificadas!</div></div></div>`}
+
+        <!-- Task list -->
+        ${tasks.length > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:var(--space-1);max-height:200px;overflow-y:auto;">
+          ${tasks.map(t => {
+            const hasIssue = DB.parts.getAll().some(p => p.equipmentId === t.equipmentId && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+            return `
+              <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);background:var(--bg-base);border-radius:var(--radius-sm);">
+                <span style="font-size:.9rem">${hasIssue ? '🔴' : '✅'}</span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
+                  <div style="font-size:10px;color:var(--text-muted)">${equipNames[t.equipmentId] || ''} · ${t.disciplina}</div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);">Nenhuma atividade programada para amanhã</div>`}
+      </div>
+    `;
+  }
+
   function renderDSection_Equipments() {
     const todayStr = today();
     const currentMonth = todayStr.slice(0,7);
@@ -496,17 +649,18 @@ window.DPanel = (() => {
     const d1Tasks = getTasksForDate(dateOf(-1));
     const dTasks  = getTasksForDate(today());
     const d1pTasks = getTasksForDate(dateOf(1));
+    const isPresentation = window.location.hash === '#presentation';
 
-    const html = `
-      <div class="page-container">
+    return `
+      <div style="padding:var(--space-5);max-width:1600px;margin:0 auto;">
         <!-- Header -->
-        <div class="section-header" style="margin-bottom:var(--space-6);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:var(--space-6);">
           <div>
-            <div class="section-title">
-              <div class="section-title-icon">
+            <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-2xl);font-weight:800;color:var(--text-primary);letter-spacing:-.02em;">
+              <div style="width:32px;height:32px;border-radius:var(--radius-sm);background:var(--brand-primary);display:flex;align-items:center;justify-content:center;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
               </div>
-              Painel Operacional D-1 | D | D+1
+              ${isPresentation ? 'Apresentação (TV)' : 'Painel Operacional D-1 | D | D+1'}
             </div>
             <div class="section-subtitle">Acompanhamento diário da execução · Atualização automática a cada 60 segundos</div>
           </div>
@@ -529,8 +683,8 @@ window.DPanel = (() => {
         <!-- Three columns -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5);align-items:start;">
           ${renderD1Section(d1Tasks)}
-          ${renderDSection_Equipments()}
-          ${renderD1Section_Released()}
+          ${isPresentation ? renderDSection_Equipments() : renderDSection(dTasks)}
+          ${isPresentation ? renderD1Section_Released() : renderD1Section_Tomorrow(d1pTasks)}
         </div>
 
         <!-- Indicators -->
