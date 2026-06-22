@@ -448,17 +448,17 @@ window.DPanel = (() => {
           ${eqMonth.length > 0 ? eqMonth.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
             const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
             return `
-              <div style="padding:var(--space-2) var(--space-3);background:var(--bg-base);border-radius:var(--radius-sm);border-left:3px solid var(--brand-primary-light);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                  <span style="font-weight:700;color:var(--text-primary);font-size:var(--text-sm);">${e.codigo}</span>
-                  <span style="font-size:var(--text-xs);font-weight:600;color:var(--text-muted)">Prazo: <span style="color:var(--brand-primary-light)">${dataStr}</span></span>
+              <div style="padding:var(--space-3) var(--space-4);background:var(--bg-base);border-radius:var(--radius-sm);border-left:4px solid var(--brand-primary-light);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <span style="font-weight:800;color:var(--text-primary);font-size:1.4rem;">${e.codigo}</span>
+                  <span style="font-size:1.1rem;font-weight:700;color:var(--text-muted)">Prazo: <span style="color:var(--brand-primary-light)">${dataStr}</span></span>
                 </div>
-                <div style="font-size:var(--text-xs);color:var(--text-muted);">
-                  Cliente: <strong style="color:var(--text-secondary)">${e.cliente || 'Não Informado'}</strong>
+                <div style="font-size:1.1rem;color:var(--text-muted);">
+                  Cliente: <strong style="color:var(--text-secondary);font-weight:800;">${e.cliente || 'Não Informado'}</strong>
                 </div>
               </div>
             `;
-          }).join('') : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);margin-top:20px;">Nenhum equipamento programado</div>`}
+          }).join('') : `<div style="text-align:center;color:var(--text-muted);font-size:1.2rem;margin-top:20px;">Nenhum equipamento programado</div>`}
         </div>
       </div>
     `;
@@ -497,17 +497,17 @@ window.DPanel = (() => {
           ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
             const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
             return `
-              <div style="padding:var(--space-2) var(--space-3);background:var(--color-success-bg);border-radius:var(--radius-sm);border-left:3px solid var(--color-success);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                  <span style="font-weight:700;color:var(--text-primary);font-size:var(--text-sm);">${e.codigo}</span>
-                  <span style="font-size:var(--text-xs);font-weight:600;color:var(--color-success)">Data: ${dataStr}</span>
+              <div style="padding:var(--space-3) var(--space-4);background:var(--color-success-bg);border-radius:var(--radius-sm);border-left:4px solid var(--color-success);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <span style="font-weight:800;color:var(--text-primary);font-size:1.4rem;">${e.codigo}</span>
+                  <span style="font-size:1.1rem;font-weight:700;color:var(--color-success)">Data: ${dataStr}</span>
                 </div>
-                <div style="font-size:var(--text-xs);color:var(--text-muted);">
-                  Cliente: <strong style="color:var(--text-secondary)">${e.cliente || 'Não Informado'}</strong>
+                <div style="font-size:1.1rem;color:var(--text-muted);">
+                  Cliente: <strong style="color:var(--text-secondary);font-weight:800;">${e.cliente || 'Não Informado'}</strong>
                 </div>
               </div>
             `;
-          }).join('') : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);margin-top:20px;">Nenhum equipamento liberado</div>`}
+          }).join('') : `<div style="text-align:center;color:var(--text-muted);font-size:1.2rem;margin-top:20px;">Nenhum equipamento liberado</div>`}
         </div>
       </div>
     `;
