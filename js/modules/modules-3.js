@@ -944,7 +944,7 @@ window.MeetingMode = (() => {
     });
 
     const eqMaintenance = eqs.filter(e => {
-      if (e.status !== 'Em Manutenção') return false;
+      if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
       if (e.tipo === 'Subconjuntos') return false;
       const dataPrazo = e.dataLiberacaoPlanejada || '';
       return dataPrazo.startsWith(currentMonth);
