@@ -649,7 +649,7 @@ window.DPanel = (() => {
     const d1Tasks = getTasksForDate(dateOf(-1));
     const dTasks  = getTasksForDate(today());
     const d1pTasks = getTasksForDate(dateOf(1));
-    const isPresentation = window.location.hash === '#presentation';
+    const isPresentation = (window.Router && window.Router.currentRoute === 'presentation') || window.location.hash === '#presentation';
 
     const html = `
       <div style="padding:var(--space-5);max-width:1600px;margin:0 auto;">
