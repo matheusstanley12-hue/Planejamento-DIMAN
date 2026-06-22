@@ -1060,7 +1060,7 @@ window.WorkforceModule = (() => {
     Toast.success('Férias agendadas com sucesso!');
   }
 
-  return { render, setTab, setSector, openCreateWorker, openEditWorker, saveWorker, deleteWorker, openCreateTimesheet, saveTimesheet, openVacationModal, saveVacation };
+  return { render, setTab, setSector, openCreateWorker, openEditWorker, saveWorker, deleteWorker, resetWorkerHours, openCreateTimesheet, saveTimesheet, openVacationModal, saveVacation };
 })();
 
 // ================================================================
