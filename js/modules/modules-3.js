@@ -938,9 +938,14 @@ window.MeetingMode = (() => {
       return dataPrazo.startsWith(currentMonth);
     });
 
-    // Helper para Top Executantes
+    // Helper para Top Executantes (No Mês!)
     const perfMap = {};
-    tasks.filter(t => t.status === 'Concluída').forEach(t => {
+    // Pega todas as tarefas do mês
+    tasks.filter(t => {
+      if (t.status !== 'Concluída') return false;
+      const tData = t.dataFim || t.dataPlanejada || '';
+      return tData.startsWith(currentMonth);
+    }).forEach(t => {
       if (!t.executantes || t.executantes.length === 0) return;
       t.executantes.forEach(exec => {
         if (!perfMap[exec]) perfMap[exec] = 0;
@@ -951,93 +956,125 @@ window.MeetingMode = (() => {
       .map(([nome, count]) => ({nome, count}))
       .sort((a,b) => b.count - a.count)
       .slice(0, 5);
+      
+    // Todos executantes para o Ticker
+    const allPerformers = Object.entries(perfMap)
+      .map(([nome, count]) => ({nome, count}))
+      .sort((a,b) => b.count - a.count);
 
     overlay.innerHTML = `
       <!-- Header bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
         <div style="display:flex;align-items:center;gap:16px;">
-          <div style="width:40px;height:40px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">⚙️</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:white;letter-spacing:-.02em">PLANEJAMENTO DIMAN-BHZ</div><div style="font-size:.7rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em">Painel de Acompanhamento · Reunião Diária</div></div>
+          <div style="width:36px;height:36px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📺</div>
+          <div>
+            <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-.02em">APRESENTAÇÃO TV</div>
+            <div style="font-size:.65rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em">Acompanhamento Mensal de Equipamentos e Produtividade</div>
+          </div>
         </div>
-        <div id="meeting-datetime" style="font-size:1.5rem;font-weight:800;color:#1E88E5;font-family:monospace;"></div>
+        <div id="meeting-datetime" style="font-size:1.4rem;font-weight:800;color:#1E88E5;font-family:monospace;"></div>
         <button onclick="MeetingMode.deactivate()" style="background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);color:#F44336;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;">✕ Sair</button>
       </div>
 
       <!-- 3-panel grid -->
-      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:24px;overflow:hidden;">
+      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px;overflow:hidden;">
         
         <!-- Column 1: Em Manutenção -->
         <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:20px;background:rgba(30,136,229,.1);border-bottom:1px solid rgba(30,136,229,.2);">
-            <h2 style="margin:0;color:#64B5F6;font-size:1.3rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+          <div style="padding:10px;background:rgba(30,136,229,.1);border-bottom:1px solid rgba(30,136,229,.2);">
+            <h2 style="margin:0;color:#64B5F6;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
               ⚙️ Aguardando / Em Manutenção
             </h2>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
             ${eqMonth.length > 0 ? eqMonth.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
               const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
               return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:16px;border-radius:8px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                    <span style="font-weight:800;color:white;font-size:1.3rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#64B5F6;font-size:1.1rem;">Prazo: ${dataStr}</span>
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:10px;border-radius:6px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#64B5F6;font-size:0.85rem;">Prazo: <span style="color:white">${dataStr}</span></span>
                   </div>
-                  <div style="color:#8EACC8;font-size:1rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
+                  <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
               `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1.2rem;">Nenhum equipamento programado</div>'}
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento programado</div>'}
           </div>
         </div>
 
         <!-- Column 2: Liberados -->
         <div style="background:#0A1929;border:1px solid rgba(76,175,80,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:20px;background:rgba(76,175,80,.1);border-bottom:1px solid rgba(76,175,80,.2);">
-            <h2 style="margin:0;color:#81C784;font-size:1.3rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+          <div style="padding:10px;background:rgba(76,175,80,.1);border-bottom:1px solid rgba(76,175,80,.2);">
+            <h2 style="margin:0;color:#81C784;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
               ✅ Liberados no Mês
             </h2>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
             ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
               const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
               return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:16px;border-radius:8px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                    <span style="font-weight:800;color:white;font-size:1.3rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#81C784;font-size:1.1rem;">Data: ${dataStr}</span>
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Data: <span style="color:white">${dataStr}</span></span>
                   </div>
-                  <div style="color:#8EACC8;font-size:1rem;">Cliente: <strong style="color:#C8E6C9">${e.cliente || 'Não Informado'}</strong></div>
+                  <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
               `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1.2rem;">Nenhum equipamento liberado</div>'}
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
           </div>
         </div>
 
         <!-- Column 3: Top Executantes -->
         <div style="background:#0A1929;border:1px solid rgba(156,39,176,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:20px;background:rgba(156,39,176,.1);border-bottom:1px solid rgba(156,39,176,.2);">
-            <h2 style="margin:0;color:#BA68C8;font-size:1.3rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+          <div style="padding:10px;background:rgba(156,39,176,.1);border-bottom:1px solid rgba(156,39,176,.2);">
+            <h2 style="margin:0;color:#BA68C8;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
               🚀 Top Executantes
             </h2>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
             ${topPerformers.length > 0 ? topPerformers.map((t, idx) => {
               const emojis = ['🏆 1º', '🥈 2º', '🥉 3º', '🏅 4º', '🏅 5º'];
               return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #AB47BC;padding:20px;border-radius:8px;display:flex;align-items:center;gap:24px;">
-                  <div style="font-size:2.5rem;">${emojis[idx] || '🏅'}</div>
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #AB47BC;padding:10px;border-radius:6px;display:flex;align-items:center;gap:12px;">
+                  <div style="font-size:1.5rem;">${emojis[idx] || '🏅'}</div>
                   <div style="flex:1;">
-                    <div style="font-weight:800;color:white;font-size:1.6rem;margin-bottom:4px;">${t.nome}</div>
-                    <div style="color:#CE93D8;font-weight:700;font-size:1.1rem;">${t.count} tarefas executadas</div>
+                    <div style="font-weight:800;color:white;font-size:1rem;margin-bottom:2px;">${t.nome}</div>
+                    <div style="color:#CE93D8;font-weight:700;font-size:0.85rem;"><span style="color:white;font-weight:900;">${t.count}</span> tarefas no mês</div>
                   </div>
                 </div>
               `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1.2rem;">Nenhum dado de execução</div>'}
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum dado de execução</div>'}
           </div>
         </div>
       </div>
 
+      <!-- Ticker -->
+      ${allPerformers.length > 0 ? `
+      <div style="background:rgba(10,25,41,0.9);border-top:1px solid rgba(30,136,229,.3);padding:8px 0;overflow:hidden;display:flex;align-items:center;position:relative;">
+        <div style="background:#1E88E5;color:white;font-weight:800;padding:4px 12px;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;position:absolute;left:0;z-index:2;border-radius:0 20px 20px 0;box-shadow:2px 0 10px rgba(0,0,0,0.5);">
+          RANKING DO MÊS
+        </div>
+        <div style="white-space:nowrap;animation: marqueeTV 30s linear infinite;padding-left:140px;display:flex;gap:30px;">
+          ${allPerformers.map((t, idx) => `
+            <div style="display:inline-flex;align-items:center;gap:6px;">
+              <span style="color:#BA68C8;font-weight:900;font-size:0.9rem;">${idx+1}º</span>
+              <span style="color:white;font-weight:700;font-size:0.9rem;">${t.nome}</span>
+              <span style="background:rgba(186,104,200,.2);color:#E1BEE7;padding:1px 6px;border-radius:10px;font-weight:800;font-size:0.8rem;">${t.count}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <style>
+        @keyframes marqueeTV {
+          0% { transform: translateX(100vw); }
+          100% { transform: translateX(-100%); }
+        }
+      </style>
+      ` : ''}
+
       <!-- Bottom bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 24px;background:#0A1929;border-top:1px solid rgba(30,136,229,.2);font-size:.7rem;color:#546E7A;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 24px;background:#0A1929;border-top:1px solid rgba(30,136,229,.2);font-size:.65rem;color:#546E7A;">
         <span>PLANEJAMENTO DIMAN-BHZ — Gestão Industrial</span>
         <span id="meeting-update-info"></span>
         <span>F11 para tela cheia</span>
@@ -1045,6 +1082,19 @@ window.MeetingMode = (() => {
     `;
 
     document.body.appendChild(overlay);
+
+    // Tenta entrar em tela cheia (Fullscreen API)
+    try {
+      if (overlay.requestFullscreen) {
+        overlay.requestFullscreen();
+      } else if (overlay.webkitRequestFullscreen) { /* Safari */
+        overlay.webkitRequestFullscreen();
+      } else if (overlay.msRequestFullscreen) { /* IE11 */
+        overlay.msRequestFullscreen();
+      }
+    } catch (err) {
+      console.warn("Fullscreen request falhou:", err);
+    }
 
     // Clock
     interval = setInterval(() => {
