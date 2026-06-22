@@ -519,7 +519,7 @@ window.EquipmentModule = (() => {
             <div><label>Avanço</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:800;font-size:var(--text-xl);color:var(--brand-primary-light)">${eq.pctAvanco||0}%</div></div>
             <div><label>Cliente</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.cliente||'—'}</div></div>
             <div><label>Entrada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${formatDate(eq.dataEntrada)}</div></div>
-            <div><label>🔒 Data Planejada</label><div style="padding:var(--space-3);background:rgba(244,67,54,0.08);border-radius:var(--radius-md);border:1px solid rgba(244,67,54,0.2);font-weight:700;color:var(--color-danger)">${formatDate(eq.dataLiberacaoPlanejada)} — BLOQUEADA</div></div>
+            <div><label>Data Planejada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:700;">${formatDate(eq.dataLiberacaoPlanejada)}</div></div>
             <div style="grid-column:1/-1;"><label>Observações</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.observacoes||'—'}</div></div>
           </div>
         </div>
@@ -638,12 +638,8 @@ window.EquipmentModule = (() => {
         </div>
       </div>
       <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
-        ${(() => {
-          const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador'].includes(window.Auth.getSession().perfil);
-          const isBlocked = eq && !isDev;
-          return `<div class="form-group"><label>${isBlocked ? '🔒 Data Planejada (BLOQUEADA)' : 'Data Planejada'}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${isBlocked ? 'readonly style="opacity:.6;cursor:not-allowed;"' : ''} /></div>`;
-        })()}
-        <div class="form-group"><label>Data Real Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
+        <div class="form-group"><label>Data Planejada</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" /></div>
+        <div class="form-group"><label>Data Prevista / Real</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
