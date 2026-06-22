@@ -940,8 +940,7 @@ window.MeetingMode = (() => {
     const eqWaiting = eqs.filter(e => {
       if (e.status !== 'Aguardando Manutenção' && e.status !== 'Backlog') return false;
       if (e.tipo === 'Subconjuntos') return false;
-      const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
-      return dataPrazo.startsWith(currentMonth);
+      return true; // Aguardando/Backlog não precisa ser filtrado por mês
     });
 
     const eqMaintenance = eqs.filter(e => {
@@ -960,12 +959,29 @@ window.MeetingMode = (() => {
 
     // Helper para Top Executantes (No Mês!)
     const perfMap = {};
+    
+    function matchesMonth(dStr, yyyy_mm) {
+      if (!dStr) return false;
+      if (dStr.startsWith(yyyy_mm)) return true;
+      // Trata DD/MM/YYYY
+      if (dStr.includes('/')) {
+        const parts = dStr.split('/');
+        if (parts.length === 3) {
+          const iso = parts[2] + '-' + parts[1];
+          return iso === yyyy_mm;
+        }
+      }
+      return false;
+    }
+
     // Pega todas as tarefas do mês
     tasks.filter(t => {
       if (t.status !== 'Concluída') return false;
       if (t.disciplina === 'Subconjunto') return false; // RETIRA SUBCONJUNTO
-      const tData = t.dataFim || t.dataPlanejada || '';
-      return tData.startsWith(currentMonth);
+      return matchesMonth(t.updatedAt, currentMonth) || 
+             matchesMonth(t.dataFim, currentMonth) || 
+             matchesMonth(t.dataPlanejadaTermino, currentMonth) || 
+             matchesMonth(t.createdAt, currentMonth);
     }).forEach(t => {
       if (!t.executantes || t.executantes.length === 0) return;
       t.executantes.forEach(exec => {
