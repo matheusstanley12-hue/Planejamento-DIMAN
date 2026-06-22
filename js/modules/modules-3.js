@@ -937,9 +937,16 @@ window.MeetingMode = (() => {
     
     const currentMonth = selectedMeetingMonth;
     
-    const eqMonth = eqs.filter(e => {
-      if (e.status === 'Liberado') return false;
-      if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
+    const eqWaiting = eqs.filter(e => {
+      if (e.status !== 'Aguardando Manutenção' && e.status !== 'Backlog') return false;
+      if (e.tipo === 'Subconjuntos') return false;
+      const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
+      return dataPrazo.startsWith(currentMonth);
+    });
+
+    const eqMaintenance = eqs.filter(e => {
+      if (e.status !== 'Em Manutenção') return false;
+      if (e.tipo === 'Subconjuntos') return false;
       const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
       return dataPrazo.startsWith(currentMonth);
     });
@@ -993,29 +1000,52 @@ window.MeetingMode = (() => {
         <button onclick="MeetingMode.deactivate()" style="background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);color:#F44336;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;">✕ Sair</button>
       </div>
 
-      <!-- 3-panel grid -->
-      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px;overflow:hidden;">
+      <!-- 4-panel grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:16px;overflow:hidden;">
         
-        <!-- Column 1: Em Manutenção -->
-        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:10px;background:rgba(30,136,229,.1);border-bottom:1px solid rgba(30,136,229,.2);">
-            <h2 style="margin:0;color:#64B5F6;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              ⚙️ Aguardando / Em Manutenção
+        <!-- Column 1: Aguardando Manutenção -->
+        <div style="background:#0A1929;border:1px solid rgba(255,152,0,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:14px;background:rgba(255,152,0,.1);border-bottom:1px solid rgba(255,152,0,.2);">
+            <h2 style="margin:0;color:#FFB74D;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              ⏳ Aguardando Manutenção
             </h2>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-            ${eqMonth.length > 0 ? eqMonth.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
+          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
+            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
               const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
               return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:10px;border-radius:6px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#64B5F6;font-size:0.85rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
+                  <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#FFE0B2">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
               `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento programado</div>'}
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
+          </div>
+        </div>
+
+        <!-- Column 2: Em Manutenção -->
+        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:14px;background:rgba(30,136,229,.1);border-bottom:1px solid rgba(30,136,229,.2);">
+            <h2 style="margin:0;color:#64B5F6;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              ⚙️ Em Manutenção
+            </h2>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
+            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
+              return `
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                  </div>
+                  <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
+                </div>
+              `;
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento em manutenção</div>'}
           </div>
         </div>
 
