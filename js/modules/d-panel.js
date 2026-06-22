@@ -651,7 +651,7 @@ window.DPanel = (() => {
     const d1pTasks = getTasksForDate(dateOf(1));
     const isPresentation = window.location.hash === '#presentation';
 
-    return `
+    const html = `
       <div style="padding:var(--space-5);max-width:1600px;margin:0 auto;">
         <!-- Header -->
         <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:var(--space-6);">

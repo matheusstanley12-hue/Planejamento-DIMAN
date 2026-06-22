@@ -8,7 +8,11 @@
   <title>DIMAN | Sistema inteligente da manutenção</title>
   <script>
     window.onerror = function(message, source, lineno, colno, error) {
-      document.body.innerHTML = '<div style="padding:20px;color:red;font-size:16px;"><b>Erro:</b> ' + message + '<br><b>Arquivo:</b> ' + source + ':' + lineno + '<br><b>Stack:</b> ' + (error ? error.stack : '') + '</div>';
+      if (message === 'Script error.' && !source) return; // Ignore un-actionable cross-origin script errors
+      const errDiv = document.createElement('div');
+      errDiv.style = "padding:20px;color:red;font-size:16px;background:#ffe6e6;border:1px solid red;margin:10px;z-index:9999;position:relative;";
+      errDiv.innerHTML = '<b>Erro:</b> ' + message + '<br><b>Arquivo:</b> ' + source + ':' + lineno + '<br><b>Stack:</b> ' + (error ? error.stack : '');
+      document.body.prepend(errDiv);
     };
   </script>
 
