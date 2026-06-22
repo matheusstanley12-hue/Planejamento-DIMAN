@@ -916,24 +916,37 @@ window.MeetingMode = (() => {
   let interval = null;
   let countdown = 30;
 
-  function activate() {
+  let selectedMeetingMonth = null;
+
+  function activate(monthParam) {
+    if (document.getElementById('meeting-overlay')) deactivate();
+
     const overlay = document.createElement('div');
     overlay.id = 'meeting-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:#050D1A;z-index:10000;display:flex;flex-direction:column;overflow:hidden;font-family:var(--font-primary);';
 
     const eqs = DB.equipment.list();
     const tasks = DB.tasks.getAll();
-    const todayStr = new Date().toISOString().slice(0,10);
-    const currentMonth = todayStr.slice(0,7);
+    
+    // Obter mês selecionado
+    const df = document.getElementById('date-filter');
+    const baseDate = df && df.value ? df.value : new Date().toISOString().slice(0,10);
+    
+    if (monthParam) selectedMeetingMonth = monthParam;
+    else if (!selectedMeetingMonth) selectedMeetingMonth = baseDate.slice(0,7);
+    
+    const currentMonth = selectedMeetingMonth;
     
     const eqMonth = eqs.filter(e => {
       if (e.status === 'Liberado') return false;
+      if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
       const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
       return dataPrazo.startsWith(currentMonth);
     });
 
     const eqReleased = eqs.filter(e => {
       if (e.status !== 'Liberado') return false;
+      if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
       const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
       return dataPrazo.startsWith(currentMonth);
     });
@@ -943,6 +956,7 @@ window.MeetingMode = (() => {
     // Pega todas as tarefas do mês
     tasks.filter(t => {
       if (t.status !== 'Concluída') return false;
+      if (t.disciplina === 'Subconjunto') return false; // RETIRA SUBCONJUNTO
       const tData = t.dataFim || t.dataPlanejada || '';
       return tData.startsWith(currentMonth);
     }).forEach(t => {
@@ -969,7 +983,10 @@ window.MeetingMode = (() => {
           <div style="width:36px;height:36px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📺</div>
           <div>
             <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-.02em">APRESENTAÇÃO TV</div>
-            <div style="font-size:.65rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em">Acompanhamento Mensal de Equipamentos e Produtividade</div>
+            <div style="font-size:.65rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:8px;">
+              Acompanhamento Mensal de Equipamentos e Produtividade
+              <input type="month" value="${currentMonth}" onchange="MeetingMode.activate(this.value)" style="background:rgba(30,136,229,.2); border:1px solid rgba(30,136,229,.4); color:white; border-radius:4px; padding:2px 6px; font-family:inherit; outline:none; font-weight:700; cursor:pointer; font-size:.7rem;">
+            </div>
           </div>
         </div>
         <div id="meeting-datetime" style="font-size:1.4rem;font-weight:800;color:#1E88E5;font-family:monospace;"></div>
