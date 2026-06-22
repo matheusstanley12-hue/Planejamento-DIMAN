@@ -1002,7 +1002,7 @@ window.MeetingMode = (() => {
         <div style="display:flex;align-items:center;gap:16px;">
           <div style="width:36px;height:36px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📺</div>
           <div>
-            <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-.02em">APRESENTAÇÃO TV</div>
+            <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-.02em">Manutenção DIMAN-BHZ</div>
             <div style="font-size:.65rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:8px;">
               Acompanhamento Mensal de Equipamentos e Produtividade
               <input type="month" value="${currentMonth}" onchange="MeetingMode.activate(this.value)" style="background:rgba(30,136,229,.2); border:1px solid rgba(30,136,229,.4); color:white; border-radius:4px; padding:2px 6px; font-family:inherit; outline:none; font-weight:700; cursor:pointer; font-size:.7rem;">

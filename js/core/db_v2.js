@@ -130,12 +130,25 @@ window.DB = (() => {
   };
 
   function get(key) {
-    try { 
-      const val = localStorage.getItem(key);
-      if (val) return JSON.parse(val);
-      return INITIAL_DATA[key] || [];
-    }
-    catch (e) { 
+    try {
+      const d = localStorage.getItem(key);
+      let arr = d ? JSON.parse(d) : INITIAL_DATA[key] || [];
+      if (Array.isArray(arr) && arr.length > 0 && arr[0] && arr[0].id) {
+         const latestMap = new Map();
+         arr.forEach(item => {
+            const existing = latestMap.get(item.id);
+            if (!existing) {
+               latestMap.set(item.id, item);
+            } else {
+               const existTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+               const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+               if (newTime > existTime) latestMap.set(item.id, item);
+            }
+         });
+         arr = Array.from(latestMap.values());
+      }
+      return arr;
+    } catch (e) { 
       console.error('Storage error for key: ' + key, e);
       const val = localStorage.getItem(key);
       if (val) {
