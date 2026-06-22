@@ -946,14 +946,14 @@ window.MeetingMode = (() => {
     const eqMaintenance = eqs.filter(e => {
       if (e.status !== 'Em Manutenção') return false;
       if (e.tipo === 'Subconjuntos') return false;
-      const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
+      const dataPrazo = e.dataLiberacaoPlanejada || '';
       return dataPrazo.startsWith(currentMonth);
     });
 
     const eqReleased = eqs.filter(e => {
       if (e.status !== 'Liberado') return false;
       if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
-      const dataPrazo = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
+      const dataPrazo = e.dataLiberacaoPlanejada || '';
       return dataPrazo.startsWith(currentMonth);
     });
 
@@ -1024,8 +1024,8 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
+            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
@@ -1047,8 +1047,8 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
+            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
@@ -1093,8 +1093,8 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => (a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) : '—';
+            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
