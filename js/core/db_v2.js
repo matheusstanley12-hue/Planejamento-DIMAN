@@ -49,6 +49,35 @@ window.DB = (() => {
 
   function now() { return new Date().toISOString(); }
 
+  // Clean up any corrupted backups that may be consuming quota
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.includes('_corrupted_')) {
+        localStorage.removeItem(k);
+        i--;
+      }
+    }
+  } catch(e) {}
+
+  function stripLargeFields(collection, arr) {
+    if (collection !== KEYS.tasks) return arr;
+    return arr.map(t => {
+       if (t && t.status === 'Concluída' && t.updatedAt) {
+          const diffDays = (new Date() - new Date(t.updatedAt)) / (1000 * 60 * 60 * 24);
+          if (diffDays > 3) { // Remove photos from tasks completed more than 3 days ago locally to save memory
+             if (t.fotoComprovacao || (t.anexos && t.anexos.length)) {
+                const copy = { ...t };
+                delete copy.fotoComprovacao;
+                delete copy.anexos;
+                return copy;
+             }
+          }
+       }
+       return t;
+    });
+  }
+
   const INITIAL_DATA = {
     [KEYS.equipment]: [
       { id: 'eq-ssm-288', nome: 'SSM-288', codigo: 'SSM-288', tipo: 'Sondas de Pesquisas', status: 'Em Manutenção', os: 'OS-88220', cliente: 'COMISA', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
@@ -222,16 +251,21 @@ window.DB = (() => {
        });
     }
 
+    let localDataToSave = data;
+    if (Array.isArray(data)) {
+       localDataToSave = stripLargeFields(key, data);
+    }
+
     try {
-      localStorage.setItem(key, JSON.stringify(data)); 
+      localStorage.setItem(key, JSON.stringify(localDataToSave)); 
     } catch(err) {
       if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-        if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos ou use links do Google Drive/OneDrive.', 8000);
-        // Do not proceed with syncing if local save failed
+        if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos ou use links.', 8000);
         return false;
       }
       throw err;
     }
+    
     syncToSupabase(key, data);
     return true;
   }
@@ -334,7 +368,10 @@ window.DB = (() => {
               }
             });
             
-            localStorage.setItem(collection, JSON.stringify(Array.from(mergedMap.values())));
+            let finalArray = Array.from(mergedMap.values());
+            finalArray = stripLargeFields(collection, finalArray);
+            
+            try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
           }
         }
       }
@@ -378,7 +415,10 @@ window.DB = (() => {
                        }
                     }
                  });
-                 localStorage.setItem(row.collection, JSON.stringify(Array.from(mergedMap.values())));
+                 
+                 let finalArray = Array.from(mergedMap.values());
+                 finalArray = stripLargeFields(row.collection, finalArray);
+                 try { localStorage.setItem(row.collection, JSON.stringify(finalArray)); } catch(e) {}
               } else if (Array.isArray(row.data) && row.data.length === 0) {
                  // Clear legacy 'all' key from local storage if the server sends an empty array (from new clients)
                  // Wait, we don't want to clear the local array if it's already using individual keys!
@@ -396,16 +436,27 @@ window.DB = (() => {
               if (!Array.isArray(localArr)) localArr = [];
               
               const idx = localArr.findIndex(i => i && i.id === row.key);
+              
+              let itemToSave = row.data;
+              if (row.collection === KEYS.tasks && itemToSave.status === 'Concluída' && itemToSave.updatedAt) {
+                  const diffDays = (new Date() - new Date(itemToSave.updatedAt)) / (1000 * 60 * 60 * 24);
+                  if (diffDays > 3) {
+                     itemToSave = { ...itemToSave };
+                     delete itemToSave.fotoComprovacao;
+                     delete itemToSave.anexos;
+                  }
+              }
+
               if (idx !== -1) {
                  const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
                  const newTime = row.data.updatedAt ? new Date(row.data.updatedAt).getTime() : 0;
                  if (newTime >= existTime) {
-                    localArr[idx] = row.data;
+                    localArr[idx] = itemToSave;
                  }
               } else {
-                 localArr.push(row.data);
+                 localArr.push(itemToSave);
               }
-              localStorage.setItem(row.collection, JSON.stringify(localArr));
+              try { localStorage.setItem(row.collection, JSON.stringify(localArr)); } catch(e) {}
             }
           }
 

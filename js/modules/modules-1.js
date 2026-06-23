@@ -895,10 +895,10 @@ window.EquipmentModule = (() => {
 
         window.DB.equipment.delete(id);
         
-        eqTasks.forEach(t => DB.tasks.remove(t.id));
-        ts.forEach(t => DB.timesheets.remove(t.id));
-        if (DB.replannings) re.forEach(r => DB.replannings.remove(r.id));
-        if (DB.restrictions) rest.forEach(r => DB.restrictions.remove(r.id));
+        eqTasks.forEach(t => DB.tasks.delete(t.id));
+        ts.forEach(t => DB.timesheets.delete(t.id));
+        if (DB.replannings) re.forEach(r => DB.replannings.delete(r.id));
+        if (DB.restrictions) rest.forEach(r => DB.restrictions.delete(r.id));
         
         window.Router.navigate('equipment', { force: true });
         window.Toast.success('Movido para a Lixeira', nome);
