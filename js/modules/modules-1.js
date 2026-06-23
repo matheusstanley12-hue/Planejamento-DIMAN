@@ -609,7 +609,7 @@ window.EquipmentModule = (() => {
         const isAllocatedToOther = w.equipmentId && w.equipmentId !== eq?.id && allocatedEq && allocatedEq.status !== 'Liberado';
         
         if (isAllocatedToOther) {
-          return `<option value="${w.nome}" disabled style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq.codigo}">🔒 ${w.nome} (Alocado no equipamento ${allocatedEq.codigo})</option>`;
+          return `<option value="${w.nome}" style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq?.codigo || 'Outro'}">🔒 ${w.nome} (Alocado em ${allocatedEq?.codigo || 'Outro'})</option>`;
         } else {
           return `<option value="${w.nome}" ${map[disc] === w.nome ? 'selected' : ''}>${w.nome}</option>`;
         }
@@ -1620,7 +1620,7 @@ window.TasksModule = (() => {
     document.getElementById('task-modal-body').innerHTML = taskForm(t);
 
     const session = window.Auth.getSession();
-    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor', 'Encarregado'].includes(session.perfil);
     const saveBtn = document.getElementById('modal-task-save-btn');
     if (!canEdit) {
       if (saveBtn) saveBtn.style.display = 'none';
