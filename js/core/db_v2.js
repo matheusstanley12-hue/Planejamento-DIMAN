@@ -319,10 +319,20 @@ window.DB = (() => {
             try { baseArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
             if (!Array.isArray(baseArr)) baseArr = [];
             
-            // Map by id to prevent duplicates and prefer individual rows
+            // Map by id to prevent duplicates and prefer the newest row
             const mergedMap = new Map();
-            baseArr.forEach(item => { if (item.id) mergedMap.set(item.id, item); });
-            arr.forEach(item => { if (item.id) mergedMap.set(item.id, item); });
+            baseArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+            arr.forEach(item => { 
+              if (item && item.id) {
+                const existing = mergedMap.get(item.id);
+                const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                // If it's from individual row, we prefer it unless base is strictly newer
+                if (!existing || newTime >= existTime) {
+                  mergedMap.set(item.id, item);
+                }
+              }
+            });
             
             localStorage.setItem(collection, JSON.stringify(Array.from(mergedMap.values())));
           }
@@ -352,7 +362,33 @@ window.DB = (() => {
             if (row.collection && row.collection.startsWith('photo_')) return;
             
             if (row.key === 'all') {
-              localStorage.setItem(row.collection, JSON.stringify(row.data));
+              if (Array.isArray(row.data) && row.data.length > 0 && row.data[0] && row.data[0].id) {
+                 let localArr = [];
+                 try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
+                 if (!Array.isArray(localArr)) localArr = [];
+                 const mergedMap = new Map();
+                 localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+                 row.data.forEach(item => {
+                    if (item && item.id) {
+                       const existing = mergedMap.get(item.id);
+                       const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                       const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                       if (!existing || newTime > existTime) {
+                          mergedMap.set(item.id, item);
+                       }
+                    }
+                 });
+                 localStorage.setItem(row.collection, JSON.stringify(Array.from(mergedMap.values())));
+              } else if (Array.isArray(row.data) && row.data.length === 0) {
+                 // Clear legacy 'all' key from local storage if the server sends an empty array (from new clients)
+                 // Wait, we don't want to clear the local array if it's already using individual keys!
+                 // So do nothing if it's an empty array sent to clear legacy data
+                 if (!localStorage.getItem(row.collection)) {
+                    localStorage.setItem(row.collection, '[]');
+                 }
+              } else {
+                 localStorage.setItem(row.collection, JSON.stringify(row.data));
+              }
             } else {
               // Individual row updated
               let localArr = [];
@@ -361,7 +397,11 @@ window.DB = (() => {
               
               const idx = localArr.findIndex(i => i && i.id === row.key);
               if (idx !== -1) {
-                 localArr[idx] = row.data;
+                 const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
+                 const newTime = row.data.updatedAt ? new Date(row.data.updatedAt).getTime() : 0;
+                 if (newTime >= existTime) {
+                    localArr[idx] = row.data;
+                 }
               } else {
                  localArr.push(row.data);
               }
