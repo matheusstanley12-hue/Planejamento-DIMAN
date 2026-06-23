@@ -1030,7 +1030,6 @@ window.MeetingMode = (() => {
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
@@ -1053,7 +1052,6 @@ window.MeetingMode = (() => {
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
                     <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Data: <span style="color:white">${dataStr}</span></span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
