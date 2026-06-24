@@ -740,7 +740,7 @@ window.DB = (() => {
       const idx = items.findIndex(w => String(w.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
-      items[idx] = { ...items[idx], ...data };
+      items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.workforce, items);
       Auth.addAuditLog('UPDATE_WORKER', `Trabalhador ${items[idx].nome} atualizado`, { before, after: items[idx] });
       return items[idx];

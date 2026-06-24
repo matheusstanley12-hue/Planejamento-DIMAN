@@ -2119,6 +2119,7 @@ window.UsersModule = (() => {
     users[userIndex].nome = newNome;
     users[userIndex].perfil = newPerfil;
     users[userIndex].disciplina = newDisciplina;
+    users[userIndex].updatedAt = new Date().toISOString();
     
     localStorage.setItem('diman_users', JSON.stringify(users));
     if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
