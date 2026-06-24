@@ -306,6 +306,9 @@ window.Auth = (() => {
     if (!user) return false;
     const filtered = users.filter(u => u.id !== id);
     saveUsers(filtered);
+    if (window.DB && window.DB.deleteFromSupabase) {
+      window.DB.deleteFromSupabase(USERS_KEY, id);
+    }
     addAuditLog('DELETE_USER', `Usuário ${user.nome} removido`, null);
     return true;
   }
