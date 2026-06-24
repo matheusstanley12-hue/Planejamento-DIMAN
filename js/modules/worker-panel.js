@@ -437,7 +437,7 @@ window.WorkerPanel = (() => {
     const desc = document.getElementById('other-reason-desc').value.trim();
     if (!desc) return Toast.error('Erro', 'Por favor, descreva o motivo.');
     closeModal('modal-worker-other-reason');
-    pauseWork(desc, workerId);
+    pauseWork(`Outros: ${desc}`, workerId);
   }
 
 
@@ -449,7 +449,8 @@ window.WorkerPanel = (() => {
     const t = DB.tasks.get(myWorker.currentTaskId);
     const startTime = new Date(myWorker.currentActionStartTime);
     const now = new Date();
-    const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+    let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+    if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h to prevent runaway timers
 
     // Save Timesheet (Work)
     DB.timesheets.create({
@@ -620,7 +621,8 @@ window.WorkerPanel = (() => {
     if (t.pauseStartTime) {
       const pauseStart = new Date(t.pauseStartTime);
       const now = new Date();
-      const elapsedHrs = (now - pauseStart) / (1000 * 60 * 60);
+      let elapsedHrs = (now - pauseStart) / (1000 * 60 * 60);
+      if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
       DB.timesheets.create({
         workerId: null, // Task-level delay
         workerNome: 'SISTEMA',
@@ -664,7 +666,8 @@ window.WorkerPanel = (() => {
       const t = DB.tasks.get(myWorker.currentTaskId);
       const startTime = new Date(myWorker.currentActionStartTime);
       const now = new Date();
-      const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+      let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+      if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
 
       DB.timesheets.create({
         workerId: myWorker.id,
@@ -802,7 +805,8 @@ window.WorkerPanel = (() => {
       if (myWorker.currentState === 'Trabalhando') {
         const startTime = new Date(myWorker.currentActionStartTime);
         const now = new Date();
-        const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+        let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+        if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
 
         DB.timesheets.create({
           workerId: myWorker.id,
@@ -826,7 +830,8 @@ window.WorkerPanel = (() => {
          // Just close the pause
          const startTime = new Date(myWorker.currentActionStartTime);
          const now = new Date();
-         const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+         let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+         if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
          DB.timesheets.create({
           workerId: myWorker.id,
           workerNome: session.nome,

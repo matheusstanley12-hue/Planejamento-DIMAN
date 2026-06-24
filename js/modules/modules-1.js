@@ -185,6 +185,26 @@ window.Dashboard = (() => {
           });
         }
 
+        // 6. Top Atendimentos por Encarregado (Setor)
+        const ctxTop = document.getElementById('mega-ch-top-atendimentos');
+        if (ctxTop) {
+          const sols = window.DB && window.DB.solicitacoes ? window.DB.solicitacoes.list() : (JSON.parse(localStorage.getItem('diman_solicitacoes')||'[]'));
+          const concluidas = sols.filter(s => s.status === 'Concluída');
+          const counts = {};
+          concluidas.forEach(s => {
+            const setor = s.destino || s.setorDestino || 'Outros';
+            counts[setor] = (counts[setor] || 0) + 1;
+          });
+          const sortedCats = Object.keys(counts).sort((a,b) => counts[b] - counts[a]);
+          const sortedCounts = sortedCats.map(c => counts[c]);
+
+          charts.topAtendimentos = new Chart(ctxTop, {
+            type: 'bar',
+            data: { labels: sortedCats, datasets: [{ label: 'Atendimentos Concluídos', data: sortedCounts, backgroundColor: createGrad(ctxTop, '#3b82f6', '#1d4ed8'), borderRadius: 6, maxBarThickness: 32 }] },
+            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
+          });
+        }
+
       } catch(e) { console.warn('Mega Chart Error', e); }
     }, 100);
 
@@ -255,7 +275,8 @@ window.Dashboard = (() => {
         <div style="grid-column: span 4;">${chartCard('Planejado x Realizado por Setores', 'mega-ch-cat')}</div>
 
         <!-- Row 3 -->
-        <div style="grid-column: span 12;">${chartCard('Execução do 2º Turno (Plan x Real) por Equipamento', 'mega-ch-turno')}</div>
+        <div style="grid-column: span 6;">${chartCard('Execução do 2º Turno (Plan x Real) por Equipamento', 'mega-ch-turno')}</div>
+        <div style="grid-column: span 6;">${chartCard('Top Atendimentos Concluídos por Setor', 'mega-ch-top-atendimentos')}</div>
 
       </div>
 
@@ -1333,7 +1354,7 @@ window.TasksModule = (() => {
       }
     }
 
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Aguardando Setor','Bloqueada','Paralisada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
     let obsHistoryHtml = '';

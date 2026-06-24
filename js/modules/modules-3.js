@@ -1280,7 +1280,7 @@ window.LessonsModule = (() => {
   }
 
   function openCreate() {
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('lesson-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="ll-disc">${discs.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
       <div class="form-group"><label>Tipo de Equipamento</label><input id="ll-tipo" placeholder="Sonda, Perfuratriz..." /></div></div>
@@ -1877,6 +1877,7 @@ window.UsersModule = (() => {
                   <div class="form-group"><label>Nome *</label><input type="text" id="nu-nome" placeholder="Nome Completo" /></div>
                   <div class="form-group"><label>Email</label><input type="email" id="nu-email" placeholder="email@exemplo.com" /></div>
                   <div class="form-group"><label>Perfil de Acesso *</label><select id="nu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="nu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option></select></div>
                   <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="Gerada automaticamente ao salvar" readonly style="background:var(--bg-base);color:var(--text-muted);font-style:italic;" /></div>
                   <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O sistema gerará uma senha aleatória que deverá ser informada ao funcionário.</div>
                 </div>
@@ -1899,6 +1900,7 @@ window.UsersModule = (() => {
                   <input type="hidden" id="eu-id" />
                   <div class="form-group"><label>Nome do Usuário *</label><input type="text" id="eu-nome" /></div>
                   <div class="form-group"><label>Nível / Perfil de Acesso *</label><select id="eu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="eu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option></select></div>
                 </div>
               </div>
               <div class="modal-footer">
@@ -1923,12 +1925,13 @@ window.UsersModule = (() => {
         </div>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
           ${users.map(u=>`<tr>
             <td style="font-family:var(--font-mono)">${u.matricula}</td>
             <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
             <td><span class="badge badge-primary">${u.perfil}</span></td>
+            <td>${u.disciplina ? `<span class="badge badge-ghost" style="color:var(--text-secondary)">${u.disciplina}</span>` : '—'}</td>
             <td>${statusBadge(u.status||'Ativo')}</td>
             <td>
               <div class="table-actions">
@@ -1956,6 +1959,7 @@ window.UsersModule = (() => {
     const nome = document.getElementById('nu-nome').value.trim();
     const email = document.getElementById('nu-email').value.trim();
     const perfil = document.getElementById('nu-perfil').value;
+    const disciplina = document.getElementById('nu-disciplina').value;
     
     if(!matricula || !nome || !perfil) {
       Toast && Toast.error('Erro', 'Preencha os campos obrigatórios (*).');
@@ -1979,6 +1983,7 @@ window.UsersModule = (() => {
       nome,
       email,
       perfil,
+      disciplina,
       senhaHash,
       senhaInicial: true,
       status: 'Ativo',
@@ -2088,6 +2093,7 @@ window.UsersModule = (() => {
     document.getElementById('eu-id').value = user.id;
     document.getElementById('eu-nome').value = user.nome;
     document.getElementById('eu-perfil').value = user.perfil;
+    document.getElementById('eu-disciplina').value = user.disciplina || '';
     
     openModal('modal-edit-user');
   }
@@ -2096,6 +2102,7 @@ window.UsersModule = (() => {
     const id = document.getElementById('eu-id').value;
     const newNome = document.getElementById('eu-nome').value.trim();
     const newPerfil = document.getElementById('eu-perfil').value;
+    const newDisciplina = document.getElementById('eu-disciplina').value;
     
     if(!id || !newPerfil || !newNome) return;
     
@@ -2105,6 +2112,7 @@ window.UsersModule = (() => {
     
     users[userIndex].nome = newNome;
     users[userIndex].perfil = newPerfil;
+    users[userIndex].disciplina = newDisciplina;
     
     localStorage.setItem('diman_users', JSON.stringify(users));
     if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);

@@ -32,7 +32,7 @@ window.ServicesModule = (() => {
 
     let currentList = activeTab === 'pendentes' ? pendentes : activeTab === 'andamento' ? andamento : concluidas;
 
-    const pageTitle = isPCM ? 'Serviços de Usinagem' : 'Serviços / Mão de Obra';
+    const pageTitle = 'Solicitação de Serviço';
     const pageSubtitle = isPCM ? 'Aprovações de OS de Usinagem' : 'Destinação de Mão de Obra';
 
     const html = `
@@ -91,13 +91,20 @@ window.ServicesModule = (() => {
                     <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar</button>
                   `;
                 } else if (s.status === 'Aguardando Encarregado' && isEncarregado) {
-                  actions = `
-                    <button class="btn btn-primary btn-xs" onclick="window.ServicesModule.assignWorker('${s.id}')">Destinar Mão de Obra</button>
-                  `;
+                  if ((s.destino || s.setorDestino) === 'Usinagem') {
+                    actions = `<button class="btn btn-primary btn-xs" onclick="window.ServicesModule.assignWorker('${s.id}')">Destinar Mão de Obra</button>`;
+                  } else {
+                    actions = `<button class="btn btn-primary btn-xs" onclick="window.ServicesModule.acceptService('${s.id}')">Aceitar Serviço</button>`;
+                  }
                 } else if ((s.status === 'Em Execução' || s.status === 'Em Andamento') && isEncarregado) {
-                   actions = `
-                    <button class="btn btn-outline btn-xs" onclick="window.ServicesModule.assignWorker('${s.id}')">Alterar Recurso</button>
-                  `;
+                   if ((s.destino || s.setorDestino) === 'Usinagem') {
+                     actions = `<button class="btn btn-outline btn-xs" onclick="window.ServicesModule.assignWorker('${s.id}')">Alterar Recurso</button>`;
+                   } else {
+                     actions = `
+                       <button class="btn btn-info btn-xs" onclick="window.ServicesModule.updateProgress('${s.id}')">Atualizar Avanço</button>
+                       <button class="btn btn-success btn-xs" onclick="window.ServicesModule.finishService('${s.id}')">Finalizar</button>
+                     `;
+                   }
                 }
 
                 return `
@@ -108,6 +115,8 @@ window.ServicesModule = (() => {
                     <td><span class="badge badge-ghost">${s.destino || s.setorDestino || '—'}</span></td>
                     <td>
                       ${s.descricao}
+                      ${s.pctAvanço !== undefined ? `<div style="margin-top:4px;font-size:10px;color:var(--text-secondary);">Avanço: <strong>${s.pctAvanço}%</strong></div>` : ''}
+                      ${s.prazoExecucao ? `<div style="font-size:10px;color:var(--text-secondary);">Prazo: <strong>${s.prazoExecucao}</strong></div>` : ''}
                     </td>
                     <td>
                       <span class="badge ${s.status.includes('PCM') ? 'badge-warning' : s.status.includes('Aguardando') ? 'badge-primary' : s.status.includes('Execução') || s.status.includes('Andamento') ? 'badge-info' : s.status === 'Concluída' ? 'badge-success' : 'badge-danger'}">
@@ -235,32 +244,11 @@ window.ServicesModule = (() => {
     const s = window.DB.solicitacoes.list().find(x => x.id === id);
     if (!s) return;
 
-    // If task does not exist (non-usinagem direct flow)
+    // If task does not exist (should only happen if Usinagem flow broke)
     let taskId = s.osId;
     if (!taskId) {
-      const taskData = {
-        equipmentId: s.equipmentId,
-        codigo: s.destino.substring(0,3).toUpperCase() + '-' + Math.random().toString().slice(2, 6),
-        descricao: `[SOLICITAÇÃO] ${s.descricao}`,
-        disciplina: s.destino,
-        responsavel: '',
-        prioridade: 'Alta',
-        status: 'Aguardando Recurso',
-        dataPlanejadaInicio: new Date().toISOString().slice(0, 10),
-        dataPlanejadaTermino: new Date().toISOString().slice(0, 10),
-        horasPlanejadas: 0,
-        horasRealizadas: 0,
-        pctExecutado: 0,
-        critico: false,
-        observacoes: '',
-        predecessoras: [],
-        solicitacaoId: s.id,
-        createdAt: window.DB.now()
-      };
-      window.DB.tasks.create(taskData);
-      const tasks = window.DB.tasks.getAll();
-      taskId = tasks[tasks.length - 1].id;
-      window.DB.solicitacoes.update(id, { osId: taskId });
+      Toast.error('Erro', 'Ordem de serviço não encontrada.');
+      return;
     }
 
     const workers = window.DB.workforce.list().filter(w => w.disciplina === s.destino);
@@ -326,6 +314,142 @@ window.ServicesModule = (() => {
     Router.navigate('services', { force: true });
   }
 
+  function acceptService(id) {
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    if (!s) return;
+    const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-accept">
+        <div class="modal" style="max-width:500px;">
+          <div class="modal-header">
+            <div class="modal-title">Aceitar Serviço</div>
+            <button class="modal-close" onclick="closeModal('modal-accept')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Serviço: <strong>${s.descricao}</strong></p>
+            <div class="form-group">
+              <label>Data/Hora de Início *</label>
+              <input type="datetime-local" id="sv-acc-inicio" class="form-control" value="${nowStr}" />
+            </div>
+            <div class="form-group">
+              <label>Prazo de Execução (Dias/Horas) *</label>
+              <input type="text" id="sv-acc-prazo" class="form-control" placeholder="Ex: 2 dias, ou 4 horas" />
+            </div>
+            <div class="form-group">
+              <label>Avanço Atual (%) *</label>
+              <input type="number" id="sv-acc-avanco" class="form-control" value="0" min="0" max="100" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-accept')">Cancelar</button>
+            <button class="btn btn-primary" onclick="window.ServicesModule.saveAccept('${s.id}')">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('services-modals').innerHTML = modalHtml;
+    openModal('modal-accept');
+  }
+
+  function saveAccept(id) {
+    const inicio = document.getElementById('sv-acc-inicio').value;
+    const prazo = document.getElementById('sv-acc-prazo').value.trim();
+    const avanco = document.getElementById('sv-acc-avanco').value;
+    if(!inicio || !prazo || !avanco) { Toast.error('Erro','Preencha todos os campos.'); return; }
+    window.DB.solicitacoes.update(id, {
+      status: 'Em Execução',
+      dataInicioExecucao: inicio,
+      prazoExecucao: prazo,
+      pctAvanço: avanco
+    });
+    closeModal('modal-accept');
+    Toast.success('Aceito', 'Serviço em execução.');
+    Router.navigate('services', { force: true });
+  }
+
+  function updateProgress(id) {
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    if (!s) return;
+    const avancoAtual = s.pctAvanço || 0;
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-progress">
+        <div class="modal" style="max-width:400px;">
+          <div class="modal-header">
+            <div class="modal-title">Atualizar Avanço</div>
+            <button class="modal-close" onclick="closeModal('modal-progress')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <div class="form-group">
+              <label>Avanço Atual (%) *</label>
+              <input type="number" id="sv-prog-avanco" class="form-control" value="${avancoAtual}" min="0" max="100" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-progress')">Cancelar</button>
+            <button class="btn btn-info" onclick="window.ServicesModule.saveProgress('${s.id}')">Atualizar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('services-modals').innerHTML = modalHtml;
+    openModal('modal-progress');
+  }
+
+  function saveProgress(id) {
+    const avanco = document.getElementById('sv-prog-avanco').value;
+    window.DB.solicitacoes.update(id, { pctAvanço: avanco });
+    closeModal('modal-progress');
+    Toast.success('Atualizado', 'Avanço atualizado com sucesso.');
+    Router.navigate('services', { force: true });
+  }
+
+  function finishService(id) {
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    if (!s) return;
+    const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-finish">
+        <div class="modal" style="max-width:400px;">
+          <div class="modal-header">
+            <div class="modal-title">Finalizar Serviço</div>
+            <button class="modal-close" onclick="closeModal('modal-finish')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <div class="form-group">
+              <label>Data/Hora de Conclusão *</label>
+              <input type="datetime-local" id="sv-fin-data" class="form-control" value="${nowStr}" />
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-finish')">Cancelar</button>
+            <button class="btn btn-success" onclick="window.ServicesModule.saveFinish('${s.id}')">Finalizar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('services-modals').innerHTML = modalHtml;
+    openModal('modal-finish');
+  }
+
+  function saveFinish(id) {
+    const fim = document.getElementById('sv-fin-data').value;
+    if(!fim) { Toast.error('Erro','Informe a data/hora.'); return; }
+    window.DB.solicitacoes.update(id, {
+      status: 'Concluída',
+      dataConclusao: fim,
+      pctAvanço: 100
+    });
+    closeModal('modal-finish');
+    Toast.success('Concluído', 'Serviço finalizado.');
+    Router.navigate('services', { force: true });
+  }
+
   return {
     render,
     setTab,
@@ -333,6 +457,12 @@ window.ServicesModule = (() => {
     saveApprovePCM,
     reject,
     assignWorker,
-    saveAssign
+    saveAssign,
+    acceptService,
+    saveAccept,
+    updateProgress,
+    saveProgress,
+    finishService,
+    saveFinish
   };
 })();

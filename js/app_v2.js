@@ -178,6 +178,24 @@ async function initApp() {
     localStorage.setItem('manuals_cleared_v1', 'true');
   }
 
+  if (typeof DB !== 'undefined' && DB.timesheets) {
+    let ts = DB.timesheets.list();
+    let originalLen = ts.length;
+    let badCount = 0;
+    ts = ts.filter(t => {
+      if (t.horasTrabalhadas > 12 && (t.observacao || '').includes('Timer')) { badCount++; return false; }
+      if (t.workerNome === 'SISTEMA' && t.horasTrabalhadas > 12) { badCount++; return false; }
+      if (t.horasTrabalhadas === 40 && (t.observacao || '').includes('Trabalho normal na semana') && t.data && t.data.includes('T')) { badCount++; return false; } // Bogus manual duplications
+      return true;
+    });
+    if (badCount > 0) {
+      console.log(`[Auto-Clean] Removed ${badCount} bad timesheets.`);
+      localStorage.setItem('diman_timesheets', JSON.stringify(ts));
+      if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_timesheets', ts);
+    }
+  }
+
+  // Init Supabase if configured
   if (window.DB && DB.initSupabase) {
     await DB.initSupabase();
   }
@@ -489,7 +507,7 @@ function renderShell(session) {
     { route:'released',   label:'Equip. Liberados',      icon:'check-circle',   perm:'dashboard',   section:'' },
     { route:'tasks',      label:'Tarefas',               icon:'clipboard-list', perm:'tasks',       section:'' },
 
-    { route:'services',   label: ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente'].includes(session.perfil) ? 'Serviços de Usinagem' : 'Serviços / Mão de Obra', icon:'clipboard-document-check', perm:'dashboard', section:'' },
+    { route:'services',   label:'Solicitação de Serviço', icon:'clipboard-document-check', perm:'dashboard', section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
     { route:'parts',      label:'Falta de Peças',   icon:'cube',           perm:'parts',       section:'' },
     { route:'meetings',   label:'Ata de Reunião',   icon:'clipboard-list', perm:'planning',    section:'' },
@@ -499,7 +517,6 @@ function renderShell(session) {
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
     { route:'workforce-time', label:'Gestão de Horas',   icon:'clock',          perm:'workforce',   section:'' },
     { route:'vacations',  label:'Gestão de Férias',      icon:'calendar-days',  perm:'workforce',   section:'' },
-    { route:'costs',      label:'Centro de Custos',      icon:'currency-dollar', perm:'costs',      section:'' },
     { route:'kpi',        label:'Indicadores KPI',       icon:'chart-pie',      perm:'kpi',         section:'ANÁLISE' },
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
     { route:'impacts',    label:'Relatório de Impactos', icon:'document-report', perm:'impacts',    section:'' },

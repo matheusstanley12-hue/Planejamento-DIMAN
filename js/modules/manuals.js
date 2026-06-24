@@ -222,7 +222,7 @@ window.ManualsAdmin = (() => {
             </div>
             <div style="display:flex;gap:var(--space-2);margin-top:10px;">
               <button data-link="${m.link}" data-title="${m.title}" onclick="window.openManualViewer(this.dataset.link, this.dataset.title)" class="btn btn-ghost" style="flex:1;display:flex;justify-content:center;gap:4px;font-size:var(--text-sm);background:rgba(59,130,246,0.1);color:var(--brand-primary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg> Abrir</button>
-              <button onclick="ManualsAdmin.deleteManual('${m.id}')" class="btn btn-ghost" style="padding:0 var(--space-3);color:var(--color-danger);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.158 0c-.31-.08-.62-.15-.93-.21m-14.158 0c.31-.08.62-.15.93-.21m14.158 0c-1.3-.31-2.6-.61-3.9-.91M6.83 5.79c1.3-.31 2.6-.61 3.9-.91M9 3h6m-6 0c0-.55-.45-1-1-1H8c-.55 0-1 .45-1 1zm6 0c0-.55.45-1 1-1h1c.55 0 1 .45 1 1z"/></svg></button>
+              <button onclick="event.stopPropagation(); ManualsAdmin.deleteManual('${m.id}')" class="btn btn-ghost" style="padding:0 var(--space-3);color:var(--color-danger);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.158 0c-.31-.08-.62-.15-.93-.21m-14.158 0c.31-.08.62-.15.93-.21m14.158 0c-1.3-.31-2.6-.61-3.9-.91M6.83 5.79c1.3-.31 2.6-.61 3.9-.91M9 3h6m-6 0c0-.55-.45-1-1-1H8c-.55 0-1 .45-1 1zm6 0c0-.55.45-1 1-1h1c.55 0 1 .45 1 1z"/></svg></button>
             </div>
           </div>
         `;
@@ -436,33 +436,57 @@ window.ManualsAdmin = (() => {
   async function deleteFolder(id) {
     if (!(await window.confirmAsync('Atenção', 'Tem certeza que deseja excluir esta pasta e TUDO que houver dentro dela?', true))) return;
     
-    // Recursive delete function to remove subfolders and their files
-    const deleteRecursively = (folderId) => {
-        const allFolders = window.DB.manualFolders.list() || [];
-        const allManuals = window.DB.manuals.list() || [];
-        
-        // delete files inside
-        const files = allManuals.filter(m => m.folderId === folderId);
-        files.forEach(f => window.DB.manuals.delete(f.id));
-        
-        // delete subfolders
-        const subfolders = allFolders.filter(f => f.parentId === folderId);
-        subfolders.forEach(sf => deleteRecursively(sf.id));
-        
-        window.DB.manualFolders.delete(folderId);
-    };
+    try {
+      // Recursive delete function to remove subfolders and their files
+      const deleteRecursively = (folderId) => {
+          const allFolders = window.DB.manualFolders.list() || [];
+          const allManuals = window.DB.manuals.list() || [];
+          
+          // delete files inside
+          const files = allManuals.filter(m => m && m.folderId === folderId);
+          files.forEach(f => { if(f && f.id) window.DB.manuals.delete(f.id); });
+          
+          // delete subfolders
+          const subfolders = allFolders.filter(f => f && f.parentId === folderId);
+          subfolders.forEach(sf => { if(sf && sf.id) deleteRecursively(sf.id); });
+          
+          window.DB.manualFolders.delete(folderId);
+      };
 
-    deleteRecursively(id);
+      deleteRecursively(id);
 
-    if (window.Toast) window.Toast.success('Excluído', 'Pasta excluída com sucesso.');
-    window.Router.navigate('manuals', { force: true });
+      if (window.Toast) window.Toast.success('Excluído', 'Pasta excluída com sucesso.');
+      
+      setTimeout(() => {
+        window.Router.navigate('manuals', { force: true });
+      }, 50);
+    } catch (e) {
+      if (window.Toast) window.Toast.error('Erro ao excluir', e.message);
+      console.error(e);
+    }
   }
 
   async function deleteManual(id) {
     if (!(await window.confirmAsync('Atenção', 'Tem certeza que deseja excluir este arquivo?', true))) return;
-    window.DB.manuals.delete(id);
-    if (window.Toast) window.Toast.success('Excluído', 'Arquivo excluído.');
-    window.Router.navigate('manuals', { force: true });
+    try {
+      window.DB.manuals.delete(id);
+      if (window.Toast) window.Toast.success('Excluído', 'Arquivo excluído.');
+      
+      // Delay to ensure storage operations complete and prevent race conditions
+      setTimeout(() => {
+        window.Router.navigate('manuals', { force: true });
+        
+        // Safety check to ensure it was actually deleted
+        const arr = window.DB.manuals.list() || [];
+        if (arr.some(m => m && m.id === id)) {
+           window.DB.manuals.delete(id); // try again
+           window.Router.navigate('manuals', { force: true });
+        }
+      }, 50);
+    } catch (e) {
+      if (window.Toast) window.Toast.error('Erro ao excluir', e.message);
+      console.error(e);
+    }
   }
 
   return { render, navToFolder, deleteFolder, deleteManual, showAddFolderModal, showAddManualModal };
