@@ -972,6 +972,8 @@ window.MeetingMode = (() => {
         }
       }
       return false;
+    }
+    
     const timesheets = window.DB.timesheets ? window.DB.timesheets.list() : [];
     const completedTasks = tasks.filter(t => t.status === 'Concluída' && t.disciplina !== 'Subconjunto');
 
