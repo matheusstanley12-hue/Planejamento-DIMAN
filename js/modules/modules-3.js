@@ -2070,10 +2070,16 @@ window.UsersModule = (() => {
     }
     window.uiConfirm('Tem certeza que deseja excluir este usuário?', (res) => {
       if (!res) return;
+      if (window.Auth && window.Auth.deleteUser) {
+        window.Auth.deleteUser(id);
+      }
+      // Fallback/Garanta que deletou do localStorage e do Supabase
       let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
       users = users.filter(u => u.id !== id);
       localStorage.setItem('diman_users', JSON.stringify(users));
       if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+      if (window.DB && window.DB.deleteFromSupabase) window.DB.deleteFromSupabase('diman_users', id);
+      
       Toast && Toast.success('Sucesso', 'Usuário excluído.');
       Router.navigate('users', { force: true });
     });
