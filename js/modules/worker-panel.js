@@ -718,9 +718,8 @@ window.WorkerPanel = (() => {
         const workers = DB.workforce.list() || [];
         const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId == t.id);
         const timesheets = DB.timesheets.list() || [];
-        const hasTimesheets = timesheets.some(ts => ts.taskId == t.id);
         if (!otherActive) {
-          DB.tasks.update(t.id, { status: hasTimesheets ? 'Pausada' : 'Não Iniciada', pauseReason: hasTimesheets ? 'Sem executantes ativos' : '' });
+          DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '' });
         }
       }
 
