@@ -191,16 +191,32 @@ window.WorkerPanel = (() => {
     if (!t) return;
     
     targetWorkers.forEach(w => {
+      let eqIds = w.equipmentIds || [];
+      if (w.equipmentId && !eqIds.includes(w.equipmentId)) eqIds.push(w.equipmentId);
+      if (t.equipmentId && !eqIds.includes(t.equipmentId)) eqIds.push(t.equipmentId);
+
       DB.workforce.update(w.id, {
         currentState: 'Trabalhando',
         currentTaskId: taskId,
         currentActionStartTime: new Date().toISOString(),
-        currentPauseReason: ''
+        currentPauseReason: '',
+        equipmentId: t.equipmentId || w.equipmentId,
+        equipmentIds: eqIds
       });
+
+      if (t.equipmentId) {
+        const eq = DB.equipment.get(t.equipmentId);
+        if (eq) {
+           if (!eq.workforceMap) eq.workforceMap = {};
+           eq.workforceMap[w.disciplina || 'Outros'] = w.nome;
+           DB.equipment.update(eq.id, eq);
+        }
+      }
     });
 
-    if (t.status !== 'Em Andamento') {
-      DB.tasks.update(taskId, { status: 'Em Andamento' });
+    const executorNames = targetWorkers.map(w => w.nome).join(', ');
+    if (t.status !== 'Em Andamento' || t.responsavel !== executorNames) {
+      DB.tasks.update(taskId, { status: 'Em Andamento', responsavel: executorNames });
     }
 
     Toast.success('Iniciado!', `A tarefa "${t.descricao}" foi iniciada para os executantes selecionados.`);
@@ -637,21 +653,39 @@ window.WorkerPanel = (() => {
       });
     }
 
-    // Reset task pause fields and set to Em Andamento
-    DB.tasks.update(taskId, {
-      status: 'Em Andamento',
-      pauseStartTime: null,
-      pauseReason: null
-    });
-
     // Start mechanic's timer for everyone
     targetWorkers.forEach(w => {
+      let eqIds = w.equipmentIds || [];
+      if (w.equipmentId && !eqIds.includes(w.equipmentId)) eqIds.push(w.equipmentId);
+      if (t.equipmentId && !eqIds.includes(t.equipmentId)) eqIds.push(t.equipmentId);
+
       DB.workforce.update(w.id, {
         currentState: 'Trabalhando',
         currentTaskId: taskId,
         currentActionStartTime: new Date().toISOString(),
-        currentPauseReason: ''
+        currentPauseReason: '',
+        equipmentId: t.equipmentId || w.equipmentId,
+        equipmentIds: eqIds
       });
+
+      if (t.equipmentId) {
+        const eq = DB.equipment.get(t.equipmentId);
+        if (eq) {
+           if (!eq.workforceMap) eq.workforceMap = {};
+           eq.workforceMap[w.disciplina || 'Outros'] = w.nome;
+           DB.equipment.update(eq.id, eq);
+        }
+      }
+    });
+
+    const executorNames = targetWorkers.map(w => w.nome).join(', ');
+
+    // Reset task pause fields and set to Em Andamento
+    DB.tasks.update(taskId, {
+      status: 'Em Andamento',
+      pauseStartTime: null,
+      pauseReason: null,
+      responsavel: executorNames
     });
 
     Toast.success('Retomado!', `Executantes alocados na tarefa: "${t.descricao}"`);
