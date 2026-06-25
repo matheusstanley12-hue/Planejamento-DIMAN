@@ -897,8 +897,8 @@ window.EquipmentModule = (() => {
         const eq = DB.equipment.get(id);
         const eqTasks = DB.tasks.getByEquipment(id);
         const ts = DB.timesheets.getAll().filter(t => t.equipmentId === id);
-        const re = DB.replannings ? DB.replannings.getAll().filter(r => r.equipmentId === id) : [];
-        const rest = DB.restrictions ? DB.restrictions.getAll().filter(r => r.equipmentId === id) : [];
+        const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
+        const rest = DB.restrictions ? DB.restrictions.list(id) : [];
         
         const trashBundle = {
           deletedAt: new Date().toISOString(),
