@@ -1012,7 +1012,7 @@ window.WorkerPanel = (() => {
 
       if (myWorker && w.id === myWorker.id) return true;
       
-      if (myTasks.find(mt => mt.id === t.id) && canExecuteTask(session, t)) return true;
+      if (myTasks.find(mt => mt.id === t.id)) return true;
       
       return false;
     });
@@ -1060,7 +1060,10 @@ window.WorkerPanel = (() => {
             <div class="active-task-card working" style="margin-bottom: 15px;">
               <div class="pulse-indicator"></div>
               <div class="task-state">EM EXECUÇÃO - ${w.nome}</div>
-              <div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}">${formatTimeDiff(w.currentActionStartTime)}</div>
+              ${currentT && !canExecuteTask(session, currentT) ? 
+                `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tempo Restrito (Outro Setor)</div>` : 
+                `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}">${formatTimeDiff(w.currentActionStartTime)}</div>`
+              }
               <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
               <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
               ${currentT && currentT.fotoPeca ? `
@@ -1098,7 +1101,10 @@ window.WorkerPanel = (() => {
           return `
             <div class="active-task-card paused" style="margin-bottom: 15px;">
               <div class="task-state">EM PAUSA: ${w.currentPauseReason} - ${w.nome}</div>
-              <div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}">${formatTimeDiff(w.currentActionStartTime)}</div>
+              ${currentT && !canExecuteTask(session, currentT) ? 
+                `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tempo Restrito (Outro Setor)</div>` : 
+                `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}">${formatTimeDiff(w.currentActionStartTime)}</div>`
+              }
               <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
               <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
               ${currentT && currentT.fotoPeca ? `
