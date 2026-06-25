@@ -1491,7 +1491,7 @@ window.EquipmentPanel = (() => {
       return;
     }
     
-    const headers = ['Disciplina', 'Descrição', 'Responsável', 'Data Planejada Início', 'Data Planejada Término', 'Horas Planejadas', 'Horas Realizadas', 'Status', 'Caminho Crítico'];
+    const headers = ['Disciplina', 'Descrição', 'Responsável', 'Data Planejada Início', 'Data Planejada Término', 'Horas Planejadas', 'Horas Realizadas', 'Status', 'Motivo da Pausa / Peças', 'Caminho Crítico'];
     const rows = tasks.map(t => [
       t.disciplina || '',
       t.descricao || '',
@@ -1501,6 +1501,7 @@ window.EquipmentPanel = (() => {
       t.horasPlanejadas || 0,
       t.horasRealizadas || 0,
       t.status || '',
+      t.pauseReason || '',
       (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico) ? 'Sim' : 'Não'
     ]);
     
