@@ -184,9 +184,9 @@ window.EquipmentPanel = (() => {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               Adicionar Atividade
             </button>
-            <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksCSV()" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-card);">
+            <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksPDF()" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-card);">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-              Baixar Todas as Tarefas
+              Baixar Relatório (PDF)
             </button>
           </div>
         </div>
@@ -578,9 +578,9 @@ window.EquipmentPanel = (() => {
     }
     return html + `
       <div style="margin-top:var(--space-3);display:flex;justify-content:flex-end;gap:var(--space-2);">
-        <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksCSV('${disc}')" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-base);">
+        <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksPDF('${disc}')" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-base);">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-          Baixar Tarefas (${disc})
+          Baixar Relatório (PDF)
         </button>
         <button class="btn btn-outline btn-sm" onclick="window.EquipmentPanel.openPartModal()" style="color:var(--color-orange);border-color:var(--color-orange);">+ Registrar Peça Faltante</button>
         <button class="btn btn-secondary btn-sm" onclick="EquipmentPanel.openTaskModal('${disc}')">+ Adicionar Atividade</button>
@@ -1477,6 +1477,94 @@ window.EquipmentPanel = (() => {
     `;
   }
 
+  function exportTasksPDF(discipline = null) {
+    if (!currentEqId) return;
+    const eq = DB.equipment.get(currentEqId);
+    let tasks = DB.tasks.getByEquipment(currentEqId);
+    let parts = DB.parts.list(currentEqId);
+    
+    if (discipline) {
+      tasks = tasks.filter(t => t.disciplina === discipline);
+      parts = parts.filter(p => p.disciplina === discipline);
+    }
+    
+    if (tasks.length === 0 && parts.length === 0) {
+      Toast.warning('Aviso', 'Não há dados para exportar.');
+      return;
+    }
+    
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      Toast.error('Erro', 'Biblioteca jsPDF não encontrada.');
+      return;
+    }
+    
+    const doc = new window.jspdf.jsPDF('l', 'mm', 'a4'); // landscape
+    
+    doc.setFontSize(16);
+    doc.text(`Equipamento: ${eq.codigo} - ${eq.nome}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Cliente: ${eq.cliente || '-'} | OS: ${eq.os || '-'} | Data: ${new Date().toLocaleDateString()}`, 14, 22);
+
+    let startY = 30;
+
+    if (tasks.length > 0) {
+      doc.text('Lista de Tarefas:', 14, startY);
+      const tHeaders = [['Disciplina', 'Descrição', 'Responsável', 'Data Início', 'Data Fim', 'Horas', 'Status', 'Motivo da Pausa', 'Crítico']];
+      const tRows = tasks.map(t => [
+        t.disciplina || '',
+        t.descricao || '',
+        t.responsavel || '',
+        t.dataPlanejadaInicio ? formatDate(t.dataPlanejadaInicio) : '',
+        t.dataPlanejadaTermino ? formatDate(t.dataPlanejadaTermino) : '',
+        `${t.horasRealizadas||0}/${t.horasPlanejadas||0}`,
+        t.status || '',
+        t.pauseReason || '',
+        (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico) ? 'Sim' : 'Não'
+      ]);
+      
+      doc.autoTable({
+        startY: startY + 5,
+        head: tHeaders,
+        body: tRows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [21, 101, 192] }
+      });
+      startY = doc.lastAutoTable.finalY + 15;
+    }
+    
+    if (parts.length > 0) {
+      if (startY > 180) {
+        doc.addPage();
+        startY = 20;
+      }
+      doc.text('Lista de Peças / Falta de Peças:', 14, startY);
+      const pHeaders = [['Disciplina', 'Descrição/PN', 'Qtd', 'Solicitante', 'Data', 'Prioridade', 'Status', 'Previsão', 'Obs']];
+      const pRows = parts.map(p => [
+        p.disciplina || '',
+        p.descricao + (p.pn ? ' (PN: '+p.pn+')' : ''),
+        p.quantidade || 1,
+        p.solicitante || '',
+        p.dataSolicitacao ? formatDate(p.dataSolicitacao) : '',
+        p.prioridade || 'Normal',
+        p.status || 'Solicitada',
+        p.previsaoEntrega ? formatDate(p.previsaoEntrega) : '—',
+        p.observacao || ''
+      ]);
+      
+      doc.autoTable({
+        startY: startY + 5,
+        head: pHeaders,
+        body: pRows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [220, 38, 38] }
+      });
+    }
+
+    const filename = discipline ? `Tarefas_Pecas_${eq.codigo}_${discipline}.pdf` : `Relatorio_Completo_${eq.codigo}.pdf`;
+    doc.save(filename);
+    Toast.success('Exportação', 'Download do PDF concluído.');
+  }
+
   function exportTasksCSV(discipline = null) {
     if (!currentEqId) return;
     const eq = DB.equipment.get(currentEqId);
@@ -1796,7 +1884,7 @@ window.EquipmentPanel = (() => {
   return { 
     render, toggleAccordion, addFollowUp, openTaskModal, saveTask, deleteTask, deleteTaskFromModal,
     updateTaskStatus, updateTaskField, openPartModal, savePart, deletePart, 
-    exportTasksCSV, deleteEquipment, toggleTaskExpand, addComment, editComment, 
+    exportTasksPDF, exportTasksCSV, deleteEquipment, toggleTaskExpand, addComment, editComment, 
     cancelCommentEdit, saveCommentEdit, deleteComment, renderComments,
     togglePartEntregue, onStatusFormChange, onEntregueFormChange,
     getEditingTaskId: () => editingTaskId,
