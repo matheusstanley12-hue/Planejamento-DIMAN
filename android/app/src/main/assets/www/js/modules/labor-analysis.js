@@ -15,7 +15,7 @@ window.LaborAnalysisModule = (() => {
         legend: { position: 'top', align: 'end', labels: { color: '#64748B', font: { family: 'Inter', size: 11, weight: '600' }, usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 20 } },
         datalabels: {
           color: '#1E293B', font: { weight: '800', size: 11, family: 'Inter' }, anchor: 'end', align: 'top', offset: 4,
-          formatter: (value) => (!value || value <= 0) ? '' : Math.round(value * 10) / 10
+          formatter: (value) => (!value || value <= 0) ? '' : parseFloat(Number(value).toFixed(2))
         },
         tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', titleFont: { family: 'Inter', size: 13 }, bodyFont: { family: 'Inter', size: 12 }, padding: 12, cornerRadius: 8, displayColors: true }
       },
@@ -33,7 +33,7 @@ window.LaborAnalysisModule = (() => {
       try {
         const currentMonthPrefix = new Date().toISOString().slice(0, 7);
         const allTasks = DB.tasks.getAll();
-        const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
+        const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
         
         function discHours(disc, type) {
           const val = allTasks.filter(t=>t.disciplina===disc && ((t.createdAt && t.createdAt.startsWith(currentMonthPrefix)) || (t.dataFim && t.dataFim.startsWith(currentMonthPrefix)))).reduce((s,t)=>s+(parseFloat(t[type])||0),0);
@@ -49,7 +49,7 @@ window.LaborAnalysisModule = (() => {
           ]
         }, options: chartDefaults() });
 
-        const ts = DB.timesheets.list().filter(t => t.data && t.data.startsWith(currentMonthPrefix));
+        const ts = DB.timesheets.list().filter(t => t.data && t.data.startsWith(currentMonthPrefix) && (!t.tipo || t.tipo === 'Trabalho'));
         const moByDisc = {};
         ts.forEach(t => {
           const w = DB.workforce.get(t.workerId);
@@ -58,7 +58,7 @@ window.LaborAnalysisModule = (() => {
         const c4 = document.getElementById('ch-mo-labor');
         if (c4) charts.mo = new Chart(c4, { type:'bar', data: {
           labels: Object.keys(moByDisc),
-          datasets: [{ label:'Horas', data: Object.values(moByDisc), backgroundColor:'rgba(139, 92, 246, 0.85)', borderRadius: 4, maxBarThickness: 32, borderSkipped: false }]
+          datasets: [{ label:'Horas', data: Object.values(moByDisc).map(v => parseFloat(Number(v).toFixed(2))), backgroundColor:'rgba(139, 92, 246, 0.85)', borderRadius: 4, maxBarThickness: 32, borderSkipped: false }]
         }, options: chartDefaults() });
 
       } catch(e) { console.warn('Chart.js error:', e); }

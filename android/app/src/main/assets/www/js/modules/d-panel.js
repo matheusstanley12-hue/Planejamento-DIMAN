@@ -142,25 +142,34 @@ window.DPanel = (() => {
     });
     
     const workerCounts = {};
+    const timesheets = window.DB.timesheets ? window.DB.timesheets.list() : [];
+
     concludedTasks.forEach(t => {
+      const taskWorkers = new Set();
       if (t.responsavel && t.responsavel !== 'Não atribuído' && t.responsavel !== 'Sistema') {
         const wfList = window.DB.workforce ? window.DB.workforce.list() : [];
         const w = wfList.find(wf => wf.nome === t.responsavel);
-        if (w) {
-          workerCounts[w.id] = (workerCounts[w.id] || 0) + 1;
-        } else {
-          workerCounts[`name:${t.responsavel}`] = (workerCounts[`name:${t.responsavel}`] || 0) + 1;
-        }
+        taskWorkers.add(w ? w.id : `name:${t.responsavel}`);
       }
+      timesheets.forEach(ts => {
+        if (ts.taskId === t.id && (!ts.tipo || ts.tipo === 'Trabalho')) {
+          taskWorkers.add(ts.workerId || `name:${ts.workerNome}`);
+        }
+      });
+      taskWorkers.forEach(wId => {
+        if (!workerCounts[wId]) workerCounts[wId] = new Set();
+        workerCounts[wId].add(t.id);
+      });
     });
 
     const ranking = [];
     Object.keys(workerCounts).forEach(wId => {
+      const count = workerCounts[wId].size;
       if (wId.startsWith('name:')) {
-        ranking.push({ id: wId, nome: wId.replace('name:', ''), count: workerCounts[wId] });
+        ranking.push({ id: wId, nome: wId.replace('name:', ''), count });
       } else {
         const w = window.DB.workforce.get(wId);
-        if (w) ranking.push({ id: wId, nome: w.nome, count: workerCounts[wId] });
+        if (w) ranking.push({ id: wId, nome: w.nome, count });
       }
     });
 
@@ -181,8 +190,6 @@ window.DPanel = (() => {
           <span style="font-weight: 800; color: var(--brand-primary-light); margin-right: 40px; text-transform: uppercase; vertical-align: middle;">🚀 TOP EXECUTANTES DO MÊS:</span>
           <span style="vertical-align: middle;">${items}</span>
           <span style="font-weight: 800; color: var(--brand-primary-light); margin-left: 40px; margin-right: 15px; text-transform: uppercase; vertical-align: middle;">🚀 PARABÉNS PELO EMPENHO!</span>
-          <span style="font-weight: 700; color: var(--text-secondary); margin-right: 15px; font-style: italic; vertical-align: middle;">Geopar Lapidando talentos</span>
-          <img src="logo.png" style="height:24px; vertical-align: middle; margin-right: 40px; border-radius: 4px; display: inline-block;">
         </marquee>
       </div>
     `;
@@ -300,33 +307,45 @@ window.DPanel = (() => {
           </div>
         </div>
 
-        <!-- Semáforos por equipamento -->
-        ${tasks.length === 0 ? `<div class="empty-state" style="padding:var(--space-6)"><p>Nenhuma atividade programada para hoje</p></div>` : `
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:320px;overflow-y:auto;">
-          ${tasks.map(t => {
-            const eq = equipMap[t.equipmentId];
-            const daysLeft = daysBetween(todayStr, t.dataPlanejadaTermino);
-            let sem = 'success', semIcon = '🟢';
-            if (t.status === 'Bloqueada' || t.status === 'Aguardando Peça') { sem='danger'; semIcon='🔴'; }
-            else if (t.status === 'Não Iniciada' && daysLeft <= 1) { sem='danger'; semIcon='🔴'; }
-            else if (t.pctExecutado < 50 && daysLeft <= 1) { sem='warning'; semIcon='🟡'; }
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
+          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:var(--text-muted)">Iniciadas</div>
+            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${iniciadas}/${total}</div>
+          </div>
+          <div style="background:${criticas > 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
+            <div style="font-size:var(--text-xs);color:${criticas > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">Ativ. Críticas</div>
+            <div style="font-size:var(--text-xl);font-weight:800;color:${criticas > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${criticas}</div>
+          </div>
+        </div>
+
+        <!-- Progress bar -->
+        ${total > 0 ? `
+        <div class="progress-bar-wrap" style="margin-bottom:var(--space-4);">
+          <div class="progress-bar-header"><span class="progress-bar-label">Progresso do Dia</span><span class="progress-bar-value">${Math.round((concluidas/total)*100)}%</span></div>
+          <div class="progress-track lg"><div class="progress-fill success" style="width:${(concluidas/total)*100}%"></div></div>
+        </div>` : ''}
+
+        <!-- Active tasks list -->
+        ${emAndamento > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:220px;overflow-y:auto;">
+          ${tasks.filter(t => t.status === 'Em Andamento').map(t => {
+            const perc = t.percentual || 0;
             return `
-              <div style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);border-left:3px solid var(--color-${sem});">
-                <span style="font-size:1.1rem;flex-shrink:0">${semIcon}</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${eq ? eq.codigo : '—'} · ${t.disciplina}</div>
+              <div style="padding:var(--space-2) var(--space-3);background:var(--bg-base);border-radius:var(--radius-sm);border-left:3px solid var(--color-${t.critico ? 'danger' : 'info'});">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+                  <span style="font-weight:600;color:var(--text-primary);font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</span>
+                  <span style="font-size:var(--text-xs);font-weight:700;color:var(--color-info)">${perc}%</span>
                 </div>
-                <div style="text-align:right;flex-shrink:0;">
-                  <div style="font-size:var(--text-xs);font-weight:700;color:var(--brand-primary-light);font-family:var(--font-mono)">${t.pctExecutado}%</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${t.responsavel?.split(' ')[0] || '—'}</div>
+                <div style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;">
+                  <span>${equipMap[t.equipmentId]?.codigo || ''} · ${t.disciplina}</span>
+                  <span style="text-transform:uppercase">${t.responsavel || 'Não atr.'}</span>
                 </div>
               </div>
             `;
           }).join('')}
-        </div>
-        `}
-        ${criticas > 0 ? `<div style="margin-top:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--color-danger-bg);border-radius:var(--radius-md);font-size:var(--text-xs);color:var(--color-danger);font-weight:600;">⚠️ ${criticas} atividade${criticas>1?'s':''} crítica${criticas>1?'s':''} hoje — monitorar de perto</div>` : ''}
+        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);">Nenhuma atividade em andamento</div>`}
+
+        ${criticas > 0 ? `<div style="margin-top:var(--space-3);padding:var(--space-2);background:var(--color-danger-bg);color:var(--color-danger);font-size:var(--text-xs);border-radius:var(--radius-sm);font-weight:600;text-align:center;">⚠️ ${criticas} atividades críticas hoje — monitorar de perto</div>` : ''}
       </div>
     `;
   }
@@ -405,6 +424,21 @@ window.DPanel = (() => {
     `;
   }
 
+  function renderTVPresentation() {
+    setTimeout(() => {
+      if (window.MeetingMode) window.MeetingMode.activate();
+      window.location.hash = '#d-panel';
+    }, 50);
+    return `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
+        <div style="font-size:2rem;">📺</div>
+        <div style="font-size:1.5rem;color:white;font-weight:800;">Iniciando Apresentação TV...</div>
+      </div>
+    `;
+  }
+
+
+
   function renderIndicators() {
     const allTasks = DB.tasks.getAll();
     const t7 = [], t30 = [];
@@ -431,7 +465,7 @@ window.DPanel = (() => {
 
     const openRestr = DB.restrictions.getAll().filter(r => r.status === 'Aberta').length;
     const allTs = DB.timesheets.list();
-    const todayTs = allTs.filter(t => t.data === today());
+    const todayTs = allTs.filter(t => t.data === today() && (!t.tipo || t.tipo === 'Trabalho'));
     const hProd = todayTs.reduce((s,t) => s + (parseFloat(t.horasTrabalhadas) || 0), 0);
 
     return `
@@ -538,20 +572,37 @@ window.DPanel = (() => {
   }
 
   function render() {
+    const isPresentation = (window.Router && window.Router.currentRoute === 'presentation') || window.location.hash === '#presentation';
+    if (isPresentation) {
+      const html = renderTVPresentation();
+      
+      // Clock logic for TV mode
+      setTimeout(() => {
+        const clockEl = document.getElementById('live-clock');
+        if (clockEl) {
+          const tick = () => { clockEl.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
+          tick();
+          if (!window._dpClockInterval) window._dpClockInterval = setInterval(tick, 1000);
+        }
+      }, 50);
+      
+      return html;
+    }
+
     const d1Tasks = getTasksForDate(dateOf(-1));
     const dTasks  = getTasksForDate(today());
     const d1pTasks = getTasksForDate(dateOf(1));
 
     const html = `
-      <div class="page-container">
+      <div style="padding:var(--space-5);max-width:1600px;margin:0 auto;">
         <!-- Header -->
-        <div class="section-header" style="margin-bottom:var(--space-6);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:var(--space-6);">
           <div>
-            <div class="section-title">
-              <div class="section-title-icon">
+            <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-2xl);font-weight:800;color:var(--text-primary);letter-spacing:-.02em;">
+              <div style="width:32px;height:32px;border-radius:var(--radius-sm);background:var(--brand-primary);display:flex;align-items:center;justify-content:center;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
               </div>
-              Painel Operacional D-1 | D | D+1
+              ${isPresentation ? 'Apresentação (TV)' : 'Painel Operacional D-1 | D | D+1'}
             </div>
             <div class="section-subtitle">Acompanhamento diário da execução · Atualização automática a cada 60 segundos</div>
           </div>
@@ -586,9 +637,6 @@ window.DPanel = (() => {
 
         <!-- AI Alerts -->
         ${renderAIAlerts()}
-
-        <!-- Top Performers Ticker -->
-        ${window.Router && window.Router.current === 'presentation' ? renderTopPerformersTicker() : ''}
       </div>
 
       <!-- Meeting mode overlay (rendered separately by MeetingMode module) -->

@@ -156,7 +156,7 @@ window.Dashboard = (() => {
           const eqNamesT2 = eqs.slice(0, 8).map(e => e.codigo);
           
           const tP2 = eqs.slice(0, 8).map(e => Math.round(tasks.filter(t => t.equipmentId === e.id && workers2nd.some(w => w.nome === t.responsavel || t.responsavel === w.id)).reduce((s,t) => s+(t.horasPlanejadas||0),0)));
-          const tR2 = eqs.slice(0, 8).map(e => Math.round(timesheets.filter(ts => ts.equipmentId === e.id && workers2ndIds.includes(ts.workerId)).reduce((s,ts) => s+(ts.horasTrabalhadas||0),0)));
+          const tR2 = eqs.slice(0, 8).map(e => Math.round(timesheets.filter(ts => ts.equipmentId === e.id && workers2ndIds.includes(ts.workerId) && (!ts.tipo || ts.tipo === 'Trabalho')).reduce((s,ts) => s+(ts.horasTrabalhadas||0),0)));
           
           charts.turnoChart = new Chart(ctxTurno, {
             type: 'bar',
@@ -182,6 +182,26 @@ window.Dashboard = (() => {
               { label: 'Planejado', data: cP, backgroundColor: createGrad(ctxCat, '#c084fc', '#9333ea'), borderRadius: 6, maxBarThickness: 24 }
             ]},
             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
+          });
+        }
+
+        // 6. Top Atendimentos por Encarregado (Setor)
+        const ctxTop = document.getElementById('mega-ch-top-atendimentos');
+        if (ctxTop) {
+          const sols = window.DB && window.DB.solicitacoes ? window.DB.solicitacoes.list() : (JSON.parse(localStorage.getItem('diman_solicitacoes')||'[]'));
+          const concluidas = sols.filter(s => s.status === 'Concluída');
+          const counts = {};
+          concluidas.forEach(s => {
+            const setor = s.destino || s.setorDestino || 'Outros';
+            counts[setor] = (counts[setor] || 0) + 1;
+          });
+          const sortedCats = Object.keys(counts).sort((a,b) => counts[b] - counts[a]);
+          const sortedCounts = sortedCats.map(c => counts[c]);
+
+          charts.topAtendimentos = new Chart(ctxTop, {
+            type: 'bar',
+            data: { labels: sortedCats, datasets: [{ label: 'Atendimentos Concluídos', data: sortedCounts, backgroundColor: createGrad(ctxTop, '#3b82f6', '#1d4ed8'), borderRadius: 6, maxBarThickness: 32 }] },
+            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
           });
         }
 
@@ -255,7 +275,8 @@ window.Dashboard = (() => {
         <div style="grid-column: span 4;">${chartCard('Planejado x Realizado por Setores', 'mega-ch-cat')}</div>
 
         <!-- Row 3 -->
-        <div style="grid-column: span 12;">${chartCard('Execução do 2º Turno (Plan x Real) por Equipamento', 'mega-ch-turno')}</div>
+        <div style="grid-column: span 6;">${chartCard('Execução do 2º Turno (Plan x Real) por Equipamento', 'mega-ch-turno')}</div>
+        <div style="grid-column: span 6;">${chartCard('Top Atendimentos Concluídos por Setor', 'mega-ch-top-atendimentos')}</div>
 
       </div>
 
@@ -519,7 +540,7 @@ window.EquipmentModule = (() => {
             <div><label>Avanço</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:800;font-size:var(--text-xl);color:var(--brand-primary-light)">${eq.pctAvanco||0}%</div></div>
             <div><label>Cliente</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.cliente||'—'}</div></div>
             <div><label>Entrada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${formatDate(eq.dataEntrada)}</div></div>
-            <div><label>🔒 Data Planejada</label><div style="padding:var(--space-3);background:rgba(244,67,54,0.08);border-radius:var(--radius-md);border:1px solid rgba(244,67,54,0.2);font-weight:700;color:var(--color-danger)">${formatDate(eq.dataLiberacaoPlanejada)} — BLOQUEADA</div></div>
+            <div><label>Data Planejada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:700;">${formatDate(eq.dataLiberacaoPlanejada)}</div></div>
             <div style="grid-column:1/-1;"><label>Observações</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.observacoes||'—'}</div></div>
           </div>
         </div>
@@ -609,7 +630,7 @@ window.EquipmentModule = (() => {
         const isAllocatedToOther = w.equipmentId && w.equipmentId !== eq?.id && allocatedEq && allocatedEq.status !== 'Liberado';
         
         if (isAllocatedToOther) {
-          return `<option value="${w.nome}" disabled style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq.codigo}">🔒 ${w.nome} (Alocado no equipamento ${allocatedEq.codigo})</option>`;
+          return `<option value="${w.nome}" style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq?.codigo || 'Outro'}">🔒 ${w.nome} (Alocado em ${allocatedEq?.codigo || 'Outro'})</option>`;
         } else {
           return `<option value="${w.nome}" ${map[disc] === w.nome ? 'selected' : ''}>${w.nome}</option>`;
         }
@@ -638,8 +659,8 @@ window.EquipmentModule = (() => {
         </div>
       </div>
       <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
-        <div class="form-group"><label>🔒 Data Planejada ${eq ? '(BLOQUEADA)' : ''}</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq?'readonly style="opacity:.6;cursor:not-allowed;"':''} /></div>
-        <div class="form-group"><label>Data Real Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
+        <div class="form-group"><label>Data Planejada</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" /></div>
+        <div class="form-group"><label>Data Prevista / Real</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
@@ -807,8 +828,19 @@ window.EquipmentModule = (() => {
       }
     }
 
-    if (id) { DB.equipment.update(id, data); Toast.success('Equipamento atualizado!', data.codigo); }
-    else { data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; DB.equipment.create(data); Toast.success('Equipamento criado!', data.codigo); }
+    if (id) { 
+      const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador'].includes(window.Auth.getSession().perfil);
+      if (isDev && document.getElementById('eq-data-plan')) {
+        data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value;
+      }
+      DB.equipment.update(id, data); 
+      Toast.success('Equipamento atualizado!', data.codigo); 
+    }
+    else { 
+      data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; 
+      DB.equipment.create(data); 
+      Toast.success('Equipamento criado!', data.codigo); 
+    }
     closeModal('modal-equipment');
     const currentRoute = Router.getCurrent();
     if (currentRoute === 'home') {
@@ -884,10 +916,10 @@ window.EquipmentModule = (() => {
 
         window.DB.equipment.delete(id);
         
-        eqTasks.forEach(t => DB.tasks.remove(t.id));
-        ts.forEach(t => DB.timesheets.remove(t.id));
-        if (DB.replannings) re.forEach(r => DB.replannings.remove(r.id));
-        if (DB.restrictions) rest.forEach(r => DB.restrictions.remove(r.id));
+        eqTasks.forEach(t => DB.tasks.delete(t.id));
+        ts.forEach(t => DB.timesheets.delete(t.id));
+        if (DB.replannings) re.forEach(r => DB.replannings.delete(r.id));
+        if (DB.restrictions) rest.forEach(r => DB.restrictions.delete(r.id));
         
         window.Router.navigate('equipment', { force: true });
         window.Toast.success('Movido para a Lixeira', nome);
@@ -917,6 +949,7 @@ window.EquipmentModule = (() => {
           if (!laborMap[key].workers[wName]) {
             laborMap[key].workers[wName] = { hours: 0, eqs: new Set() };
           }
+          if (ts.tipo && ts.tipo !== 'Trabalho') return;
           laborMap[key].workers[wName].hours += (ts.horasTrabalhadas || 0);
           
           const eq = DB.equipment.get(t.equipmentId);
@@ -1321,8 +1354,8 @@ window.TasksModule = (() => {
       }
     }
 
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
-    const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Aguardando Setor','Bloqueada','Paralisada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
     let obsHistoryHtml = '';
     let obsTextValue = '';
@@ -1360,6 +1393,7 @@ window.TasksModule = (() => {
     const summary = {};
     allTimesheets.filter(ts => ts.tipo === 'Trabalho').forEach(ts => {
       if(!summary[ts.workerNome]) summary[ts.workerNome] = 0;
+      if (ts.tipo && ts.tipo !== 'Trabalho') return;
       summary[ts.workerNome] += Number(ts.horasTrabalhadas) || 0;
     });
 
@@ -1371,7 +1405,7 @@ window.TasksModule = (() => {
       const dataStr = ts.data ? ts.data.split('-').reverse().join('/') : '';
       const hStart = ts.horaInicio ? new Date(ts.horaInicio).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
       const hEnd = ts.horaFim ? new Date(ts.horaFim).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
-      const dur = Number(ts.horasTrabalhadas).toFixed(2);
+      const dur = (Number(ts.horasTrabalhadas) || 0).toFixed(2);
       
       return `
         <div style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -1606,7 +1640,7 @@ window.TasksModule = (() => {
     document.getElementById('task-modal-body').innerHTML = taskForm(t);
 
     const session = window.Auth.getSession();
-    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor', 'Encarregado'].includes(session.perfil);
     const saveBtn = document.getElementById('modal-task-save-btn');
     if (!canEdit) {
       if (saveBtn) saveBtn.style.display = 'none';

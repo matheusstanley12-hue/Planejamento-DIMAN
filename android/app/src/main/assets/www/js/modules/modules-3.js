@@ -501,6 +501,7 @@ window.AIAssistant = (() => {
     if (/feria|atestado|falta.*funcionar|falta.*mecanic|falta.*equipe|falta.*pessoal|ausencia|atraso.*funcionar/.test(q)) intents.push('attendance');
     if (/custo|gasto|financeiro|orcamento|valor|preco|comprar/.test(q)) intents.push('costs');
     if (/resumo|geral|status|panorama|visao.*geral|oficina|como.*esta|tudo/.test(q)) intents.push('summary');
+    if (/quant|historico|liberad|mes|junho|julho|agosto/.test(q)) intents.push('history');
     if (/ola|oi|bom.*dia|boa.*tarde|boa.*noite|ola.*assistente/.test(q)) intents.push('greeting');
     if (/internet|web|site|anuncio|manual|esquema|circuito|eletrico|hidraulico|pdf|baixar|download|google|mercado.*livre|procure|pesquise|busque|ache|comprar/.test(q)) intents.push('web_search');
     return intents;
@@ -524,30 +525,24 @@ window.AIAssistant = (() => {
     const eqsList = window.DB && DB.equipment ? DB.equipment.list() : [];
 
     // Fallback para simular IA hiper-mega-inteligente quando nenhum equipamento exato é pego, mas a query pede detalhe
-    if (matchedEqs.length === 0 && !intents.some(i => ['summary','productivity','costs','attendance','restrictions'].includes(i))) {
-      // Se não caiu em nenhum intent clássico, a IA vai dar uma resposta detalhada "simulada" 
-      // varrendo tudo o que tem de anormal no sistema para mostrar proatividade
-      const eqAtrasados = eqsList.filter(e => e.status === 'Em Manutenção' && e.dataLiberacaoPlanejada && window.daysBetween(new Date().toISOString().slice(0,10), e.dataLiberacaoPlanejada) < 0);
-      const partsCriticas = parts.filter(p => p.critica && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-      const resting = restrictions.filter(r => r.status === 'Aberta');
-
-      let fallbackResp = `🤖 **Análise Detalhada (IA Avançada)**\n\nAnalisei profundamente a base de dados do DIMAN-BHZ para responder ao seu pedido.\n\n`;
-      
-      fallbackResp += `**Diagnóstico Rápido da Planta:**\n`;
-      fallbackResp += `• Equipamentos em pátio: ${eqsList.filter(e=>e.status==='Em Manutenção').length}\n`;
-      fallbackResp += `• Focos de incêndio (Atrasos reais): ${eqAtrasados.length}\n`;
-      fallbackResp += `• Gargalos em Suprimentos (Peças Críticas): ${partsCriticas.length}\n`;
-      fallbackResp += `• Restrições ativas bloqueando frentes de serviço: ${resting.length}\n\n`;
-
-      if (eqAtrasados.length > 0) {
-        fallbackResp += `🚨 **Atenção Especial:** O equipamento **${eqAtrasados[0].codigo}** está puxando a média de eficiência para baixo. Recomendo focar a alocação de mecânicos e priorizar o follow-up de peças para ele.\n\n`;
-      }
-      
-      fallbackResp += `Posso mergulhar nos dados de algum equipamento específico se você me disser o código (ex: SSM-265) ou detalhar o impacto financeiro de qualquer restrição. Como prefere proceder?`;
-      return fallbackResp;
+    if (matchedEqs.length === 0 && !intents.some(i => ['summary','productivity','costs','attendance','restrictions','history'].includes(i))) {
+      return `🤖 **Aviso do Sistema Neural**\n\nDesculpe, não consegui processar essa pergunta específica com os dados locais e a rede neural da nuvem está inacessível no momento.\n\nVocê pode tentar reformular a pergunta ou me consultar sobre o **resumo da oficina**, **peças críticas**, ou o **status de um equipamento** específico (ex: SSM-265).`;
     }
 
     let resp = '';
+
+    if (matchedEqs.length === 0 && intents.includes('history')) {
+      const liberados = eqsList.filter(e => e.status === 'Liberado');
+      resp += `🤖 **Análise Histórica**\n\n`;
+      resp += `Até o momento, temos um total de **${liberados.length} equipamento(s)** marcados como "Liberado" na base de dados ativa.\n`;
+      if (liberados.length > 0) {
+        resp += `\nAlguns dos últimos equipamentos liberados:\n`;
+        liberados.slice(-5).forEach(e => {
+          resp += `• **${e.codigo}** (${e.cliente || 'Sem cliente'})\n`;
+        });
+      }
+      return resp;
+    }
 
     // If specific equipment mentioned
     if (matchedEqs.length > 0) {
@@ -921,96 +916,236 @@ window.MeetingMode = (() => {
   let interval = null;
   let countdown = 30;
 
-  function activate() {
+  let selectedMeetingMonth = null;
+
+  function activate(monthParam) {
+    if (document.getElementById('meeting-overlay')) deactivate();
+
     const overlay = document.createElement('div');
     overlay.id = 'meeting-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:#050D1A;z-index:10000;display:flex;flex-direction:column;overflow:hidden;font-family:var(--font-primary);';
 
     const eqs = DB.equipment.list();
-    const parts = DB.parts.getAll();
-    const restrictions = DB.restrictions.getAll().filter(r=>r.status==='Aberta');
     const tasks = DB.tasks.getAll();
-    const today = new Date().toISOString().slice(0,10);
-    const nextReleases = eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)).sort((a,b)=>{
-      const dateA = a.dataLiberacaoAtual || a.dataLiberacaoPlanejada;
-      const dateB = b.dataLiberacaoAtual || b.dataLiberacaoPlanejada;
-      return dateA.localeCompare(dateB);
+    
+    // Obter mês selecionado
+    const df = document.getElementById('date-filter');
+    const baseDate = df && df.value ? df.value : new Date().toISOString().slice(0,10);
+    
+    if (monthParam) selectedMeetingMonth = monthParam;
+    else if (!selectedMeetingMonth) selectedMeetingMonth = baseDate.slice(0,7);
+    
+    const currentMonth = selectedMeetingMonth;
+    
+    const eqWaiting = eqs.filter(e => {
+      if (e.status !== 'Aguardando Manutenção' && e.status !== 'Backlog') return false;
+      if (e.tipo === 'Subconjuntos') return false;
+      return true; // Aguardando/Backlog não precisa ser filtrado por mês
     });
-    const delayed = eqs.filter(e=>e.status==='Em Manutenção'&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)&&(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada)<today);
-    const critTasks = tasks.filter(t=>t.critico&&t.status!=='Concluída').slice(0,8);
-    const pendParts = parts.filter(p=>['Solicitada','Comprada','Em Transporte'].includes(p.status)).slice(0,6);
+
+    const eqMaintenance = eqs.filter(e => {
+      if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
+      if (e.tipo === 'Subconjuntos') return false;
+      const dataPrazo = e.dataLiberacaoPlanejada || '';
+      return dataPrazo.startsWith(currentMonth);
+    });
+
+    const eqReleased = eqs.filter(e => {
+      if (e.status !== 'Liberado') return false;
+      if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
+      const dataPrazo = e.dataLiberacaoPlanejada || '';
+      return dataPrazo.startsWith(currentMonth);
+    });
+
+    // Helper para Top Executantes (Total geral, sem filtro de mês conforme pedido)
+    const perfMap = {};
+    
+    function matchesMonth(dStr, yyyy_mm) {
+      if (!dStr) return false;
+      if (dStr.startsWith(yyyy_mm)) return true;
+      // Trata DD/MM/YYYY
+      if (dStr.includes('/')) {
+        const parts = dStr.split('/');
+        if (parts.length === 3) {
+          const iso = parts[2] + '-' + parts[1];
+          return iso === yyyy_mm;
+        }
+      }
+      return false;
+    }
+    
+    const timesheets = window.DB.timesheets ? window.DB.timesheets.list() : [];
+    const completedTasks = tasks.filter(t => t.status === 'Concluída' && t.disciplina !== 'Subconjunto');
+
+    completedTasks.forEach(t => {
+      const taskWorkers = new Set();
+      if (t.responsavel && t.responsavel !== 'Não atribuído' && t.responsavel !== 'Sistema') {
+        taskWorkers.add(t.responsavel);
+      }
+      timesheets.forEach(ts => {
+        if (ts.taskId === t.id && (!ts.tipo || ts.tipo === 'Trabalho') && ts.workerNome) {
+          taskWorkers.add(ts.workerNome);
+        }
+      });
+      taskWorkers.forEach(wName => {
+        if (!perfMap[wName]) perfMap[wName] = new Set();
+        perfMap[wName].add(t.id);
+      });
+    });
+
+    const topPerformers = Object.entries(perfMap)
+      .map(([nome, taskSet]) => ({nome, count: taskSet.size}))
+      .sort((a,b) => b.count - a.count)
+      .slice(0, 5);
+      
+    // Todos executantes para o Ticker
+    const allPerformers = Object.entries(perfMap)
+      .map(([nome, taskSet]) => ({nome, count: taskSet.size}))
+      .sort((a,b) => b.count - a.count);
 
     overlay.innerHTML = `
       <!-- Header bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
         <div style="display:flex;align-items:center;gap:16px;">
-          <div style="width:40px;height:40px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;">⚙️</div>
-          <div><div style="font-size:1.3rem;font-weight:900;color:white;letter-spacing:-.02em">PLANEJAMENTO DIMAN-BHZ</div><div style="font-size:.7rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em">Painel de Acompanhamento · Reunião Diária</div></div>
+          <div style="width:36px;height:36px;background:rgba(21,101,192,.8);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;">📺</div>
+          <div>
+            <div style="font-size:1.1rem;font-weight:900;color:white;letter-spacing:-.02em">Manutenção DIMAN-BHZ</div>
+            <div style="font-size:.65rem;color:#8EACC8;text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:8px;">
+              Acompanhamento Mensal de Equipamentos e Produtividade
+              <input type="month" value="${currentMonth}" onchange="MeetingMode.activate(this.value)" style="background:rgba(30,136,229,.2); border:1px solid rgba(30,136,229,.4); color:white; border-radius:4px; padding:2px 6px; font-family:inherit; outline:none; font-weight:700; cursor:pointer; font-size:.7rem;">
+            </div>
+          </div>
         </div>
-        <div id="meeting-datetime" style="font-size:1.5rem;font-weight:800;color:#1E88E5;font-family:monospace;"></div>
-        <button onclick="MeetingMode.deactivate()" style="background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);color:#F44336;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;">✕ Sair</button>
-      </div>
-
-      <!-- 6-panel grid -->
-      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:12px;padding:12px;overflow:hidden;">
-
-        <!-- Panel 1: Delayed -->
-        <div style="background:#0A1929;border:1px solid rgba(244,67,54,.3);border-radius:12px;padding:16px;overflow:hidden;">
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#F44336;margin-bottom:12px;">🔴 Equipamentos Atrasados</div>
-          ${delayed.length === 0 ? '<div style="color:#546E7A;font-size:.8rem;">Nenhum atraso registrado ✅</div>' :
-          delayed.map(e=>{const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada; const d=daysBetween(datePrev,today);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(244,67,54,.1);border-radius:8px;margin-bottom:8px;border-left:3px solid #F44336;"><div><div style="font-weight:800;color:white;font-size:1rem">${e.codigo}</div><div style="font-size:.7rem;color:#8EACC8">${e.cliente}</div></div><div style="font-size:1.8rem;font-weight:900;color:#F44336">${d}d</div></div>`;}).join('')}
-        </div>
-
-        <!-- Panel 2: Critical Path -->
-        <div style="background:#0A1929;border:1px solid rgba(255,152,0,.3);border-radius:12px;padding:16px;overflow:hidden;">
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#FF9800;margin-bottom:12px;">⚡ Caminho Crítico</div>
-          ${critTasks.map(t=>{const eq2=DB.equipment.get(t.equipmentId);const isBlocked=t.status==='Bloqueada';return`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,152,0,.07);">
-            <span style="font-size:.9rem">${isBlocked?'🔴':'🟡'}</span>
-            <div style="flex:1;min-width:0;"><div style="font-size:.75rem;font-weight:600;color:${isBlocked?'#F44336':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div><div style="font-size:.65rem;color:#8EACC8">${eq2?.codigo||'—'} · ${t.disciplina}</div></div>
-            <span style="font-size:.75rem;font-weight:700;color:#FF9800;font-family:monospace">${t.pctExecutado}%</span>
-          </div>`;}).join('')}
-        </div>
-
-        <!-- Panel 3: Pending Parts -->
-        <div style="background:#0A1929;border:1px solid rgba(255,179,0,.3);border-radius:12px;padding:16px;overflow:hidden;">
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#FFB300;margin-bottom:12px;">📦 Peças Pendentes</div>
-          ${pendParts.map(p=>{const eq2=DB.equipment.get(p.equipmentId);return`<div style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(255,179,0,.07);">
-            <span style="font-size:.8rem">${p.critica?'🔴':'📦'}</span>
-            <div style="flex:1;min-width:0;"><div style="font-size:.75rem;font-weight:600;color:${p.critica?'#F44336':'white'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.descricao}</div><div style="font-size:.65rem;color:#8EACC8">${eq2?.codigo||'—'} · ${p.status}</div></div>
-          </div>`;}).join('')}
-        </div>
-
-        <!-- Panel 4: Next Releases -->
-        <div style="background:#0A1929;border:1px solid rgba(0,200,83,.3);border-radius:12px;padding:16px;overflow:hidden;">
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#00C853;margin-bottom:12px;">🚀 Próximas Liberações</div>
-          ${nextReleases.slice(0,5).map(e=>{const datePrev = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada; const d=daysBetween(today,datePrev);const cls=d<0?'#F44336':d<=3?'#FF9800':'#00C853';return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px;background:rgba(0,200,83,.07);border-radius:8px;margin-bottom:8px;">
-            <div><div style="font-weight:800;color:white;font-size:.95rem">${e.codigo} <span style="font-size:.7rem;color:#8EACC8">${e.cliente}</span></div>
-            <div style="margin-top:4px;background:rgba(255,255,255,.1);border-radius:4px;height:6px;width:100%;overflow:hidden;"><div style="height:100%;width:${e.pctAvanco||0}%;background:#00C853;border-radius:4px;"></div></div></div>
-            <div style="text-align:right;"><div style="font-size:.85rem;font-weight:700;color:${cls}">${formatDate(datePrev)}</div><div style="font-size:.65rem;color:${cls}">${d<0?Math.abs(d)+'d atraso':d+'d'}</div></div>
-          </div>`;}).join('')}
-        </div>
-
-        <!-- Panel 5: Restrictions -->
-        <div style="background:#0A1929;border:1px solid rgba(156,39,176,.3);border-radius:12px;padding:16px;overflow:hidden;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#CE93D8;">🚫 Restrições</div><div style="font-size:2rem;font-weight:900;color:#CE93D8">${restrictions.length}</div></div>
-          ${restrictions.slice(0,5).map(r=>{const eq2=DB.equipment.get(r.equipmentId);return`<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(156,39,176,.1);border-left:2px solid #9C27B0;">
-            <div style="font-size:.7rem;color:#CE93D8;font-weight:700">${r.tipo}</div>
-            <div style="font-size:.7rem;color:#8EACC8">${eq2?.codigo||'—'} · ${r.descricao.slice(0,50)}...</div>
-          </div>`;}).join('')}
-        </div>
-
-        <!-- Panel 6: System Alerts -->
-        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;padding:16px;overflow:hidden;">
-          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1E88E5;margin-bottom:12px;">🔔 Alertas do Sistema</div>
-          ${DB.notifications.list().slice(0,5).map(n=>`<div style="padding:8px;border-radius:6px;margin-bottom:6px;background:rgba(30,136,229,.08);">
-            <div style="font-size:.75rem;font-weight:600;color:white">${n.title}</div>
-            <div style="font-size:.65rem;color:#8EACC8;margin-top:2px">${formatDateTime(n.createdAt)}</div>
-          </div>`).join('')}
+        <div id="meeting-datetime" style="font-size:1.4rem;font-weight:800;color:#1E88E5;font-family:monospace;"></div>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <button onclick="MeetingMode.toggleFullscreen()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+            Tela Cheia
+          </button>
+          <button onclick="MeetingMode.deactivate()" style="background:rgba(244,67,54,.2);border:1px solid rgba(244,67,54,.4);color:#F44336;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:700;">✕ Sair</button>
         </div>
       </div>
+
+      <!-- 4-panel grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:16px;overflow:hidden;">
+        
+        <!-- Column 1: Em Manutenção -->
+        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:14px;background:rgba(30,136,229,.1);border-bottom:1px solid rgba(30,136,229,.2);">
+            <h2 style="margin:0;color:#64B5F6;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              ⚙️ Em Manutenção
+            </h2>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
+            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+              return `
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                  </div>
+                  <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
+                </div>
+              `;
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento em manutenção</div>'}
+          </div>
+        </div>
+
+        <!-- Column 2: Liberados -->
+        <div style="background:#0A1929;border:1px solid rgba(76,175,80,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:10px;background:rgba(76,175,80,.1);border-bottom:1px solid rgba(76,175,80,.2);">
+            <h2 style="margin:0;color:#81C784;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              ✅ Liberados no Mês
+            </h2>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
+            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+              return `
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                  </div>
+                  <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
+                </div>
+              `;
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
+          </div>
+        </div>
+
+        <!-- Column 3: Top Executantes -->
+        <div style="background:#0A1929;border:1px solid rgba(156,39,176,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:10px;background:rgba(156,39,176,.1);border-bottom:1px solid rgba(156,39,176,.2);">
+            <h2 style="margin:0;color:#BA68C8;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              🚀 Top Executantes
+            </h2>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
+            ${topPerformers.length > 0 ? topPerformers.map((t, idx) => {
+              const emojis = ['🏆 1º', '🥈 2º', '🥉 3º', '🏅 4º', '🏅 5º'];
+              return `
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #AB47BC;padding:10px;border-radius:6px;display:flex;align-items:center;gap:12px;">
+                  <div style="font-size:1.5rem;">${emojis[idx] || '🏅'}</div>
+                  <div style="flex:1;">
+                    <div style="font-weight:800;color:white;font-size:1rem;margin-bottom:2px;">${t.nome}</div>
+                    <div style="color:#CE93D8;font-weight:700;font-size:0.85rem;"><span style="color:white;font-weight:900;">${t.count}</span> tarefas executadas</div>
+                  </div>
+                </div>
+              `;
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum dado de execução</div>'}
+          </div>
+        </div>
+
+        <!-- Column 4: Aguardando Manutenção -->
+        <div style="background:#0A1929;border:1px solid rgba(255,152,0,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:14px;background:rgba(255,152,0,.1);border-bottom:1px solid rgba(255,152,0,.2);">
+            <h2 style="margin:0;color:#FFB74D;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              ⏳ Aguardando Manutenção
+            </h2>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
+            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
+              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+              return `
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                  </div>
+                  <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#FFE0B2">${e.cliente || 'Não Informado'}</strong></div>
+                </div>
+              `;
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
+          </div>
+        </div>
+      </div>
+
+      <!-- Ticker -->
+      ${allPerformers.length > 0 ? `
+      <div style="background:rgba(10,25,41,0.9);border-top:1px solid rgba(30,136,229,.3);padding:8px 0;overflow:hidden;display:flex;align-items:center;position:relative;">
+        <div style="background:#1E88E5;color:white;font-weight:800;padding:4px 12px;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;position:absolute;left:0;z-index:2;border-radius:0 20px 20px 0;box-shadow:2px 0 10px rgba(0,0,0,0.5);">
+          RANKING DO MÊS
+        </div>
+        <div style="white-space:nowrap;animation: marqueeTV 30s linear infinite;padding-left:140px;display:flex;gap:30px;">
+          ${allPerformers.map((t, idx) => `
+            <div style="display:inline-flex;align-items:center;gap:6px;">
+              <span style="color:#BA68C8;font-weight:900;font-size:0.9rem;">${idx+1}º</span>
+              <span style="color:white;font-weight:700;font-size:0.9rem;">${t.nome}</span>
+              <span style="background:rgba(186,104,200,.2);color:#E1BEE7;padding:1px 6px;border-radius:10px;font-weight:800;font-size:0.8rem;">${t.count}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <style>
+        @keyframes marqueeTV {
+          0% { transform: translateX(100vw); }
+          100% { transform: translateX(-100%); }
+        }
+      </style>
+      ` : ''}
 
       <!-- Bottom bar -->
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 24px;background:#0A1929;border-top:1px solid rgba(30,136,229,.2);font-size:.7rem;color:#546E7A;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 24px;background:#0A1929;border-top:1px solid rgba(30,136,229,.2);font-size:.65rem;color:#546E7A;">
         <span>PLANEJAMENTO DIMAN-BHZ — Gestão Industrial</span>
         <span id="meeting-update-info"></span>
         <span>F11 para tela cheia</span>
@@ -1018,6 +1153,19 @@ window.MeetingMode = (() => {
     `;
 
     document.body.appendChild(overlay);
+
+    // Tenta entrar em tela cheia (Fullscreen API)
+    try {
+      if (overlay.requestFullscreen) {
+        overlay.requestFullscreen();
+      } else if (overlay.webkitRequestFullscreen) { /* Safari */
+        overlay.webkitRequestFullscreen();
+      } else if (overlay.msRequestFullscreen) { /* IE11 */
+        overlay.msRequestFullscreen();
+      }
+    } catch (err) {
+      console.warn("Fullscreen request falhou:", err);
+    }
 
     // Clock
     interval = setInterval(() => {
@@ -1031,9 +1179,30 @@ window.MeetingMode = (() => {
   function deactivate() {
     if (interval) { clearInterval(interval); interval = null; }
     document.getElementById('meeting-overlay')?.remove();
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(()=>{});
+    }
+    if (window.Router) {
+      const session = window.Auth ? window.Auth.getSession() : null;
+      window.Router.navigate(session && session.perfil === 'Executante' ? 'worker-panel' : 'home', { force: true });
+    } else {
+      window.location.hash = '#home';
+    }
   }
 
-  return { activate, deactivate };
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }
+
+  return { activate, deactivate, toggleFullscreen };
 })();
 
 // ================================================================
@@ -1111,7 +1280,7 @@ window.LessonsModule = (() => {
   }
 
   function openCreate() {
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('lesson-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="ll-disc">${discs.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
       <div class="form-group"><label>Tipo de Equipamento</label><input id="ll-tipo" placeholder="Sonda, Perfuratriz..." /></div></div>
@@ -1565,7 +1734,7 @@ window.ReportsModule = (() => {
 
       const totalWorkers = workers.length;
       const activeWorkers = workers.filter(w => w.status === 'Ativo').length;
-      const totalHours = filteredTimesheets.reduce((s, t) => s + (t.horasTrabalhadas || 0), 0);
+      const totalHours = filteredTimesheets.filter(t => !t.tipo || t.tipo === 'Trabalho').reduce((s, t) => s + (parseFloat(t.horasTrabalhadas) || 0), 0);
 
       addHeader("Relatório de Mão de Obra e Apontamentos");
 
@@ -1594,7 +1763,7 @@ window.ReportsModule = (() => {
 
       const columnsW = ['Matrícula', 'Colaborador', 'Função', 'Disciplina', 'Status', 'Horas Apontadas'];
       const rowsW = workers.map(w => {
-        const wHours = timesheets.filter(t => t.workerId === w.id).reduce((s, t) => s + (t.horasTrabalhadas || 0), 0);
+        const wHours = timesheets.filter(t => t.workerId === w.id && (!t.tipo || t.tipo === 'Trabalho')).reduce((s, t) => s + (parseFloat(t.horasTrabalhadas) || 0), 0);
         return [
           w.matricula || '—',
           w.nome,
@@ -1708,6 +1877,7 @@ window.UsersModule = (() => {
                   <div class="form-group"><label>Nome *</label><input type="text" id="nu-nome" placeholder="Nome Completo" /></div>
                   <div class="form-group"><label>Email</label><input type="email" id="nu-email" placeholder="email@exemplo.com" /></div>
                   <div class="form-group"><label>Perfil de Acesso *</label><select id="nu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="nu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
                   <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="Gerada automaticamente ao salvar" readonly style="background:var(--bg-base);color:var(--text-muted);font-style:italic;" /></div>
                   <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O sistema gerará uma senha aleatória que deverá ser informada ao funcionário.</div>
                 </div>
@@ -1730,6 +1900,7 @@ window.UsersModule = (() => {
                   <input type="hidden" id="eu-id" />
                   <div class="form-group"><label>Nome do Usuário *</label><input type="text" id="eu-nome" /></div>
                   <div class="form-group"><label>Nível / Perfil de Acesso *</label><select id="eu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="eu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
                 </div>
               </div>
               <div class="modal-footer">
@@ -1754,12 +1925,13 @@ window.UsersModule = (() => {
         </div>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
           ${users.map(u=>`<tr>
             <td style="font-family:var(--font-mono)">${u.matricula}</td>
             <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
             <td><span class="badge badge-primary">${u.perfil}</span></td>
+            <td>${u.disciplina ? `<span class="badge badge-ghost" style="color:var(--text-secondary)">${u.disciplina}</span>` : '—'}</td>
             <td>${statusBadge(u.status||'Ativo')}</td>
             <td>
               <div class="table-actions">
@@ -1787,6 +1959,7 @@ window.UsersModule = (() => {
     const nome = document.getElementById('nu-nome').value.trim();
     const email = document.getElementById('nu-email').value.trim();
     const perfil = document.getElementById('nu-perfil').value;
+    const disciplina = document.getElementById('nu-disciplina').value;
     
     if(!matricula || !nome || !perfil) {
       Toast && Toast.error('Erro', 'Preencha os campos obrigatórios (*).');
@@ -1800,8 +1973,7 @@ window.UsersModule = (() => {
     }
 
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let randomPassword = '';
-    for(let i=0; i<6; i++) randomPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+    let randomPassword = '123456';
 
     const senhaHash = await Auth.hashPassword(randomPassword);
 
@@ -1811,6 +1983,7 @@ window.UsersModule = (() => {
       nome,
       email,
       perfil,
+      disciplina,
       senhaHash,
       senhaInicial: true,
       status: 'Ativo',
@@ -1897,10 +2070,16 @@ window.UsersModule = (() => {
     }
     window.uiConfirm('Tem certeza que deseja excluir este usuário?', (res) => {
       if (!res) return;
+      if (window.Auth && window.Auth.deleteUser) {
+        window.Auth.deleteUser(id);
+      }
+      // Fallback/Garanta que deletou do localStorage e do Supabase
       let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
       users = users.filter(u => u.id !== id);
       localStorage.setItem('diman_users', JSON.stringify(users));
       if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
+      if (window.DB && window.DB.deleteFromSupabase) window.DB.deleteFromSupabase('diman_users', id);
+      
       Toast && Toast.success('Sucesso', 'Usuário excluído.');
       Router.navigate('users', { force: true });
     });
@@ -1920,6 +2099,7 @@ window.UsersModule = (() => {
     document.getElementById('eu-id').value = user.id;
     document.getElementById('eu-nome').value = user.nome;
     document.getElementById('eu-perfil').value = user.perfil;
+    document.getElementById('eu-disciplina').value = user.disciplina || '';
     
     openModal('modal-edit-user');
   }
@@ -1928,6 +2108,7 @@ window.UsersModule = (() => {
     const id = document.getElementById('eu-id').value;
     const newNome = document.getElementById('eu-nome').value.trim();
     const newPerfil = document.getElementById('eu-perfil').value;
+    const newDisciplina = document.getElementById('eu-disciplina').value;
     
     if(!id || !newPerfil || !newNome) return;
     
@@ -1937,6 +2118,8 @@ window.UsersModule = (() => {
     
     users[userIndex].nome = newNome;
     users[userIndex].perfil = newPerfil;
+    users[userIndex].disciplina = newDisciplina;
+    users[userIndex].updatedAt = new Date().toISOString();
     
     localStorage.setItem('diman_users', JSON.stringify(users));
     if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);

@@ -1163,9 +1163,13 @@ window.WorkerPanel = (() => {
     `;
 
     // Tasks List
-    let listTasks = myTasks.filter(t => t.status !== 'Concluída' && t.id !== myWorker.currentTaskId && canExecuteTask(session, t));
+    let listTasks = myTasks.filter(t => t.id !== myWorker.currentTaskId && canExecuteTask(session, t));
     
     listTasks.sort((a, b) => {
+      const aConcluida = a.status === 'Concluída' ? 1 : 0;
+      const bConcluida = b.status === 'Concluída' ? 1 : 0;
+      if (aConcluida !== bConcluida) return aConcluida - bConcluida;
+
       const aCanExec = canExecuteTask(session, a) ? 1 : 0;
       const bCanExec = canExecuteTask(session, b) ? 1 : 0;
       return bCanExec - aCanExec;
@@ -1177,7 +1181,16 @@ window.WorkerPanel = (() => {
       const isBlocked = blockedBy.length > 0;
       
       let actionBtn = '';
-      if (t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor' || t.status === 'Pausada') {
+      if (t.status === 'Concluída') {
+        actionBtn = `
+          <div style="width:100%; display:flex; align-items:center; justify-content:center; padding: 6px; background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
+            <div style="font-size:12px;color:#10b981;font-weight:800;display:flex;align-items:center;gap:4px;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              TAREFA CONCLUÍDA
+            </div>
+          </div>
+        `;
+      } else if (t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor' || t.status === 'Pausada') {
         const pauseReason = t.pauseReason || t.status;
         let timeStr = '';
         if (t.pauseStartTime) {

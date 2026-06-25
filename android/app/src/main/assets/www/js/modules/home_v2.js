@@ -6,10 +6,13 @@ window.HomeModule = (() => {
     { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)' },
     { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)' },
     { id: 'prog-almoxarifado', name: 'Programação de almoxarifado', color: 'var(--color-info)' },
+    { id: 'aguardando-manutencao', name: 'Aguardando Manut.', color: 'var(--color-danger)' },
     { id: 'outros', name: 'Outros Equipamentos', color: 'var(--text-muted)' }
   ];
 
-  function getBucketId(tipo) {
+  function getBucketId(eq) {
+    if (eq.status === 'Aguardando Manutenção' || eq.status === 'Backlog') return 'aguardando-manutencao';
+    const tipo = eq.tipo || '';
     if (!tipo) return 'outros';
     const t = tipo.trim().toLowerCase();
     if (t.includes('sonda') && t.includes('pesquisa')) return 'sondas-pesquisas';
@@ -25,8 +28,7 @@ window.HomeModule = (() => {
     const currentMonthStr = new Date().toISOString().slice(0, 7);
     const eqs = [...window.DB.equipment.list()].filter(e => {
       if (e.status === 'Liberado') return false; // always hide released
-      if (!e.dataLiberacaoPlanejada) return true; // show if no date
-      return e.dataLiberacaoPlanejada.startsWith(currentMonthStr);
+      return true; // show all active equipment regardless of date
     });
     // Sort equipment by estimated release date ascending (soonest to leave first)
     eqs.sort((a, b) => {
@@ -63,11 +65,12 @@ window.HomeModule = (() => {
       'bombas-pocos': [],
       'subconjuntos': [],
       'prog-almoxarifado': [],
+      'aguardando-manutencao': [],
       'outros': []
     };
 
     eqs.forEach(e => {
-      const bucketId = getBucketId(e.tipo);
+      const bucketId = getBucketId(e);
       const pct = e.pctAvanco || 0;
       const dtPlan = e.dataLiberacaoPlanejada || '';
       const dtPrev = e.dataLiberacaoAtual || dtPlan;
@@ -249,10 +252,7 @@ window.HomeModule = (() => {
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-success);">${libsThisWeek}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Liberações (7 dias)</div>
           </div>
-          <div id="summary-card-restr" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('restr')" title="Clique para filtrar">
-            <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-warning);">${restrAbertas}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Restrições Abertas</div>
-          </div>
+
           <div id="summary-card-pecas" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('pecas')" title="Clique para filtrar">
             <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-orange);">${partsPendentes}</div>
             <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Peças Pendentes</div>
@@ -384,10 +384,13 @@ window.HomeModule = (() => {
 
     const eq = window.DB.equipment.get(eqId);
     if (eq) {
-      if (eq.tipo === targetTipo) return;
-
-      // Update Database
-      window.DB.equipment.update(eqId, { tipo: targetTipo });
+      if (bucketId === 'aguardando-manutencao') {
+         if (eq.status === 'Aguardando Manutenção') return;
+         window.DB.equipment.update(eqId, { status: 'Aguardando Manutenção' });
+      } else {
+         if (eq.tipo === targetTipo && eq.status !== 'Aguardando Manutenção' && eq.status !== 'Backlog') return;
+         window.DB.equipment.update(eqId, { tipo: targetTipo, status: (eq.status === 'Aguardando Manutenção' || eq.status === 'Backlog') ? 'Em Manutenção' : eq.status });
+      }
 
       // Move element in DOM
       const card = document.querySelector(`.home-eq-card[onclick*="'${eqId}'"]`);

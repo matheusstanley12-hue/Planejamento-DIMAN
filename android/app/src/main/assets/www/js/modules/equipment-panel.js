@@ -7,31 +7,36 @@ window.EquipmentPanel = (() => {
   };
 
   function renderSvRequests(eqId) {
-    if (!window.DB || !DB.svRequests) return '<div class="alert alert-info">Módulo de Solicitações não disponível.</div>';
-    const reqs = DB.svRequests.list().filter(r => r.equipmentId === eqId);
+    if (!window.DB || !DB.solicitacoes) return '<div class="alert alert-info">Módulo de Solicitações não disponível.</div>';
+    const reqs = DB.solicitacoes.list().filter(r => r.equipmentId === eqId);
     if (reqs.length === 0) {
       return `<div style="text-align:center;padding:var(--space-6);color:var(--text-muted);background:var(--bg-card);border-radius:var(--radius-lg);border:1px dashed var(--border-hover);">
         Nenhuma solicitação de serviço registrada para este equipamento.
       </div>`;
     }
     
+    const session = Auth.getSession();
+    const isDeleteAllowed = session && ['Planejador', 'Administrador', 'Gerente'].includes(session.perfil);
+
     let html = `<div style="display:flex;flex-direction:column;gap:var(--space-3);">`;
     reqs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(r => {
-      const isConcluido = r.status === 'Concluído';
-      const statusColor = isConcluido ? 'success' : (r.status === 'Aprovado' ? 'primary' : 'warning');
+      const isConcluida = r.status === 'Concluída';
+      const statusColor = isConcluida ? 'success' : (r.status.includes('Aprovado') || r.status.includes('Execução') ? 'primary' : 'warning');
       html += `
         <div style="background:var(--bg-base); border:1px solid var(--border-default); border-radius:var(--radius-md); padding:var(--space-4);">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-3);">
             <div>
-              <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">${r.titulo || 'Solicitação'}</div>
+              <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px;">${r.descricao || 'Solicitação'}</div>
               <div style="font-size:12px; color:var(--text-muted);">
-                Solicitante: <strong style="color:var(--text-secondary);">${r.solicitante}</strong> &bull; 
+                Solicitante: <strong style="color:var(--text-secondary);">${r.origem || r.solicitanteNome || '—'}</strong> &bull; 
                 Data: ${new Date(r.createdAt).toLocaleDateString('pt-BR')}
               </div>
             </div>
-            <span class="badge badge-${statusColor}">${r.status}</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span class="badge badge-${statusColor}">${r.status}</span>
+              ${isDeleteAllowed ? `<button class="btn btn-ghost btn-xs" style="color:var(--color-danger);padding:0 4px;" onclick="window.EquipmentPanel.deleteRequest('${r.id}')" title="Excluir"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>` : ''}
+            </div>
           </div>
-          ${r.descricao ? `<div style="font-size:13px; color:var(--text-primary); margin-bottom:var(--space-3); line-height:1.4;">${r.descricao}</div>` : ''}
           ${r.fotoPeca ? `
             <div style="margin-top:var(--space-2);">
               <div style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:4px;">Foto Anexada:</div>
@@ -179,9 +184,9 @@ window.EquipmentPanel = (() => {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
               Adicionar Atividade
             </button>
-            <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksCSV()" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-card);">
+            <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksPDF()" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-card);">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-              Baixar Todas as Tarefas
+              Baixar Relatório (PDF)
             </button>
           </div>
         </div>
@@ -217,10 +222,7 @@ window.EquipmentPanel = (() => {
                 <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Reprogramações</div>
                 <div style="font-size:1.1rem;font-weight:700;color:${replanCount>0?'var(--color-warning)':'var(--text-primary)'};">${replanCount}</div>
               </div>
-              <div>
-                <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Restrições Abertas</div>
-                <div style="font-size:1.1rem;font-weight:700;color:${openRestr>0?'var(--color-danger)':'var(--color-success)'};">${openRestr}</div>
-              </div>
+
               <div>
                 <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Peças Pendentes</div>
                 <div style="font-size:1.1rem;font-weight:700;color:${pendingParts>0?'var(--color-warning)':'var(--color-success)'};">${pendingParts}</div>
@@ -238,7 +240,7 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('resumo', 'RESUMO EXECUTIVO', 'chart-bar', renderResumo(eq, tasks, openRestr, pendingParts, adherencia, hPlan, hReal))}
           
-          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'].map(disc => {
+          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Teste','Retrabalho'].map(disc => {
             const discTasks = tasks.filter(t => t.disciplina === disc);
             const discHPlan = discTasks.reduce((s,t) => s + (t.horasPlanejadas||0), 0);
             const discHReal = discTasks.reduce((s,t) => s + (t.horasRealizadas||0), 0);
@@ -260,14 +262,6 @@ window.EquipmentPanel = (() => {
           }).join('')}
 
           ${renderAccordion('pecas', `FALTA DE PEÇAS <span class="badge badge-${pendingParts>0?'danger':'success'}" style="margin-left:8px;">${pendingParts} pendentes</span>`, 'cube', renderPecas(parts))}
-          
-          ${renderAccordion('workforce', 'MÃO DE OBRA', 'users', renderMaoDeObra())}
-          
-          ${renderAccordion('followup', 'FOLLOW-UP (DIÁRIO DE BORDO)', 'clipboard-list', renderFollowUp(eq))}
-          
-          ${renderAccordion('restricoes', `RESTRIÇÕES <span class="badge badge-${openRestr>0?'danger':'success'}" style="margin-left:8px;">${openRestr} abertas</span>`, 'exclamation-triangle', renderRestricoes(restrictions))}
-          
-          ${renderAccordion('cronograma', 'CRONOGRAMA & CAMINHO CRÍTICO', 'calendar', renderCronograma(tasks, eq))}
           
           ${renderAccordion('svrequests', 'SOLICITAÇÕES DE SERVIÇO', 'clipboard', renderSvRequests(eq.id))}
           
@@ -584,9 +578,9 @@ window.EquipmentPanel = (() => {
     }
     return html + `
       <div style="margin-top:var(--space-3);display:flex;justify-content:flex-end;gap:var(--space-2);">
-        <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksCSV('${disc}')" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-base);">
+        <button class="btn btn-outline btn-sm" onclick="EquipmentPanel.exportTasksPDF('${disc}')" style="border-color:var(--border-default);color:var(--text-secondary);background:var(--bg-base);">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-          Baixar Tarefas (${disc})
+          Baixar Relatório (PDF)
         </button>
         <button class="btn btn-outline btn-sm" onclick="window.EquipmentPanel.openPartModal()" style="color:var(--color-orange);border-color:var(--color-orange);">+ Registrar Peça Faltante</button>
         <button class="btn btn-secondary btn-sm" onclick="EquipmentPanel.openTaskModal('${disc}')">+ Adicionar Atividade</button>
@@ -1483,6 +1477,94 @@ window.EquipmentPanel = (() => {
     `;
   }
 
+  function exportTasksPDF(discipline = null) {
+    if (!currentEqId) return;
+    const eq = DB.equipment.get(currentEqId);
+    let tasks = DB.tasks.getByEquipment(currentEqId);
+    let parts = DB.parts.list(currentEqId);
+    
+    if (discipline) {
+      tasks = tasks.filter(t => t.disciplina === discipline);
+      parts = parts.filter(p => p.disciplina === discipline);
+    }
+    
+    if (tasks.length === 0 && parts.length === 0) {
+      Toast.warning('Aviso', 'Não há dados para exportar.');
+      return;
+    }
+    
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      Toast.error('Erro', 'Biblioteca jsPDF não encontrada.');
+      return;
+    }
+    
+    const doc = new window.jspdf.jsPDF('l', 'mm', 'a4'); // landscape
+    
+    doc.setFontSize(16);
+    doc.text(`Equipamento: ${eq.codigo} - ${eq.nome}`, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Cliente: ${eq.cliente || '-'} | OS: ${eq.os || '-'} | Data: ${new Date().toLocaleDateString()}`, 14, 22);
+
+    let startY = 30;
+
+    if (tasks.length > 0) {
+      doc.text('Lista de Tarefas:', 14, startY);
+      const tHeaders = [['Disciplina', 'Descrição', 'Responsável', 'Data Início', 'Data Fim', 'Horas', 'Status', 'Motivo da Pausa', 'Crítico']];
+      const tRows = tasks.map(t => [
+        t.disciplina || '',
+        t.descricao || '',
+        t.responsavel || '',
+        t.dataPlanejadaInicio ? formatDate(t.dataPlanejadaInicio) : '',
+        t.dataPlanejadaTermino ? formatDate(t.dataPlanejadaTermino) : '',
+        `${t.horasRealizadas||0}/${t.horasPlanejadas||0}`,
+        t.status || '',
+        t.pauseReason || '',
+        (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico) ? 'Sim' : 'Não'
+      ]);
+      
+      doc.autoTable({
+        startY: startY + 5,
+        head: tHeaders,
+        body: tRows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [21, 101, 192] }
+      });
+      startY = doc.lastAutoTable.finalY + 15;
+    }
+    
+    if (parts.length > 0) {
+      if (startY > 180) {
+        doc.addPage();
+        startY = 20;
+      }
+      doc.text('Lista de Peças / Falta de Peças:', 14, startY);
+      const pHeaders = [['Disciplina', 'Descrição/PN', 'Qtd', 'Solicitante', 'Data', 'Prioridade', 'Status', 'Previsão', 'Obs']];
+      const pRows = parts.map(p => [
+        p.disciplina || '',
+        p.descricao + (p.pn ? ' (PN: '+p.pn+')' : ''),
+        p.quantidade || 1,
+        p.solicitante || '',
+        p.dataSolicitacao ? formatDate(p.dataSolicitacao) : '',
+        p.prioridade || 'Normal',
+        p.status || 'Solicitada',
+        p.previsaoEntrega ? formatDate(p.previsaoEntrega) : '—',
+        p.observacao || ''
+      ]);
+      
+      doc.autoTable({
+        startY: startY + 5,
+        head: pHeaders,
+        body: pRows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [220, 38, 38] }
+      });
+    }
+
+    const filename = discipline ? `Tarefas_Pecas_${eq.codigo}_${discipline}.pdf` : `Relatorio_Completo_${eq.codigo}.pdf`;
+    doc.save(filename);
+    Toast.success('Exportação', 'Download do PDF concluído.');
+  }
+
   function exportTasksCSV(discipline = null) {
     if (!currentEqId) return;
     const eq = DB.equipment.get(currentEqId);
@@ -1497,7 +1579,7 @@ window.EquipmentPanel = (() => {
       return;
     }
     
-    const headers = ['Disciplina', 'Descrição', 'Responsável', 'Data Planejada Início', 'Data Planejada Término', 'Horas Planejadas', 'Horas Realizadas', 'Status', 'Caminho Crítico'];
+    const headers = ['Disciplina', 'Descrição', 'Responsável', 'Data Planejada Início', 'Data Planejada Término', 'Horas Planejadas', 'Horas Realizadas', 'Status', 'Motivo da Pausa / Peças', 'Caminho Crítico'];
     const rows = tasks.map(t => [
       t.disciplina || '',
       t.descricao || '',
@@ -1507,6 +1589,7 @@ window.EquipmentPanel = (() => {
       t.horasPlanejadas || 0,
       t.horasRealizadas || 0,
       t.status || '',
+      t.pauseReason || '',
       (window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico) ? 'Sim' : 'Não'
     ]);
     
@@ -1801,7 +1884,7 @@ window.EquipmentPanel = (() => {
   return { 
     render, toggleAccordion, addFollowUp, openTaskModal, saveTask, deleteTask, deleteTaskFromModal,
     updateTaskStatus, updateTaskField, openPartModal, savePart, deletePart, 
-    exportTasksCSV, deleteEquipment, toggleTaskExpand, addComment, editComment, 
+    exportTasksPDF, exportTasksCSV, deleteEquipment, toggleTaskExpand, addComment, editComment, 
     cancelCommentEdit, saveCommentEdit, deleteComment, renderComments,
     togglePartEntregue, onStatusFormChange, onEntregueFormChange,
     getEditingTaskId: () => editingTaskId,

@@ -8,7 +8,11 @@
   <title>DIMAN | Sistema inteligente da manutenção</title>
   <script>
     window.onerror = function(message, source, lineno, colno, error) {
-      document.body.innerHTML = '<div style="padding:20px;color:red;font-size:16px;"><b>Erro:</b> ' + message + '<br><b>Arquivo:</b> ' + source + ':' + lineno + '<br><b>Stack:</b> ' + (error ? error.stack : '') + '</div>';
+      if (message === 'Script error.' && !source) return; // Ignore un-actionable cross-origin script errors
+      const errDiv = document.createElement('div');
+      errDiv.style = "padding:20px;color:red;font-size:16px;background:#ffe6e6;border:1px solid red;margin:10px;z-index:9999;position:relative;";
+      errDiv.innerHTML = '<b>Erro:</b> ' + message + '<br><b>Arquivo:</b> ' + source + ':' + lineno + '<br><b>Stack:</b> ' + (error ? error.stack : '');
+      document.body.prepend(errDiv);
     };
   </script>
 
@@ -84,7 +88,7 @@
   <!-- Modules -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/layout.css?v=210" />
+  <link rel="stylesheet" href="css/layout.css?v=216" />
 
   <link rel="stylesheet" href="css/pro-dashboard.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -336,46 +340,46 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script src="js/core/events.js"></script>
-  <script src="js/core/db_v2.js?v=210"></script>
+  <script src="js/core/db_v2.js?v=216"></script>
   <script src="js/core/auth.js"></script>
   <script src="js/core/notifications.js"></script>
 
   <!-- 2. MODULES -->
   <!-- Empty stubs (superseded) -->
-  <script src="js/modules/labor-analysis.js?v=210"></script>
-  <script src="js/modules/dashboard.js?v=210"></script>
-  <script src="js/modules/equipment.js?v=210"></script>
+  <script src="js/modules/labor-analysis.js?v=216"></script>
+  <script src="js/modules/dashboard.js?v=216"></script>
+  <script src="js/modules/equipment.js?v=216"></script>
 
 
   <!-- Feature modules batches -->
-  <script src="js/modules/home_v2.js?v=210"></script>
-  <script src="js/modules/released.js?v=210"></script>
-  <script src="js/modules/waiting.js?v=210"></script>
-  <script src="js/modules/equipment-panel.js?v=210"></script>
-  <script src="js/modules/checklists.js?v=210"></script>
-  <script src="js/modules/equipment-table.js?v=210"></script>
-  <script src="js/modules/modules-1.js?v=210"></script>
-  <script src="js/modules/modules-2.js?v=210"></script>
-  <script src="js/modules/modules-3.js?v=210"></script>
-  <script src="js/modules/worker-panel.js?v=210"></script>
-  <script src="js/modules/workforce-time.js?v=210"></script>
-  <script src="js/modules/bonus.js?v=210"></script>
-  <script src="js/modules/attendance.js?v=210"></script>
-  <script src="js/modules/services.js?v=210"></script>
-  <script src="js/modules/manuals.js?v=210"></script>
-  <script src="js/modules/meetings.js?v=210"></script>
-  <script src="js/modules/vacations.js?v=210"></script>
-  <script src="js/modules/tasks-ongoing.js?v=210"></script>
+  <script src="js/modules/home_v2.js?v=216"></script>
+  <script src="js/modules/released.js?v=216"></script>
+  <script src="js/modules/waiting.js?v=216"></script>
+  <script src="js/modules/equipment-panel.js?v=216"></script>
+  <script src="js/modules/checklists.js?v=216"></script>
+  <script src="js/modules/modules-1.js?v=216"></script>
+  <script src="js/modules/modules-2.js?v=216"></script>
+  <script src="js/modules/modules-3.js?v=216"></script>
+  <script src="js/modules/worker-panel.js?v=216"></script>
+  <script src="js/modules/workforce-time.js?v=216"></script>
+  <script src="js/modules/bonus.js?v=216"></script>
+  <script src="js/modules/attendance.js?v=216"></script>
+  <script src="js/modules/services.js?v=216"></script>
+  <script src="js/modules/manuals.js?v=216"></script>
+  <script src="js/modules/meetings.js?v=216"></script>
+  <script src="js/modules/followup.js?v=216"></script>
+  <script src="js/modules/vacations.js?v=216"></script>
+  <script src="js/modules/tasks-ongoing.js?v=216"></script>
 
   <!-- D-1 | D | D+1 Panel -->
-  <script src="js/modules/d-panel.js?v=210"></script>
+  <script src="js/modules/d-panel.js?v=216"></script>
 
   <!-- QR Modules -->
-  <script src="js/modules/qr-generator.js?v=210"></script>
-  <script src="js/modules/qr-view_v2.js?v=210"></script>
+  <script src="js/modules/qr-generator.js?v=216"></script>
+  <script src="js/modules/qr-view_v2.js?v=216"></script>
 
   <!-- 3. APP BOOTSTRAP -->
-  <script src="js/app_v2.js?v=210"></script>
+  <script src="js/app_v2.js?v=216"></script>
 
   <!-- Loading screen removal -->
   <script>

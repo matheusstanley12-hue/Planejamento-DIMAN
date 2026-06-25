@@ -647,8 +647,8 @@ window.WorkforceModule = (() => {
     const timesheets = DB.timesheets.list();
     const today = new Date().toISOString().slice(0,10);
 
-    const monthTs = timesheets.filter(t => t.data && t.data.slice(0,7) === today.slice(0,7));
-    const totalHours = monthTs.reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
+    const monthTs = timesheets.filter(t => t.data && t.data.slice(0,7) === today.slice(0,7) && (!t.tipo || t.tipo === 'Trabalho'));
+    const totalHours = monthTs.filter(t => !t.tipo || t.tipo === 'Trabalho').reduce((s,t)=>s+(parseFloat(t.horasTrabalhadas)||0),0);
 
     return `<div class="page-container">
       <div class="section-header">
@@ -693,13 +693,13 @@ window.WorkforceModule = (() => {
                 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--space-4);margin-bottom:var(--space-6);">
                   ${sectorWorkers.map(w => {
                     if (!w) return '';
-                    const wHours = monthTs.filter(t=>t.workerId===w.id).reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
+                    const wHours = monthTs.filter(t=>t.workerId===w.id && (!t.tipo || t.tipo === 'Trabalho')).reduce((s,t)=>s+(parseFloat(t.horasTrabalhadas)||0),0);
                     
-                    const eq = w.equipmentId ? DB.equipment.get(w.equipmentId) : null;
-                    const isAllocated = eq && eq.status !== 'Liberado';
-                    const allocationBadge = isAllocated
-                      ? `<div style="margin:var(--space-1) 0"><span class="badge" style="background:rgba(255, 152, 0, 0.15);color:#ff9800;border:1px solid rgba(255,152,0,0.2);" title="${w.justificativa ? 'Justificativa: ' + w.justificativa : ''}">Alocado: ${eq.codigo}</span></div>
-                         ${w.justificativa ? `<div style="font-size:10px;color:var(--text-muted);font-style:italic;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px auto 0;" title="${w.justificativa}">${w.justificativa}</div>` : ''}`
+                    const eqIds = w.equipmentIds || (w.equipmentId ? [w.equipmentId] : []);
+                    const eqsAllocated = eqIds.map(id => DB.equipment.get(id)).filter(e => e && e.status !== 'Liberado');
+                    const allocationBadge = eqsAllocated.length > 0
+                      ? eqsAllocated.map(eq => `<div style="margin:var(--space-1) 0"><span class="badge" style="background:rgba(255, 152, 0, 0.15);color:#ff9800;border:1px solid rgba(255,152,0,0.2);" title="${w.justificativa ? 'Justificativa: ' + w.justificativa : ''}">Alocado: ${eq.codigo}</span></div>`).join('') +
+                        (w.justificativa ? `<div style="font-size:10px;color:var(--text-muted);font-style:italic;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px auto 0;" title="${w.justificativa}">${w.justificativa}</div>` : '')
                       : `<div style="margin:var(--space-1) 0"><span class="badge badge-success">Disponível</span></div>`;
 
                     return `<div class="card" style="text-align:center;padding:var(--space-4);display:flex;flex-direction:column;justify-content:space-between;min-height:280px;">
@@ -774,7 +774,7 @@ window.WorkforceModule = (() => {
             <tbody>
               ${workers.map(w => {
                 const wTs = monthTs.filter(t=>t.workerId===w.id);
-                const wHours = wTs.reduce((s,t)=>s+(t.horasTrabalhadas||0),0);
+                const wHours = wTs.filter(t => !t.tipo || t.tipo === 'Trabalho').reduce((s,t)=>s+(parseFloat(t.horasTrabalhadas)||0),0);
                 return `<tr>
                   <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(w.nome)}</div><span>${w.nome}</span></div></td>
                   <td>${w.disciplina}</td>
@@ -843,13 +843,16 @@ window.WorkforceModule = (() => {
   function renderWorkerForm(id = null) {
     const worker = id ? DB.workforce.get(id) : null;
     const allEqs = DB.equipment.list();
-    const currentEqId = worker?.equipmentId || '';
-    const eqs = allEqs.filter(e => e.status !== 'Liberado' || e.id === currentEqId);
+    const currentEqIds = (worker?.equipmentIds || (worker?.equipmentId ? [worker.equipmentId] : [])).filter(id => id);
+    const eqs = allEqs.filter(e => e.status !== 'Liberado' || currentEqIds.includes(e.id));
     
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canBypassLock = session && ['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil);
-    const isLocked = worker && currentEqId && allEqs.find(e => e.id === currentEqId)?.status !== 'Liberado' && !canBypassLock;
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
+    const canBypassLock = session && ['Administrador', 'Desenvolvedor', 'Gerente', 'Encarregado'].includes(session.perfil);
+    const isLocked = worker && currentEqIds.length > 0 && currentEqIds.some(id => {
+      const eq = allEqs.find(e => e.id === id);
+      return eq && eq.status !== 'Liberado';
+    }) && !canBypassLock;
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador'];
     
     const activeDiscs = [...discs];
@@ -904,10 +907,9 @@ window.WorkforceModule = (() => {
         </div>
       </div>
       <div class="form-group">
-        <label>Equipamento Alocado</label>
-        <select id="wk-eq" ${isLocked ? 'disabled style="background:var(--bg-base);cursor:not-allowed;"' : ''}>
-          <option value="">Nenhum / Disponível</option>
-          ${eqs.map(e => `<option value="${e.id}" ${e.id === currentEqId ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('')}
+        <label>Equipamentos Alocados (Segure CTRL p/ múltiplos)</label>
+        <select id="wk-eq" multiple size="4" style="height:auto;" ${isLocked ? 'disabled style="background:var(--bg-base);cursor:not-allowed;"' : ''}>
+          ${eqs.map(e => `<option value="${e.id}" ${currentEqIds.includes(e.id) ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('')}
         </select>
         ${isLocked ? `
           <div style="font-size:var(--text-xs);color:var(--color-warning);margin-top:4px;display:flex;align-items:center;gap:4px;">
@@ -931,7 +933,7 @@ window.WorkforceModule = (() => {
     if (!nome) { Toast.error('Erro', 'Nome é obrigatório'); return; }
     
     const eqEl = document.getElementById('wk-eq');
-    const equipmentId = eqEl ? eqEl.value : '';
+    const equipmentIds = eqEl ? Array.from(eqEl.selectedOptions).map(opt => opt.value) : [];
     const justificativa = document.getElementById('wk-just').value.trim();
     
     const data = {
@@ -942,9 +944,12 @@ window.WorkforceModule = (() => {
       centroCusto: document.getElementById('wk-cc').value,
       status: document.getElementById('wk-status').value,
       turno: document.getElementById('wk-turno').value,
-      equipmentId,
+      equipmentIds,
+      equipmentId: equipmentIds.length > 0 ? equipmentIds[0] : '',
       justificativa
     };
+    
+    const oldWorker = editingWorkerId ? DB.workforce.get(editingWorkerId) : null;
     
     if (editingWorkerId) {
       DB.workforce.update(editingWorkerId, data);
@@ -953,6 +958,29 @@ window.WorkforceModule = (() => {
       DB.workforce.create(data);
       Toast.success('Funcionário cadastrado!', nome);
     }
+    
+    // Sync with Equipment workforceMap so it shows up in the Equipment Card
+    if (oldWorker) {
+      const oldEqIds = oldWorker.equipmentIds || (oldWorker.equipmentId ? [oldWorker.equipmentId] : []);
+      oldEqIds.forEach(id => {
+        if (!equipmentIds.includes(id)) {
+          const oldEq = DB.equipment.get(id);
+          if (oldEq && oldEq.workforceMap && oldEq.workforceMap[oldWorker.disciplina] === oldWorker.nome) {
+            oldEq.workforceMap[oldWorker.disciplina] = '';
+            DB.equipment.update(oldEq.id, oldEq);
+          }
+        }
+      });
+    }
+    
+    equipmentIds.forEach(id => {
+      const newEq = DB.equipment.get(id);
+      if (newEq) {
+        if (!newEq.workforceMap) newEq.workforceMap = {};
+        newEq.workforceMap[data.disciplina] = data.nome;
+        DB.equipment.update(newEq.id, newEq);
+      }
+    });
     
     closeModal('modal-worker');
     Router.navigate('workforce', { force: true });
@@ -1129,7 +1157,7 @@ window.RestrictionsModule = (() => {
   function openCreate() {
     const eqs = DB.equipment.list();
     const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho'];
+    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('restriction-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Tipo *</label><select id="rs-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
       <div class="form-group"><label>Equipamento</label><select id="rs-eq"><option value="">—</option>${eqs.map(e=>`<option value="${e.id}">${e.codigo}</option>`).join('')}</select></div></div>

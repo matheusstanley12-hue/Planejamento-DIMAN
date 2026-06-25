@@ -22,13 +22,15 @@ window.DB = (() => {
     costs: 'diman_costs',
     lessons: 'diman_lessons',
     notifications: 'diman_notifications',
-    meetingTasks: 'diman_meeting_tasks',
     kpiCache: 'diman_kpi_cache',
     settings: 'diman_settings',
     solicitacoes: 'diman_solicitacoes',
     users: 'diman_users',
     audit: 'diman_audit',
     manuals: 'diman_manuals',
+    manualFolders: 'diman_manual_folders',
+    meetingTasks: 'diman_meeting_tasks',
+    followupTasks: 'diman_followup_tasks',
     vacations: 'diman_vacations'
   };
 
@@ -47,6 +49,35 @@ window.DB = (() => {
   window.setGlobalEqFilter = setGlobalEqFilter;
 
   function now() { return new Date().toISOString(); }
+
+  // Clean up any corrupted backups that may be consuming quota
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.includes('_corrupted_')) {
+        localStorage.removeItem(k);
+        i--;
+      }
+    }
+  } catch(e) {}
+
+  function stripLargeFields(collection, arr) {
+    if (collection !== KEYS.tasks) return arr;
+    return arr.map(t => {
+       if (t && t.status === 'Concluída' && t.updatedAt) {
+          const diffDays = (new Date() - new Date(t.updatedAt)) / (1000 * 60 * 60 * 24);
+          if (diffDays > 3) { // Remove photos from tasks completed more than 3 days ago locally to save memory
+             if (t.fotoComprovacao || (t.anexos && t.anexos.length)) {
+                const copy = { ...t };
+                delete copy.fotoComprovacao;
+                delete copy.anexos;
+                return copy;
+             }
+          }
+       }
+       return t;
+    });
+  }
 
   const INITIAL_DATA = {
     [KEYS.equipment]: [
@@ -129,12 +160,25 @@ window.DB = (() => {
   };
 
   function get(key) {
-    try { 
-      const val = localStorage.getItem(key);
-      if (val) return JSON.parse(val);
-      return INITIAL_DATA[key] || [];
-    }
-    catch (e) { 
+    try {
+      const d = localStorage.getItem(key);
+      let arr = d ? JSON.parse(d) : INITIAL_DATA[key] || [];
+      if (Array.isArray(arr) && arr.length > 0 && arr[0] && arr[0].id) {
+         const latestMap = new Map();
+         arr.forEach(item => {
+            const existing = latestMap.get(item.id);
+            if (!existing) {
+               latestMap.set(item.id, item);
+            } else {
+               const existTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+               const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+               if (newTime > existTime) latestMap.set(item.id, item);
+            }
+         });
+         arr = Array.from(latestMap.values());
+      }
+      return arr;
+    } catch (e) { 
       console.error('Storage error for key: ' + key, e);
       const val = localStorage.getItem(key);
       if (val) {
@@ -159,15 +203,24 @@ window.DB = (() => {
     
     syncTimeouts[collection] = setTimeout(async () => {
       try {
+        let upsertPayload = [];
+        if (Array.isArray(data) && data.length > 0 && data[0] && data[0].id) {
+           upsertPayload = data.filter(Boolean).map(item => ({ collection: collection, key: item.id, data: item, updated_at: new Date().toISOString() }));
+           // Clear out legacy 'all' key to prevent deleted items from coming back
+           upsertPayload.push({ collection: collection, key: 'all', data: [], updated_at: new Date().toISOString() });
+        } else {
+           upsertPayload = { collection: collection, key: 'all', data: data, updated_at: new Date().toISOString() };
+        }
+
         const { error } = await supabaseClient.from('diman_store')
-          .upsert({ collection: collection, key: 'all', data: data }, { onConflict: 'collection,key' });
+          .upsert(upsertPayload, { onConflict: 'collection,key' });
         
         if (error) {
           console.error('Supabase Sync Error:', error);
           localStorage.setItem('diman_unsynced', 'true');
         } else {
           // If no other pending syncs exist, we can mark as fully synced
-          if (Object.values(syncTimeouts).length === 0 || localStorage.getItem('diman_unsynced') !== 'true') {
+          if (Object.values(syncTimeouts).length <= 1 || localStorage.getItem('diman_unsynced') !== 'true') {
              localStorage.setItem('diman_unsynced', 'false');
           }
         }
@@ -178,9 +231,44 @@ window.DB = (() => {
       delete syncTimeouts[collection];
     }, 1000);
   }
+
+  async function deleteFromSupabase(collection, key) {
+     if (!supabaseClient) return;
+     try {
+        await supabaseClient.from('diman_store').delete().match({ collection: collection, key: key });
+     } catch (err) {
+        console.error('Supabase Delete Error:', err);
+     }
+  }
   function set(key, data) { 
-    localStorage.setItem(key, JSON.stringify(data)); 
+    let oldData = [];
+    try { oldData = JSON.parse(localStorage.getItem(key)) || []; } catch(e){}
+    
+    if (Array.isArray(oldData) && Array.isArray(data)) {
+       const newIds = new Set(data.filter(Boolean).map(i => i.id).filter(Boolean));
+       const deletedItems = oldData.filter(i => i && i.id && !newIds.has(i.id));
+       deletedItems.forEach(item => {
+           deleteFromSupabase(key, item.id);
+       });
+    }
+
+    let localDataToSave = data;
+    if (Array.isArray(data)) {
+       localDataToSave = stripLargeFields(key, data);
+    }
+
+    try {
+      localStorage.setItem(key, JSON.stringify(localDataToSave)); 
+    } catch(err) {
+      if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos ou use links.', 8000);
+        return false;
+      }
+      throw err;
+    }
+    
     syncToSupabase(key, data);
+    return true;
   }
   function uid(prefix = 'id') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
 
@@ -194,8 +282,14 @@ window.DB = (() => {
       const data = get(k);
       if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
         try {
+          let upsertPayload = [];
+          if (Array.isArray(data) && data.length > 0 && data[0] && data[0].id) {
+             upsertPayload = data.map(item => ({ collection: k, key: item.id, data: item, updated_at: new Date().toISOString() }));
+          } else {
+             upsertPayload = { collection: k, key: 'all', data: data, updated_at: new Date().toISOString() };
+          }
           const { error } = await supabaseClient.from('diman_store')
-            .upsert({ collection: k, key: 'all', data: data }, { onConflict: 'collection,key' });
+            .upsert(upsertPayload, { onConflict: 'collection,key' });
           if (error) {
              console.error('Supabase Error:', error);
              if (window.Toast) window.Toast.error('Erro do Banco de Dados', error.message || JSON.stringify(error));
@@ -237,11 +331,57 @@ window.DB = (() => {
           console.log('[DIMAN] Existem alterações locais não sincronizadas. O pull inicial foi cancelado e faremos o push local agora.');
           await forceSyncAll();
         } else {
+          const groupedData = {};
+          const allData = {};
+          
           data.forEach(row => {
             if (row.key === 'all') {
-              localStorage.setItem(row.collection, JSON.stringify(row.data));
+              allData[row.collection] = row.data;
+            } else {
+              if (!groupedData[row.collection]) groupedData[row.collection] = [];
+              groupedData[row.collection].push(row.data);
             }
           });
+          
+          // First set the 'all' collections
+          for (const [collection, arr] of Object.entries(allData)) {
+            localStorage.setItem(collection, JSON.stringify(arr));
+          }
+          
+          // Then merge the individual rows into them
+          for (const [collection, arr] of Object.entries(groupedData)) {
+            let baseArr = [];
+            try { baseArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
+            if (!Array.isArray(baseArr)) baseArr = [];
+            
+            // Map by id to prevent duplicates and prefer the newest row
+            const mergedMap = new Map();
+            baseArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+            arr.forEach(item => { 
+              if (item && item.id) {
+                const existing = mergedMap.get(item.id);
+                const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                
+                // Enforce: once finalized, never reverts
+                if (existing && existing.status === 'Concluída' && item.status !== 'Concluída') {
+                   item.status = 'Concluída';
+                   item.pctExecutado = 100;
+                   if (existing.dataRealTermino && !item.dataRealTermino) item.dataRealTermino = existing.dataRealTermino;
+                }
+
+                // If it's from individual row, we prefer it unless base is strictly newer
+                if (!existing || newTime >= existTime) {
+                  mergedMap.set(item.id, item);
+                }
+              }
+            });
+            
+            let finalArray = Array.from(mergedMap.values());
+            finalArray = stripLargeFields(collection, finalArray);
+            
+            try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
+          }
         }
       }
 
@@ -249,27 +389,112 @@ window.DB = (() => {
       supabaseClient
         .channel('diman-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'diman_store' }, payload => {
-          if (payload.new && payload.new.key === 'all') {
-            // Ignore photos in realtime to save local storage and memory
-            if (payload.new.collection && payload.new.collection.startsWith('photo_')) return;
+          if (localStorage.getItem('diman_unsynced') === 'true') {
+            console.log('[DIMAN] Ignorando atualização em tempo real (dados locais em sincronização pendente).');
+            return;
+          }
 
-            localStorage.setItem(payload.new.collection, JSON.stringify(payload.new.data));
-            if (window.Router) {
-              const current = window.Router.getCurrent();
-              const liveViews = ['dashboard', 'manager-dashboard'];
-              
-              if (current && liveViews.includes(current)) {
-                // Auto-refresh ONLY on dashboard views (TV screens, charts)
-                const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
-                if (!hasOpenModal) {
-                  window.Router.navigate(current, { force: true });
-                }
+          if (payload.eventType === 'DELETE' && payload.old) {
+            const row = payload.old;
+            if (row.key === 'all') return;
+            let localArr = [];
+            try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
+            if (Array.isArray(localArr)) {
+               localArr = localArr.filter(i => i && i.id !== row.key);
+               localStorage.setItem(row.collection, JSON.stringify(localArr));
+            }
+          } else if (payload.new) {
+            const row = payload.new;
+            if (row.collection && row.collection.startsWith('photo_')) return;
+            
+            if (row.key === 'all') {
+              if (Array.isArray(row.data) && row.data.length > 0 && row.data[0] && row.data[0].id) {
+                 let localArr = [];
+                 try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
+                 if (!Array.isArray(localArr)) localArr = [];
+                 const mergedMap = new Map();
+                 localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+                 row.data.forEach(item => {
+                    if (item && item.id) {
+                       const existing = mergedMap.get(item.id);
+                       const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                       const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                       
+                       // Enforce: once finalized, never reverts
+                       if (existing && existing.status === 'Concluída' && item.status !== 'Concluída') {
+                          item.status = 'Concluída';
+                          item.pctExecutado = 100;
+                          if (existing.dataRealTermino && !item.dataRealTermino) item.dataRealTermino = existing.dataRealTermino;
+                       }
+
+                       if (!existing || newTime > existTime) {
+                          mergedMap.set(item.id, item);
+                       }
+                    }
+                 });
+                 
+                 let finalArray = Array.from(mergedMap.values());
+                 finalArray = stripLargeFields(row.collection, finalArray);
+                 try { localStorage.setItem(row.collection, JSON.stringify(finalArray)); } catch(e) {}
+              } else if (Array.isArray(row.data) && row.data.length === 0) {
+                 // Clear legacy 'all' key from local storage if the server sends an empty array (from new clients)
+                 // Wait, we don't want to clear the local array if it's already using individual keys!
+                 // So do nothing if it's an empty array sent to clear legacy data
+                 if (!localStorage.getItem(row.collection)) {
+                    localStorage.setItem(row.collection, '[]');
+                 }
               } else {
-                // On interactive views (tasks, equipments, worker-panel), do not disrupt the user with forced reloads.
-                if (window.Toast) {
-                  // Use a distinct ID or simple message so it doesn't spam
-                  // window.Toast.info('Sincronização', 'Dados atualizados. Recarregue a página para ver as mudanças.', 3000);
-                }
+                 localStorage.setItem(row.collection, JSON.stringify(row.data));
+              }
+            } else {
+              // Individual row updated
+              let localArr = [];
+              try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
+              if (!Array.isArray(localArr)) localArr = [];
+              
+              const idx = localArr.findIndex(i => i && i.id === row.key);
+              
+              let itemToSave = row.data;
+              if (row.collection === KEYS.tasks && itemToSave.status === 'Concluída' && itemToSave.updatedAt) {
+                  const diffDays = (new Date() - new Date(itemToSave.updatedAt)) / (1000 * 60 * 60 * 24);
+                  if (diffDays > 3) {
+                     itemToSave = { ...itemToSave };
+                     delete itemToSave.fotoComprovacao;
+                     delete itemToSave.anexos;
+                  }
+              }
+
+              if (idx !== -1) {
+                 const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
+                 const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
+                 
+                 // Enforce: once finalized, never reverts
+                 if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
+                    itemToSave.status = 'Concluída';
+                    itemToSave.pctExecutado = 100;
+                    if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
+                 }
+
+                 if (newTime >= existTime) {
+                    localArr[idx] = itemToSave;
+                 }
+              } else {
+                 localArr.push(itemToSave);
+              }
+              try { localStorage.setItem(row.collection, JSON.stringify(localArr)); } catch(e) {}
+            }
+          }
+
+          if (window.Router) {
+            const current = window.Router.getCurrent();
+            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home'];
+            if (current && liveViews.includes(current)) {
+              const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
+              if (!hasOpenModal) {
+                if (window._syncRenderTimeout) clearTimeout(window._syncRenderTimeout);
+                window._syncRenderTimeout = setTimeout(() => {
+                  window.Router.navigate(current, { force: true });
+                }, 800);
               }
             }
           }
@@ -330,7 +555,7 @@ window.DB = (() => {
   // ==================== EQUIPMENT ====================
   const equipment = {
     list: () => get(KEYS.equipment),
-    get: id => get(KEYS.equipment).find(e => e.id === id),
+    get: id => get(KEYS.equipment).find(e => String(e.id) === String(id)),
     create(data) {
       const items = get(KEYS.equipment);
       const item = { id: uid('eq'), ...data, createdAt: now(), updatedAt: now(), timeline: [], replanning: [] };
@@ -342,7 +567,7 @@ window.DB = (() => {
     },
     update(id, data) {
       const items = get(KEYS.equipment);
-      const idx = items.findIndex(e => e.id === id);
+      const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
@@ -369,8 +594,8 @@ window.DB = (() => {
     },
     delete(id) {
       const items = get(KEYS.equipment);
-      const eq = items.find(e => e.id === id);
-      set(KEYS.equipment, items.filter(e => e.id !== id));
+      const eq = items.find(e => String(e.id) === String(id));
+      set(KEYS.equipment, items.filter(e => String(e.id) !== String(id)));
       if (eq) { 
         if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('DELETE_EQUIPMENT', `Equipamento ${eq.nome} removido`, null); 
         if (window.events && window.events.emit) window.events.emit('equipment:deleted', id); 
@@ -379,7 +604,7 @@ window.DB = (() => {
     },
     addTimeline(id, event) {
       const items = get(KEYS.equipment);
-      const idx = items.findIndex(e => e.id === id);
+      const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return;
       if (!items[idx].timeline) items[idx].timeline = [];
       items[idx].timeline.push({ id: uid('tl'), ...event, timestamp: now() });
@@ -389,7 +614,7 @@ window.DB = (() => {
     },
     addReplanning(id, data) {
       const items = get(KEYS.equipment);
-      const idx = items.findIndex(e => e.id === id);
+      const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return;
       if (!items[idx].replanning) items[idx].replanning = [];
       const n = items[idx].replanning.length + 1;
@@ -409,7 +634,7 @@ window.DB = (() => {
       const eqFilter = equipmentId || window.GlobalEqFilter;
       return get(KEYS.tasks).filter(t => !eqFilter || t.equipmentId === eqFilter);
     },
-    get: id => get(KEYS.tasks).find(t => t.id === id),
+    get: id => get(KEYS.tasks).find(t => String(t.id) === String(id)),
     create(data) {
       const items = get(KEYS.tasks);
       const item = { id: uid('tk'), ...data, status: data.status || 'Não Iniciada', pctExecutado: data.pctExecutado || 0, createdAt: now(), updatedAt: now() };
@@ -422,9 +647,16 @@ window.DB = (() => {
     },
     update(id, data) {
       const items = get(KEYS.tasks);
-      const idx = items.findIndex(t => t.id === id);
+      const idx = items.findIndex(t => String(t.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
+      
+      // Enforce: once finalized, never reverts
+      if (before.status === 'Concluída' && data.status && data.status !== 'Concluída') {
+          data.status = 'Concluída';
+          data.pctExecutado = 100;
+      }
+      
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.tasks, items);
       Auth.addAuditLog('UPDATE_TASK', `Tarefa ${items[idx].descricao} atualizada`, { before, after: items[idx] });
@@ -437,7 +669,7 @@ window.DB = (() => {
     },
     delete(id) {
       const items = get(KEYS.tasks);
-      const t = items.find(x => x.id === id);
+      const t = items.find(x => String(x.id) === String(id));
       set(KEYS.tasks, items.filter(x => x.id !== id));
       if (t) { 
         Auth.addAuditLog('DELETE_TASK', `Tarefa ${t.descricao} removida`, null); 
@@ -458,7 +690,7 @@ window.DB = (() => {
       const eqFilter = equipmentId || window.GlobalEqFilter;
       return get(KEYS.parts).filter(p => !eqFilter || p.equipmentId === eqFilter);
     },
-    get: id => get(KEYS.parts).find(p => p.id === id),
+    get: id => get(KEYS.parts).find(p => String(p.id) === String(id)),
     create(data) {
       const items = get(KEYS.parts);
       const item = { id: uid('pt'), ...data, status: data.status || 'Solicitada', createdAt: now(), updatedAt: now() };
@@ -494,7 +726,7 @@ window.DB = (() => {
   // ==================== WORKFORCE ====================
   const workforce = {
     list: () => get(KEYS.workforce),
-    get: id => get(KEYS.workforce).find(w => w.id === id),
+    get: id => get(KEYS.workforce).find(w => String(w.id) === String(id)),
     create(data) {
       const items = get(KEYS.workforce);
       const item = { id: uid('wf'), ...data, createdAt: now() };
@@ -505,17 +737,17 @@ window.DB = (() => {
     },
     update(id, data) {
       const items = get(KEYS.workforce);
-      const idx = items.findIndex(w => w.id === id);
+      const idx = items.findIndex(w => String(w.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
-      items[idx] = { ...items[idx], ...data };
+      items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.workforce, items);
       Auth.addAuditLog('UPDATE_WORKER', `Trabalhador ${items[idx].nome} atualizado`, { before, after: items[idx] });
       return items[idx];
     },
     delete(id) {
       const items = get(KEYS.workforce);
-      const w = items.find(x => x.id === id);
+      const w = items.find(x => String(x.id) === String(id));
       set(KEYS.workforce, items.filter(x => x.id !== id));
       if (w) Auth.addAuditLog('DELETE_WORKER', `Trabalhador ${w.nome} removido`, null);
     }
@@ -535,6 +767,7 @@ window.DB = (() => {
       if (filters.date)        items = items.filter(t => t.data === filters.date);
       return items;
     },
+    getAll: () => get(KEYS.timesheets),
     create(data) {
       const items = get(KEYS.timesheets);
       const item = { id: uid('ts'), ...data, createdAt: now() };
@@ -631,7 +864,7 @@ window.DB = (() => {
       const eqFilter = window.GlobalEqFilter;
       return get(KEYS.lessons).filter(l => !eqFilter || l.equipmentId === eqFilter);
     },
-    get: id => get(KEYS.lessons).find(l => l.id === id),
+    get: id => get(KEYS.lessons).find(l => String(l.id) === String(id)),
     create(data) {
       const items = get(KEYS.lessons);
       const item = { id: uid('ll'), ...data, createdAt: now() };
@@ -642,13 +875,13 @@ window.DB = (() => {
     },
     update(id, data) {
       const items = get(KEYS.lessons);
-      const idx = items.findIndex(l => l.id === id);
+      const idx = items.findIndex(l => String(l.id) === String(id));
       if (idx === -1) return null;
       items[idx] = { ...items[idx], ...data };
       set(KEYS.lessons, items);
       return items[idx];
     },
-    delete(id) { set(KEYS.lessons, get(KEYS.lessons).filter(l => l.id !== id)); },
+    delete(id) { set(KEYS.lessons, get(KEYS.lessons).filter(l => String(l.id) !== String(id))); },
     search(query) {
       const q = query.toLowerCase();
       return get(KEYS.lessons).filter(l =>
@@ -775,6 +1008,11 @@ window.DB = (() => {
     const allTasks = get(KEYS.tasks).filter(t => t.equipmentId === equipmentId);
     const total = allTasks.length;
     let pct = 0;
+    
+    // Calculate max task end date for automatic prediction
+    const taskDates = allTasks.map(t => t.dataReplanejada || t.dataPlanejadaTermino).filter(Boolean).sort();
+    const maxTaskDate = taskDates.length > 0 ? taskDates[taskDates.length - 1] : null;
+
     if (total > 0) {
       const sum = allTasks.reduce((s, t) => s + (t.pctExecutado || 0), 0);
       pct = Math.round(sum / total);
@@ -783,8 +1021,17 @@ window.DB = (() => {
     const items = get(KEYS.equipment);
     const idx = items.findIndex(e => e.id === equipmentId);
     if (idx !== -1) {
+      let changed = false;
       if (items[idx].pctAvanco !== pct) {
         items[idx].pctAvanco = pct;
+        changed = true;
+      }
+      if (maxTaskDate && items[idx].dataLiberacaoAtual !== maxTaskDate) {
+        items[idx].dataLiberacaoAtual = maxTaskDate;
+        changed = true;
+      }
+      
+      if (changed) {
         items[idx].updatedAt = now();
         set(KEYS.equipment, items);
         if (window.events && window.events.emit) {
@@ -869,16 +1116,31 @@ window.DB = (() => {
   // Seed workforce if missing (for existing clients)
   setTimeout(() => {
     try {
-      let currentWf = workforce.list();
+      let currentWf = workforce.list() || [];
+      let updatedAny = false;
+      
+      // Ensure all existing workers have an ID to prevent Supabase sync crashes
+      currentWf.forEach(w => {
+         if (!w.id) {
+            w.id = window.DB.uid ? window.DB.uid('wf') : `wf-${Date.now()}-${Math.random()}`;
+            if (!w.currentState) {
+               w.currentState = 'Ocioso';
+               w.currentTaskId = null;
+            }
+            updatedAny = true;
+         }
+      });
+      
       let seeded = false;
       if (INITIAL_DATA[KEYS.workforce]) {
         INITIAL_DATA[KEYS.workforce].forEach(seed => {
           if (!currentWf.find(w => w.matricula === seed.matricula)) {
-            currentWf.push(seed);
-            seeded = true;
+             seed.id = seed.id || window.DB.uid('wf');
+             currentWf.push({ ...seed, currentState: 'Ocioso', currentTaskId: null, currentPauseReason: '', currentActionStartTime: null });
+             seeded = true;
           }
         });
-        if (seeded) {
+        if (seeded || updatedAny) {
           localStorage.setItem(KEYS.workforce, JSON.stringify(currentWf));
           if (window.DB && DB.syncToSupabase) DB.syncToSupabase(KEYS.workforce, currentWf);
         }
@@ -888,34 +1150,52 @@ window.DB = (() => {
 
   const solicitacoes = {
     list: () => get(KEYS.solicitacoes),
-    add: (data) => { const s = get(KEYS.solicitacoes); s.push(data); set(KEYS.solicitacoes, s); },
-    update: (id, updates) => { let s = get(KEYS.solicitacoes); const i = s.findIndex(r => r.id === id); if (i !== -1) { s[i] = { ...s[i], ...updates, updatedAt: now() }; set(KEYS.solicitacoes, s); } },
-    delete: (id) => { const s = get(KEYS.solicitacoes); set(KEYS.solicitacoes, s.filter(r => r.id !== id)); }
+    add: (data) => { const s = get(KEYS.solicitacoes); s.push({ ...data, createdAt: now() }); set(KEYS.solicitacoes, s); },
+    update: (id, updates) => { let s = get(KEYS.solicitacoes); const i = s.findIndex(r => r && r.id === id); if (i !== -1) { s[i] = { ...s[i], ...updates, updatedAt: now() }; set(KEYS.solicitacoes, s); } },
+    delete: (id) => { const s = get(KEYS.solicitacoes); set(KEYS.solicitacoes, s.filter(r => r && r.id !== id)); }
   };
 
   const manuals = {
     list: () => get(KEYS.manuals),
-    add: (data) => { const m = get(KEYS.manuals); m.push({ ...data, createdAt: now() }); set(KEYS.manuals, m); },
-    update: (id, updates) => { let m = get(KEYS.manuals); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.manuals, m); } },
-    delete: (id) => { const m = get(KEYS.manuals); set(KEYS.manuals, m.filter(r => r.id !== id)); }
+    add: (data) => {
+      const m = get(KEYS.manuals);
+      m.push({ ...data, createdAt: now() });
+      return set(KEYS.manuals, m);
+    },
+    update: (id, updates) => { let m = get(KEYS.manuals); const i = m.findIndex(r => r && r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.manuals, m); } },
+    delete: (id) => { const m = get(KEYS.manuals); set(KEYS.manuals, m.filter(r => r && r.id !== id)); }
+  };
+
+  const manualFolders = {
+    list: () => get(KEYS.manualFolders),
+    add: (data) => { const m = get(KEYS.manualFolders); m.push({ ...data, createdAt: now() }); set(KEYS.manualFolders, m); },
+    update: (id, updates) => { let m = get(KEYS.manualFolders); const i = m.findIndex(r => r && r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.manualFolders, m); } },
+    delete: (id) => { const m = get(KEYS.manualFolders); set(KEYS.manualFolders, m.filter(r => r && r.id !== id)); }
   };
 
   const meetingTasks = {
     list: () => get(KEYS.meetingTasks),
     add: (data) => { const m = get(KEYS.meetingTasks); m.push({ ...data, createdAt: now() }); set(KEYS.meetingTasks, m); },
-    update: (id, updates) => { let m = get(KEYS.meetingTasks); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.meetingTasks, m); } },
-    delete: (id) => { const m = get(KEYS.meetingTasks); set(KEYS.meetingTasks, m.filter(r => r.id !== id)); }
+    update: (id, updates) => { let m = get(KEYS.meetingTasks); const i = m.findIndex(r => r && r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.meetingTasks, m); } },
+    delete: (id) => { const m = get(KEYS.meetingTasks); set(KEYS.meetingTasks, m.filter(r => r && r.id !== id)); }
+  };
+
+  const followupTasks = {
+    list: () => get(KEYS.followupTasks),
+    add: (data) => { const m = get(KEYS.followupTasks); m.push({ ...data, createdAt: now() }); set(KEYS.followupTasks, m); },
+    update: (id, updates) => { let m = get(KEYS.followupTasks); const i = m.findIndex(r => r && r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.followupTasks, m); } },
+    delete: (id) => { const m = get(KEYS.followupTasks); set(KEYS.followupTasks, m.filter(r => r && r.id !== id)); }
   };
 
   const vacations = {
     list: () => get(KEYS.vacations),
     add: (data) => { const m = get(KEYS.vacations); m.push({ ...data, createdAt: now() }); set(KEYS.vacations, m); },
-    update: (id, updates) => { let m = get(KEYS.vacations); const i = m.findIndex(r => r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.vacations, m); } },
-    delete: (id) => { const m = get(KEYS.vacations); set(KEYS.vacations, m.filter(r => r.id !== id)); }
+    update: (id, updates) => { let m = get(KEYS.vacations); const i = m.findIndex(r => r && r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.vacations, m); } },
+    delete: (id) => { const m = get(KEYS.vacations); set(KEYS.vacations, m.filter(r => r && r.id !== id)); }
   };
 
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, meetingTasks, vacations, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);

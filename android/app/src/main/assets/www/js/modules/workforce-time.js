@@ -32,16 +32,24 @@ window.WorkforceTimeModule = (() => {
     const tasks = DB.tasks.getAll();
     const timesheets = DB.timesheets ? DB.timesheets.list() : [];
 
+    let filteredTasks = tasks;
+
     // Calculate live metrics
     let trabalhandoCount = 0;
     let pausaCount = 0;
     let ociosoCount = 0;
 
     workers.forEach(w => {
-      if (w.currentState === 'Trabalhando') trabalhandoCount++;
-      else if (w.currentState === 'Em Pausa') pausaCount++;
-      else ociosoCount++;
+      if (w.currentState === 'Trabalhando') {
+        trabalhandoCount++;
+      } else if (w.currentState === 'Em Pausa') {
+        pausaCount++;
+      } else {
+        ociosoCount++;
+      }
     });
+
+    let faltaDePecaCount = filteredTasks.filter(t => t.status === 'Aguardando Peça').length;
 
     const totalWorkers = workers.length;
 
@@ -150,22 +158,26 @@ window.WorkforceTimeModule = (() => {
       });
 
       contentHtml = `
-        <div style="display:flex;gap:var(--space-4);margin-bottom:var(--space-6);flex-wrap:wrap;">
-          <div style="flex:1;min-width:150px;background:var(--bg-card);border:1px solid var(--border-card);padding:var(--space-4);border-radius:var(--radius-lg);text-align:center;">
-            <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:bold;">Total Executantes</div>
-            <div style="font-size:24px;font-weight:900;color:var(--text-primary);">${totalWorkers}</div>
+        <div style="display:flex;gap:var(--space-4);margin-top:var(--space-4);flex-wrap:wrap;">
+          <div style="flex:1;min-width:180px;background:#fff;border:1px solid #f1f5f9;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:0.5px;">TOTAL EXECUTANTES</div>
+            <div style="font-size:2rem;font-weight:900;color:var(--text-primary);margin-top:4px;">${totalWorkers}</div>
           </div>
-          <div style="flex:1;min-width:150px;background:var(--color-success-bg);border:1px solid var(--color-success);padding:var(--space-4);border-radius:var(--radius-lg);text-align:center;">
-            <div style="font-size:12px;color:var(--color-success);text-transform:uppercase;font-weight:bold;">Trabalhando Agora</div>
-            <div style="font-size:24px;font-weight:900;color:var(--color-success);">${trabalhandoCount}</div>
+          <div style="flex:1;min-width:180px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:11px;font-weight:800;color:#166534;letter-spacing:0.5px;">TRABALHANDO AGORA</div>
+            <div style="font-size:2rem;font-weight:900;color:#15803d;margin-top:4px;">${trabalhandoCount}</div>
           </div>
-          <div style="flex:1;min-width:150px;background:var(--color-warning-bg);border:1px solid var(--color-warning);padding:var(--space-4);border-radius:var(--radius-lg);text-align:center;">
-            <div style="font-size:12px;color:var(--color-warning);text-transform:uppercase;font-weight:bold;">Em Pausa</div>
-            <div style="font-size:24px;font-weight:900;color:var(--color-warning);">${pausaCount}</div>
+          <div style="flex:1;min-width:180px;background:#fffbeb;border:1px solid #fde68a;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:11px;font-weight:800;color:#b45309;letter-spacing:0.5px;">EM PAUSA</div>
+            <div style="font-size:2rem;font-weight:900;color:#d97706;margin-top:4px;">${pausaCount}</div>
           </div>
-          <div style="flex:1;min-width:150px;background:var(--bg-base);border:1px dashed var(--border-card);padding:var(--space-4);border-radius:var(--radius-lg);text-align:center;">
-            <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:bold;">Ociosos</div>
-            <div style="font-size:24px;font-weight:900;color:var(--text-muted);">${ociosoCount}</div>
+          <div style="flex:1;min-width:180px;background:#fef2f2;border:1px solid #fecaca;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:11px;font-weight:800;color:#b91c1c;letter-spacing:0.5px;">TAREFAS AGUARDANDO PEÇAS</div>
+            <div style="font-size:2rem;font-weight:900;color:#ef4444;margin-top:4px;">${faltaDePecaCount}</div>
+          </div>
+          <div style="flex:1;min-width:180px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:var(--space-4);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:11px;font-weight:800;color:var(--text-secondary);letter-spacing:0.5px;">OCIOSOS</div>
+            <div style="font-size:2rem;font-weight:900;color:var(--text-muted);margin-top:4px;">${ociosoCount}</div>
           </div>
         </div>
 

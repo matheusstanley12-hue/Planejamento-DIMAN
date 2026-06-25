@@ -127,7 +127,7 @@ window.BonusModule = (() => {
 
     timesheets.filter(t => new Date(t.data) >= startDate && new Date(t.data) <= endDate).forEach(t => {
       let w = wfList.find(x => x.id === t.workerId || x.nome === t.workerName);
-      if (w && workerStats[w.nome] && t.tipo !== 'Falta' && t.tipo !== 'Atestado') {
+      if (w && workerStats[w.nome] && (!t.tipo || t.tipo === 'Trabalho')) {
         if (!workerStats[w.nome].horasPorDia[t.data]) workerStats[w.nome].horasPorDia[t.data] = 0;
         workerStats[w.nome].horasPorDia[t.data] += parseFloat(t.horasTrabalhadas || 0);
       }
@@ -201,20 +201,20 @@ window.BonusModule = (() => {
           </td>
 
           <td style="padding:15px;text-align:center;">
-            <div style="display:flex;gap:4px;justify-content:center;">
+             <div style="display:flex;gap:4px;justify-content:center;">
                <div>
                  <span style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;">Faltas</span>
-                 <input type="number" min="0" step="1" class="form-control" style="width:40px;text-align:center;padding:4px;font-size:12px;height:auto;" value="${pen.faltas}" onblur="window.updatePenalidade('${w.id}', 'faltas', this.value)">
+                 <input type="number" disabled class="form-control" style="width:40px;text-align:center;padding:4px;font-size:12px;height:auto;background:var(--bg-card);color:var(--text-muted);cursor:not-allowed;" value="${pen.faltas}">
                </div>
                <div>
                  <span style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;">Atestados</span>
-                 <input type="number" min="0" step="1" class="form-control" style="width:40px;text-align:center;padding:4px;font-size:12px;height:auto;" value="${pen.atestados}" onblur="window.updatePenalidade('${w.id}', 'atestados', this.value)">
+                 <input type="number" disabled class="form-control" style="width:40px;text-align:center;padding:4px;font-size:12px;height:auto;background:var(--bg-card);color:var(--text-muted);cursor:not-allowed;" value="${pen.atestados}">
                </div>
                <div>
                  <span style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:2px;">Atrasos</span>
-                 <input type="number" min="0" step="1" class="form-control" style="width:40px;text-align:center;padding:4px;font-size:12px;height:auto;" value="${pen.atrasos}" onblur="window.updatePenalidade('${w.id}', 'atrasos', this.value)">
+                 <input type="number" disabled class="form-control" style="width:40px;text-align:center;padding:4px;font-size:12px;height:auto;background:var(--bg-card);color:var(--text-muted);cursor:not-allowed;" value="${pen.atrasos}">
                </div>
-            </div>
+             </div>
           </td>
 
           <td style="padding:15px;text-align:center;">

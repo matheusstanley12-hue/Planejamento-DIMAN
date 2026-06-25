@@ -39,7 +39,7 @@ window.Router = (() => {
     
     const sidebar = document.getElementById('sidebar');
     const header = document.querySelector('header');
-    if (name === 'qrview') {
+    if (name === 'qrview' || name === 'presentation') {
       if (sidebar) sidebar.style.display = 'none';
       if (header) header.style.display = 'none';
       document.body.style.background = '#0f172a'; // match dark premium theme
@@ -159,6 +159,7 @@ function showFirstAccessPasswordChange(matricula, session, loginPage) {
       document.getElementById('first-access-modal').remove();
       loginPage.remove();
       session.mustChangePassword = false;
+      sessionStorage.setItem('diman_session', JSON.stringify(session));
       window.renderShell(session);
       window.Router.navigate(session.perfil === 'Executante' ? 'worker-panel' : 'home');
     } else {
@@ -171,6 +172,30 @@ function showFirstAccessPasswordChange(matricula, session, loginPage) {
 }
 
 async function initApp() {
+  if (!localStorage.getItem('manuals_cleared_v1')) {
+    localStorage.setItem('diman_manuals', '[]');
+    localStorage.setItem('diman_manual_folders', '[]');
+    localStorage.setItem('manuals_cleared_v1', 'true');
+  }
+
+  if (typeof DB !== 'undefined' && DB.timesheets) {
+    let ts = DB.timesheets.list();
+    let originalLen = ts.length;
+    let badCount = 0;
+    ts = ts.filter(t => {
+      if (t.horasTrabalhadas > 12 && (t.observacao || '').includes('Timer')) { badCount++; return false; }
+      if (t.workerNome === 'SISTEMA' && t.horasTrabalhadas > 12) { badCount++; return false; }
+      if (t.horasTrabalhadas === 40 && (t.observacao || '').includes('Trabalho normal na semana') && t.data && t.data.includes('T')) { badCount++; return false; } // Bogus manual duplications
+      return true;
+    });
+    if (badCount > 0) {
+      console.log(`[Auto-Clean] Removed ${badCount} bad timesheets.`);
+      localStorage.setItem('diman_timesheets', JSON.stringify(ts));
+      if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_timesheets', ts);
+    }
+  }
+
+  // Init Supabase if configured
   if (window.DB && DB.initSupabase) {
     await DB.initSupabase();
   }
@@ -243,6 +268,67 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch(e) {}
     
+    // Setup Audio Notifications Listener for Cross-Tablet Sync
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'diman_solicitacoes' && e.newValue) {
+        try {
+          const oldList = e.oldValue ? JSON.parse(e.oldValue) : [];
+          const newList = JSON.parse(e.newValue);
+          
+          if (!window.Auth || !window.Auth.isLoggedIn()) return;
+          const currentSession = window.Auth.getSession();
+          if (!currentSession) return;
+
+          const oldMap = {};
+          oldList.forEach(s => { oldMap[s.id] = s; });
+
+          const myEqs = (window.WorkerPanel && window.WorkerPanel.getMyEquipments) ? window.WorkerPanel.getMyEquipments(currentSession) : [];
+          const myEqIds = myEqs.map(eq => eq.id);
+
+          newList.forEach(sol => {
+            const oldSol = oldMap[sol.id];
+            
+            // Check if new or status changed to pending execution
+            const isNewActive = (!oldSol && (sol.status === 'Aguardando Execução' || sol.status === 'Em Andamento' || sol.status === 'Em Execução')) || 
+                                (oldSol && oldSol.status !== sol.status && (sol.status === 'Aguardando Execução' || sol.status === 'Em Andamento' || sol.status === 'Em Execução'));
+            
+            if (isNewActive && currentSession.perfil === 'Executante') {
+              if (myEqIds.includes(sol.equipmentId)) {
+                 const sDisc = (currentSession.disciplina || '').toLowerCase();
+                 const sCargo = (currentSession.cargo || '').toLowerCase();
+                 const dest = (sol.destino || sol.setorDestino || '').toLowerCase();
+                 
+                 let isMySector = false;
+                 if (dest === 'usinagem' && (sDisc.includes('usinagem') || sCargo.includes('torneiro'))) isMySector = true;
+                 else if (dest === 'elétrica' && (sDisc.includes('elétric') || sCargo.includes('eletric'))) isMySector = true;
+                 else if (dest === 'caldeiraria' && (sDisc.includes('caldeir') || sCargo.includes('solda'))) isMySector = true;
+                 else if (dest === 'mecânica' && (sDisc.includes('mecânic') || sCargo.includes('mecanic'))) isMySector = true;
+                 else if (dest === 'lubrificação' && (sDisc.includes('lubrific'))) isMySector = true;
+                 else if (dest === 'teste' && (sDisc.includes('teste') || sCargo.includes('teste'))) isMySector = true;
+                 else if (dest === 'retrabalho' && (sDisc.includes('retrabalho') || sCargo.includes('retrabalho'))) isMySector = true;
+                 
+                 if (isMySector && window.AudioNotification) {
+                   window.AudioNotification.notifyNewService('Novo Serviço: ' + (sol.destino||''), sol.descricao);
+                 }
+              }
+            }
+
+            // Check if completed
+            const isJustCompleted = oldSol && oldSol.status !== sol.status && sol.status === 'Concluída';
+            if (isJustCompleted) {
+              if (sol.solicitanteNome === currentSession.nome || (sol.origem && sol.origem.includes(currentSession.nome))) {
+                if (myEqIds.includes(sol.equipmentId) && window.AudioNotification) {
+                  window.AudioNotification.notifyDone('Serviço Concluído!', 'A peça/serviço "' + sol.descricao + '" está pronta!');
+                }
+              }
+            }
+          });
+        } catch(err) {
+          console.error('Audio Notification parse error', err);
+        }
+      }
+    });
+
     Router.navigate(defaultRoute, defaultParams);
   } catch (e) {
     console.error('Fatal App Error:', e);
@@ -342,7 +428,7 @@ function showLoginPage() {
     e.preventDefault();
     const btn = document.getElementById('login-btn');
     const matricula = document.getElementById('login-matricula').value.trim();
-    const senha = document.getElementById('login-senha').value;
+    const senha = document.getElementById('login-senha').value.trim();
     const errDiv = document.getElementById('login-error');
     const errMsg = document.getElementById('login-error-msg');
 
@@ -482,16 +568,16 @@ function renderShell(session) {
     { route:'released',   label:'Equip. Liberados',      icon:'check-circle',   perm:'dashboard',   section:'' },
     { route:'tasks',      label:'Tarefas',               icon:'clipboard-list', perm:'tasks',       section:'' },
 
-    { route:'services',   label: ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente'].includes(session.perfil) ? 'Serviços de Usinagem' : 'Serviços / Mão de Obra', icon:'clipboard-document-check', perm:'dashboard', section:'' },
+    { route:'services',   label:'Solicitação de Serviço', icon:'clipboard-document-check', perm:'dashboard', section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
     { route:'parts',      label:'Falta de Peças',   icon:'cube',           perm:'parts',       section:'' },
     { route:'meetings',   label:'Ata de Reunião',   icon:'clipboard-list', perm:'planning',    section:'' },
+    { route:'followup',   label:'Ata de Follow-up', icon:'clipboard-document-check', perm:'planning', section:'' },
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO' },
-    { route:'restrictions', label:'Restrições',          icon:'no-symbol',      perm:'restrictions', section:'RECURSOS' },
+
     { route:'workforce',  label:'Mão de Obra',           icon:'users',          perm:'workforce',   section:'' },
     { route:'workforce-time', label:'Gestão de Horas',   icon:'clock',          perm:'workforce',   section:'' },
     { route:'vacations',  label:'Gestão de Férias',      icon:'calendar-days',  perm:'workforce',   section:'' },
-    { route:'costs',      label:'Centro de Custos',      icon:'currency-dollar', perm:'costs',      section:'' },
     { route:'kpi',        label:'Indicadores KPI',       icon:'chart-pie',      perm:'kpi',         section:'ANÁLISE' },
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
     { route:'impacts',    label:'Relatório de Impactos', icon:'document-report', perm:'impacts',    section:'' },
@@ -556,8 +642,7 @@ function renderShell(session) {
         html += `<div class="sidebar-section-label">${item.section}</div>`;
         lastSection = item.section;
       }
-      const badge = item.route === 'restrictions' ?
-        `<span class="nav-badge" id="nav-badge-restrictions">${(DB && DB.restrictions ? DB.restrictions.getAll().filter(r=>r.status==='Aberta').length : 0) || ''}</span>` : '';
+      const badge = '';
       html += `<div class="nav-item" data-route="${item.route}" onclick="window.Router.navigate('${item.route}')">
         <span class="nav-icon">${icon(item.icon)}</span>
         <span class="nav-label">${item.label}</span>
@@ -568,7 +653,8 @@ function renderShell(session) {
   }
 
   window.filterSidebar = function(query) {
-    query = query.toLowerCase();
+    const normalize = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    query = normalize(query);
     const nav = document.querySelector('.sidebar-nav');
     if (!nav) return;
     
@@ -577,7 +663,7 @@ function renderShell(session) {
     
     items.forEach(item => {
       if (item.classList.contains('logout-btn')) return; // ignore if added to nav
-      const text = item.querySelector('.nav-label').textContent.toLowerCase();
+      const text = normalize(item.querySelector('.nav-label').textContent);
       if (text.includes(query)) {
         item.style.display = 'flex';
       } else {
@@ -750,6 +836,7 @@ function renderShell(session) {
   Router.register('equipment-panel', (p) => EquipmentPanel.render(p));
   if (typeof ChecklistsModule !== 'undefined') Router.register('checklists', () => ChecklistsModule.render());
   if (typeof MeetingsModule !== 'undefined') Router.register('meetings', () => MeetingsModule.render());
+  if (typeof FollowupModule !== 'undefined') Router.register('followup', () => FollowupModule.render());
   
   if (typeof DPanel !== 'undefined') {
     Router.register('d-panel', () => DPanel.render());
@@ -765,7 +852,7 @@ function renderShell(session) {
   if (typeof GanttModule !== 'undefined') Router.register('gantt', () => GanttModule.render());
   if (typeof CriticalPath !== 'undefined') Router.register('critical', () => CriticalPath.render());
   if (typeof PlanningModule !== 'undefined') Router.register('planning', () => PlanningModule.render());
-  if (typeof RestrictionsModule !== 'undefined') Router.register('restrictions', () => RestrictionsModule.render());
+
   if (typeof PartsModule !== 'undefined') Router.register('parts', () => PartsModule.render());
   if (typeof WorkforceModule !== 'undefined') Router.register('workforce', () => WorkforceModule.render());
   if (typeof WorkforceTimeModule !== 'undefined') Router.register('workforce-time', () => WorkforceTimeModule.render());

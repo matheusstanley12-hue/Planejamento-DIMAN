@@ -180,8 +180,8 @@ window.WorkerPanel = (() => {
 
     closeModal('modal-worker-justification');
     
-    let matriculas = matriculasStr.split(',');
-    let targetWorkers = matriculas.map(m => DB.workforce.list().find(wk => String(wk.matricula) === String(m))).filter(Boolean);
+    let ids = matriculasStr.split(',');
+    let targetWorkers = ids.map(id => DB.workforce.list().find(wk => String(wk.id) === String(id))).filter(Boolean);
     
     startTaskForWorkers(taskId, targetWorkers);
   }
@@ -191,16 +191,32 @@ window.WorkerPanel = (() => {
     if (!t) return;
     
     targetWorkers.forEach(w => {
+      let eqIds = w.equipmentIds || [];
+      if (w.equipmentId && !eqIds.includes(w.equipmentId)) eqIds.push(w.equipmentId);
+      if (t.equipmentId && !eqIds.includes(t.equipmentId)) eqIds.push(t.equipmentId);
+
       DB.workforce.update(w.id, {
         currentState: 'Trabalhando',
         currentTaskId: taskId,
         currentActionStartTime: new Date().toISOString(),
-        currentPauseReason: ''
+        currentPauseReason: '',
+        equipmentId: t.equipmentId || w.equipmentId,
+        equipmentIds: eqIds
       });
+
+      if (t.equipmentId) {
+        const eq = DB.equipment.get(t.equipmentId);
+        if (eq) {
+           if (!eq.workforceMap) eq.workforceMap = {};
+           eq.workforceMap[w.disciplina || 'Outros'] = w.nome;
+           DB.equipment.update(eq.id, eq);
+        }
+      }
     });
 
-    if (t.status !== 'Em Andamento') {
-      DB.tasks.update(taskId, { status: 'Em Andamento' });
+    const executorNames = targetWorkers.map(w => w.nome).join(', ');
+    if (t.status !== 'Em Andamento' || t.responsavel !== executorNames) {
+      DB.tasks.update(taskId, { status: 'Em Andamento', responsavel: executorNames });
     }
 
     Toast.success('Iniciado!', `A tarefa "${t.descricao}" foi iniciada para os executantes selecionados.`);
@@ -210,11 +226,15 @@ window.WorkerPanel = (() => {
 
   function startTask(taskId) {
     const inputs = document.querySelectorAll('.start-task-matricula-input');
-    let matriculas = [];
+    let targetIds = [];
     if (inputs.length > 0) {
       inputs.forEach(inp => {
         const val = inp.value.trim();
-        if (val && !matriculas.includes(val)) matriculas.push(val);
+        // find worker by matricula for the extra inputs
+        if (val) {
+           let w = DB.workforce.list().find(wk => String(wk.matricula) === String(val));
+           if (w && !targetIds.includes(w.id)) targetIds.push(w.id);
+        }
       });
     }
 
@@ -223,31 +243,27 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('include-myself');
     if (includeMyself && includeMyself.checked && myWorker) {
-      if (!matriculas.includes(myWorker.matricula)) {
-        matriculas.push(myWorker.matricula);
+      if (!targetIds.includes(myWorker.id)) {
+        targetIds.push(myWorker.id);
       }
     }
     
-    if (matriculas.length === 0) {
-      if (myWorker) matriculas.push(String(myWorker.matricula));
+    if (targetIds.length === 0) {
+      if (myWorker) targetIds.push(String(myWorker.id));
       else return Toast.error('Erro', 'Nenhum executante informado.');
     }
 
     const t = DB.tasks.get(taskId);
     if (!t) return;
 
-    let targetWorkers = [];
-    for (let mat of matriculas) {
-      let w = DB.workforce.list().find(wk => String(wk.matricula) === String(mat));
-      if (!w) return Toast.error('Erro', `Matrícula ${mat} não encontrada no sistema.`);
-      targetWorkers.push(w);
-    }
+    let targetWorkers = targetIds.map(id => DB.workforce.list().find(wk => String(wk.id) === String(id))).filter(Boolean);
+    if (targetWorkers.length === 0) return Toast.error('Erro', 'Executantes não encontrados no sistema.');
 
     // Check busy status and auto-fix stuck workers
     for (let w of targetWorkers) {
       if (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') {
         const activeT = DB.tasks.get(w.currentTaskId);
-        if (!activeT || (activeT.status !== 'Em Andamento' && activeT.status !== 'Paralisada')) {
+        if (!activeT || (activeT.status !== 'Em Andamento' && activeT.status !== 'Pausada')) {
           // Auto-fix stuck state
           w.currentState = 'Ocioso';
           w.currentTaskId = null;
@@ -255,7 +271,7 @@ window.WorkerPanel = (() => {
           w.currentPauseReason = '';
           DB.workforce.update(w.id, w);
         } else {
-          return Toast.error('Atenção', `${w.nome} já tem uma atividade ou pausa em andamento. Finalize a tarefa atual primeiro.`);
+          return Toast.error('Atenção', `${w.nome} já tem uma atividade pendente: "${activeT.descricao}". Finalize a tarefa atual primeiro.`);
         }
       }
     }
@@ -264,7 +280,6 @@ window.WorkerPanel = (() => {
     let divergingWorkers = targetWorkers.filter(w => w.equipmentId && w.equipmentId !== t.equipmentId);
     if (divergingWorkers.length > 0) {
       const names = divergingWorkers.map(w => w.nome).join(', ');
-      const matriculasStr = matriculas.join(',');
       const jModalHtml = `
         <div class="modal-overlay" id="modal-worker-justification" style="z-index:9999;">
           <div class="modal" style="box-shadow:var(--shadow-lg);">
@@ -282,7 +297,8 @@ window.WorkerPanel = (() => {
                 <label>Justificativa do Desvio *</label>
                 <textarea id="start-task-justification" rows="3" style="width:100%;border-radius:6px;border:1px solid var(--border-card);padding:10px;background:var(--bg-base);" placeholder="Informe o motivo para alocá-los nesta tarefa..."></textarea>
               </div>
-              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.confirmStartTaskWithJustification('${taskId}', '${matriculasStr}')">Confirmar e Iniciar</button>
+              <button class="btn btn-outline" style="width:100%;height:45px;margin-bottom:12px;" onclick="closeModal('modal-worker-start-task')">Cancelar</button>
+              <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.confirmStartTaskWithJustification('${taskId}', '${targetIds.join(',')}')">Confirmar e Iniciar</button>
             </div>
           </div>
         </div>
@@ -436,7 +452,7 @@ window.WorkerPanel = (() => {
     const desc = document.getElementById('other-reason-desc').value.trim();
     if (!desc) return Toast.error('Erro', 'Por favor, descreva o motivo.');
     closeModal('modal-worker-other-reason');
-    pauseWork(desc, workerId);
+    pauseWork(`Outros: ${desc}`, workerId);
   }
 
 
@@ -448,7 +464,8 @@ window.WorkerPanel = (() => {
     const t = DB.tasks.get(myWorker.currentTaskId);
     const startTime = new Date(myWorker.currentActionStartTime);
     const now = new Date();
-    const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+    let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+    if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h to prevent runaway timers
 
     // Save Timesheet (Work)
     DB.timesheets.create({
@@ -502,7 +519,26 @@ window.WorkerPanel = (() => {
     Router.navigate('worker-panel', { force: true });
   }
 
+  function addResumeExecutorInput() {
+    const list = document.getElementById('resume-task-executors-list');
+    if (!list) return;
+    const div = document.createElement('div');
+    div.className = 'form-group executor-item';
+    div.style.marginBottom = '15px';
+    div.innerHTML = `
+      <label style="text-transform:uppercase;font-size:10px;font-weight:700;color:var(--text-muted);">Matrícula do Ajudante:</label>
+      <div style="display:flex;gap:8px;margin-top:5px;">
+        <input type="number" inputmode="numeric" class="resume-task-matricula-input" placeholder="Matrícula..." style="flex:1;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);font-size:16px;"/>
+        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);font-weight:bold;padding:0 12px;border:1px solid var(--border-card);background:var(--bg-elevated);" onclick="this.parentElement.parentElement.remove()">X</button>
+      </div>
+    `;
+    list.appendChild(div);
+  }
+
   function promptResumeTask(taskId) {
+    const session = Auth.getSession();
+    const myWorker = getMyWorker(session);
+
     const modalHtml = `
       <div class="modal-overlay" id="modal-worker-resume-task">
         <div class="modal" style="box-shadow:var(--shadow-lg);">
@@ -517,7 +553,19 @@ window.WorkerPanel = (() => {
             <div class="form-group" style="margin-bottom:15px;">
               <textarea id="resume-task-desc" rows="4" placeholder="Descreva a justificativa..." style="width:100%;resize:vertical;border-radius:6px;border:1px solid var(--border-card);padding:10px;color:var(--text-primary);background:var(--bg-base);"></textarea>
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:10px;height:45px;" onclick="WorkerPanel.submitResumeTask('${taskId}')">Confirmar Retomada</button>
+            
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai retomar essa tarefa?</p>
+            
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border-card);">
+                 <input type="checkbox" id="resume-include-myself" checked style="width:18px;height:18px;accent-color:var(--brand-primary);flex-shrink:0;" />
+                 <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Incluir a mim mesmo nesta tarefa</span>
+            </label>
+            
+            <div id="resume-task-executors-list"></div>
+            
+            <button class="btn btn-ghost" style="width:100%;margin-bottom:15px;border:1px dashed var(--border-card);color:var(--brand-primary);" onclick="WorkerPanel.addResumeExecutorInput()">+ Adicionar outro executante</button>
+
+            <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.submitResumeTask('${taskId}')">Confirmar Retomada</button>
           </div>
         </div>
       </div>
@@ -531,25 +579,65 @@ window.WorkerPanel = (() => {
   function submitResumeTask(taskId) {
     const desc = document.getElementById('resume-task-desc').value.trim();
     if (!desc) return Toast.error('Erro', 'Por favor, informe a justificativa.');
-    closeModal('modal-worker-resume-task');
     
+    const inputs = document.querySelectorAll('.resume-task-matricula-input');
+    let targetIds = [];
+    if (inputs.length > 0) {
+      inputs.forEach(inp => {
+        const val = inp.value.trim();
+        if (val) {
+           let w = DB.workforce.list().find(wk => String(wk.matricula) === String(val));
+           if (w && !targetIds.includes(w.id)) targetIds.push(w.id);
+        }
+      });
+    }
+
     const session = Auth.getSession();
     const myWorker = getMyWorker(session);
-    if (!myWorker) return Toast.error('Erro', 'Cadastro não encontrado.');
-    if (myWorker.currentState && myWorker.currentState !== 'Ocioso') {
-      if (myWorker.currentTaskId != taskId) {
-        return Toast.error('Atenção', `${myWorker.nome}, você já tem uma atividade ou pausa em andamento. Por gentileza, finalize a sua tarefa primeiro.`);
+    
+    const includeMyself = document.getElementById('resume-include-myself');
+    if (includeMyself && includeMyself.checked && myWorker) {
+      if (!targetIds.includes(myWorker.id)) {
+        targetIds.push(myWorker.id);
       }
     }
+    
+    if (targetIds.length === 0) {
+      if (myWorker) targetIds.push(String(myWorker.id));
+      else return Toast.error('Erro', 'Nenhum executante informado.');
+    }
+
+    closeModal('modal-worker-resume-task');
 
     const t = DB.tasks.get(taskId);
     if (!t) return;
+
+    let targetWorkers = targetIds.map(id => DB.workforce.list().find(wk => String(wk.id) === String(id))).filter(Boolean);
+    if (targetWorkers.length === 0) return Toast.error('Erro', 'Executantes não encontrados no sistema.');
+
+    // Check busy status and auto-fix stuck workers
+    for (let w of targetWorkers) {
+      if (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') {
+        const activeT = DB.tasks.get(w.currentTaskId);
+        if (!activeT || (activeT.status !== 'Em Andamento' && activeT.status !== 'Pausada')) {
+          // Auto-fix stuck state
+          w.currentState = 'Ocioso';
+          w.currentTaskId = null;
+          w.currentActionStartTime = null;
+          w.currentPauseReason = '';
+          DB.workforce.update(w.id, w);
+        } else if (w.currentTaskId != taskId) {
+          return Toast.error('Atenção', `${w.nome} já está vinculado à tarefa pendente: "${activeT.descricao}". Por gentileza, finalize a tarefa dele primeiro.`);
+        }
+      }
+    }
 
     // Log the pause duration
     if (t.pauseStartTime) {
       const pauseStart = new Date(t.pauseStartTime);
       const now = new Date();
-      const elapsedHrs = (now - pauseStart) / (1000 * 60 * 60);
+      let elapsedHrs = (now - pauseStart) / (1000 * 60 * 60);
+      if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
       DB.timesheets.create({
         workerId: null, // Task-level delay
         workerNome: 'SISTEMA',
@@ -565,22 +653,42 @@ window.WorkerPanel = (() => {
       });
     }
 
+    // Start mechanic's timer for everyone
+    targetWorkers.forEach(w => {
+      let eqIds = w.equipmentIds || [];
+      if (w.equipmentId && !eqIds.includes(w.equipmentId)) eqIds.push(w.equipmentId);
+      if (t.equipmentId && !eqIds.includes(t.equipmentId)) eqIds.push(t.equipmentId);
+
+      DB.workforce.update(w.id, {
+        currentState: 'Trabalhando',
+        currentTaskId: taskId,
+        currentActionStartTime: new Date().toISOString(),
+        currentPauseReason: '',
+        equipmentId: t.equipmentId || w.equipmentId,
+        equipmentIds: eqIds
+      });
+
+      if (t.equipmentId) {
+        const eq = DB.equipment.get(t.equipmentId);
+        if (eq) {
+           if (!eq.workforceMap) eq.workforceMap = {};
+           eq.workforceMap[w.disciplina || 'Outros'] = w.nome;
+           DB.equipment.update(eq.id, eq);
+        }
+      }
+    });
+
+    const executorNames = targetWorkers.map(w => w.nome).join(', ');
+
     // Reset task pause fields and set to Em Andamento
     DB.tasks.update(taskId, {
       status: 'Em Andamento',
       pauseStartTime: null,
-      pauseReason: null
+      pauseReason: null,
+      responsavel: executorNames
     });
 
-    // Start mechanic's timer
-    DB.workforce.update(myWorker.id, {
-      currentState: 'Trabalhando',
-      currentTaskId: taskId,
-      currentActionStartTime: new Date().toISOString(),
-      currentPauseReason: ''
-    });
-
-    Toast.success('Retomado!', `Você voltou a executar a tarefa: "${t.descricao}"`);
+    Toast.success('Retomado!', `Executantes alocados na tarefa: "${t.descricao}"`);
     Router.navigate('worker-panel', { force: true });
   }
 
@@ -591,7 +699,8 @@ window.WorkerPanel = (() => {
       const t = DB.tasks.get(myWorker.currentTaskId);
       const startTime = new Date(myWorker.currentActionStartTime);
       const now = new Date();
-      const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+      let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+      if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
 
       DB.timesheets.create({
         workerId: myWorker.id,
@@ -642,9 +751,8 @@ window.WorkerPanel = (() => {
         const workers = DB.workforce.list() || [];
         const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId == t.id);
         const timesheets = DB.timesheets.list() || [];
-        const hasTimesheets = timesheets.some(ts => ts.taskId == t.id);
         if (!otherActive) {
-          DB.tasks.update(t.id, { status: hasTimesheets ? 'Pausada' : 'Aberta', pauseReason: hasTimesheets ? 'Sem executantes ativos' : '' });
+          DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '' });
         }
       }
 
@@ -729,7 +837,8 @@ window.WorkerPanel = (() => {
       if (myWorker.currentState === 'Trabalhando') {
         const startTime = new Date(myWorker.currentActionStartTime);
         const now = new Date();
-        const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+        let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+        if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
 
         DB.timesheets.create({
           workerId: myWorker.id,
@@ -753,7 +862,8 @@ window.WorkerPanel = (() => {
          // Just close the pause
          const startTime = new Date(myWorker.currentActionStartTime);
          const now = new Date();
-         const elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+         let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+         if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
          DB.timesheets.create({
           workerId: myWorker.id,
           workerNome: session.nome,
@@ -1053,9 +1163,13 @@ window.WorkerPanel = (() => {
     `;
 
     // Tasks List
-    let listTasks = myTasks.filter(t => t.status !== 'Concluída' && t.id !== myWorker.currentTaskId);
+    let listTasks = myTasks.filter(t => t.id !== myWorker.currentTaskId && canExecuteTask(session, t));
     
     listTasks.sort((a, b) => {
+      const aConcluida = a.status === 'Concluída' ? 1 : 0;
+      const bConcluida = b.status === 'Concluída' ? 1 : 0;
+      if (aConcluida !== bConcluida) return aConcluida - bConcluida;
+
       const aCanExec = canExecuteTask(session, a) ? 1 : 0;
       const bCanExec = canExecuteTask(session, b) ? 1 : 0;
       return bCanExec - aCanExec;
@@ -1067,35 +1181,60 @@ window.WorkerPanel = (() => {
       const isBlocked = blockedBy.length > 0;
       
       let actionBtn = '';
-      if (t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor' || t.status === 'Pausada') {
+      if (t.status === 'Concluída') {
+        actionBtn = `
+          <div style="width:100%; display:flex; align-items:center; justify-content:center; padding: 6px; background: rgba(16, 185, 129, 0.1); border-radius: 6px;">
+            <div style="font-size:12px;color:#10b981;font-weight:800;display:flex;align-items:center;gap:4px;">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              TAREFA CONCLUÍDA
+            </div>
+          </div>
+        `;
+      } else if (t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor' || t.status === 'Pausada') {
         const pauseReason = t.pauseReason || t.status;
         let timeStr = '';
         if (t.pauseStartTime) {
           timeStr = `<span class="live-pause-timer" data-start="${t.pauseStartTime}"> - ${formatTimeDiff(t.pauseStartTime)}</span>`;
         }
         
-        // Verifica quem deve retomar vs quem deve continuar
-        const myWorkerName = myWorker ? myWorker.nome : session.nome;
-        const isMyTask = t.responsavel === myWorkerName;
-        const btnText = isMyTask ? 'RETOMAR TAREFA' : 'CONTINUAR TAREFA';
-
-        actionBtn = `
-          <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
-            <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
-              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              ${pauseReason}${timeStr}
+        if (!canExecuteTask(session, t)) {
+          actionBtn = `
+            <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                ${pauseReason}${timeStr}
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>
             </div>
-            <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">${btnText}</button>
-          </div>
-        `;
+          `;
+        } else {
+          // Verifica quem deve retomar vs quem deve continuar
+          const myWorkerName = myWorker ? myWorker.nome : session.nome;
+          const isMyTask = t.responsavel === myWorkerName;
+          const btnText = isMyTask ? 'RETOMAR TAREFA' : 'CONTINUAR TAREFA';
+
+          actionBtn = `
+            <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+              <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                ${pauseReason}${timeStr}
+              </div>
+              <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">${btnText}</button>
+            </div>
+          `;
+        }
       } else if (t.status === 'Em Andamento') {
         const executingWorkers = allActiveWorkers.filter(w => w.currentTaskId === t.id);
         
         // Auto-fix: if status is Em Andamento but nobody is working on it
         if (executingWorkers.length === 0) {
-          DB.tasks.update(t.id, { status: 'Aberta' });
-          t.status = 'Aberta';
-          actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
+          DB.tasks.update(t.id, { status: 'Não Iniciada' });
+          t.status = 'Não Iniciada';
+          if (!canExecuteTask(session, t)) {
+             actionBtn = `<div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>`;
+          } else {
+             actionBtn = `<button class="btn-start-task" onclick="WorkerPanel.startPromptTask('${t.id}')">INICIAR AGORA</button>`;
+          }
         } else {
           const allPaused = executingWorkers.every(w => w.currentState === 'Em Pausa');
           const statusLabel = allPaused ? 'EM PAUSA' : 'EM EXECUÇÃO';
@@ -1110,19 +1249,31 @@ window.WorkerPanel = (() => {
             }
           }).join(', ');
           
-          actionBtn = `
-            <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
-              <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
-                ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+          if (!canExecuteTask(session, t)) {
+            actionBtn = `
+              <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
+                  ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>
               </div>
-              <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
-                ENTRAR NA TAREFA
-              </button>
-            </div>
-          `;
+            `;
+          } else {
+            actionBtn = `
+              <div style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:12px;color:${statusColor};font-weight:800;display:flex;align-items:center;gap:6px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
+                  ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
+                </div>
+                <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
+                  ENTRAR NA TAREFA
+                </button>
+              </div>
+            `;
+          }
         }
-      } else if (state === 'Ocioso' || (state === 'Trabalhando' && myWorker.currentTaskId !== t.id) || (state === 'Em Pausa' && myWorker.currentTaskId !== t.id)) {
+      } else if (state === 'Ocioso' || (state === 'Trabalhando' && String(myWorker.currentTaskId) !== String(t.id)) || (state === 'Em Pausa' && String(myWorker.currentTaskId) !== String(t.id))) {
         if (!canExecuteTask(session, t)) {
           actionBtn = `<div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>`;
         } else if (isBlocked) {
@@ -1257,7 +1408,10 @@ window.WorkerPanel = (() => {
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:24px;">
           <h3 style="font-size:14px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin:0;">Fila de Tarefas Pendentes</h3>
-          <button class="btn btn-primary btn-sm" onclick="WorkerPanel.openCreateTask()" style="font-weight:700;">+ Nova Tarefa</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="Router.navigate('worker-services', { force: true })" style="font-weight:700;">Solicitações / Histórico</button>
+            <button class="btn btn-primary btn-sm" onclick="WorkerPanel.openCreateTask()" style="font-weight:700;">+ Nova Tarefa</button>
+          </div>
         </div>
         
         ${listTasks.length > 0 ? tasksHtml : `
@@ -1516,7 +1670,7 @@ window.WorkerPanel = (() => {
                 <div class="form-group">
                   <label>Status</label>
                   <select id="w-tk-status" onchange="const p=document.getElementById('w-tk-photo-group'); if(this.value==='Concluída'){p.style.display='block';}else{p.style.display='none';}">
-                    ${['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Bloqueada','Concluída'].map(s => 
+                    ${['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Aguardando Setor','Bloqueada','Paralisada','Concluída'].map(s => 
                       `<option ${t.status === s ? 'selected' : ''}>${s}</option>`
                     ).join('')}
                   </select>
@@ -1857,13 +2011,15 @@ window.WorkerPanel = (() => {
               </div>
               <div class="form-group">
                 <label>Setor Destino *</label>
-                <select id="w-sv-setor">
                   <option value="Usinagem">Usinagem</option>
                   <option value="Mecânica">Mecânica</option>
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
                   <option value="Elétrica">Elétrica</option>
+                  <option value="Subconjunto">Subconjunto</option>
+                  <option value="Pintura">Pintura</option>
+                  <option value="Lavador">Lavador</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1919,7 +2075,7 @@ window.WorkerPanel = (() => {
       setorDestino: setor,
       prazo: prazo,
       critico: critica,
-      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado',
+      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Execução',
       createdAt: DB.now()
     };
 
@@ -2068,6 +2224,7 @@ window.WorkerPanel = (() => {
     cancelWork,
     promptResumeTask,
     submitResumeTask,
+    addResumeExecutorInput,
     promptMissingParts,
     submitMissingParts,
     promptDependency,
@@ -2280,13 +2437,9 @@ window.WorkerServices = (() => {
           window.Toast.error('Erro', 'Setor de destino é obrigatório.');
           return;
         }
-        if (!window._tempSvPhoto) {
-          window.Toast.error('Erro', 'É obrigatório anexar a foto da peça.');
-          return;
-        }
 
         const eqId = document.getElementById('w-sv-eq').value;
-        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
+        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Execução';
         
         const payload = {
           id: window.DB.uid('sol'),
@@ -2301,7 +2454,18 @@ window.WorkerServices = (() => {
         };
 
         window.DB.solicitacoes.add(payload);
-        const msg = (dest === 'Usinagem') ? `Solicitação para Usinagem enviada ao PCM para aprovação.` : `Solicitação enviada direto para o encarregado de ${dest}.`;
+        const msg = (dest === 'Usinagem') ? `Solicitação para Usinagem enviada ao PCM para aprovação.` : `Solicitação enviada direto para o executante/setor de ${dest}.`;
+        
+        if (window.DB.notifications) {
+          window.DB.notifications.add({
+            type: 'warning',
+            title: 'Nova Solicitação de Serviço',
+            message: `Solicitação de ${session.nome} para ${dest}: ${desc.slice(0, 50)}...`,
+            read: false,
+            createdAt: window.DB.now()
+          });
+        }
+        
         window.Toast.success('Enviado!', msg);
         window._tempSvPhoto = null; // Clear temp photo
         window.Router.navigate('worker-services', { force: true });
@@ -2332,6 +2496,9 @@ window.WorkerServices = (() => {
                 <option value="Retrabalho">Retrabalho</option>
                 <option value="Elétrica">Elétrica</option>
                 <option value="Lubrificação">Lubrificação</option>
+                <option value="Subconjunto">Subconjunto</option>
+                <option value="Pintura">Pintura</option>
+                <option value="Lavador">Lavador</option>
               </select>
             </div>
             <div class="form-group">
@@ -2340,8 +2507,8 @@ window.WorkerServices = (() => {
             </div>
             
             <div class="form-group">
-              <label>Foto da Peça / Serviço *</label>
-              <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Obrigatório tirar foto para a aprovação e visualização do Torneiro/Encarregado.</p>
+              <label>Foto da Peça / Serviço (Opcional)</label>
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Tire uma foto para ajudar a aprovação e visualização do Torneiro/Encarregado.</p>
               <div class="file-upload-wrapper" style="position:relative;display:inline-block;width:100%;">
                 <button type="button" class="btn btn-outline" style="width:100%;border-style:dashed;color:var(--text-secondary);" onclick="document.getElementById('w-sv-photo').click()">
                   📸 Tirar Foto ou Anexar
