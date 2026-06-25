@@ -319,12 +319,41 @@ window.DB = (() => {
     if (!supabaseClient) return;
     try {
       // 1. Initial fetch (Excluding photos to avoid massive memory usage)
-      const { data, error } = await supabaseClient.from('diman_store').select('*').not('collection', 'ilike', 'photo_%');
-      if (error) { 
-         console.error('Supabase fetch error:', error); 
-         if (window.Toast) window.Toast.error('Falha de Conexão Nuvem', error.message || 'Erro ao conectar com o Supabase. Você está offline ou a chave é inválida.');
+      // Paginated to avoid 1000 rows limit from Supabase API
+      let allFetchedData = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+      let fetchError = null;
+
+      while (hasMore) {
+        const { data, error } = await supabaseClient.from('diman_store')
+          .select('*')
+          .not('collection', 'ilike', 'photo_%')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+        if (error) {
+          fetchError = error;
+          break;
+        }
+        
+        if (data && data.length > 0) {
+          allFetchedData = allFetchedData.concat(data);
+        }
+        
+        if (!data || data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+
+      if (fetchError) { 
+         console.error('Supabase fetch error:', fetchError); 
+         if (window.Toast) window.Toast.error('Falha de Conexão Nuvem', fetchError.message || 'Erro ao conectar com o Supabase. Você está offline ou a chave é inválida.');
          return; 
       }
+      const data = allFetchedData;
       if (data && data.length > 0) {
         const hasUnsynced = localStorage.getItem('diman_unsynced') === 'true';
         if (hasUnsynced) {
