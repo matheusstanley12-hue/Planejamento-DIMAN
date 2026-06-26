@@ -166,7 +166,7 @@ window.ServicesModule = (() => {
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
                 <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;text-align:left;"><strong>Foto da Peça / Serviço:</strong></p>
-                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage('${s.fotoPeca}')" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage(this.src)" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : `<p style="font-size:12px;color:#ef4444;margin-bottom:15px;">⚠️ Foto não anexada (Solicitação Antiga).</p>`}
             
@@ -272,7 +272,7 @@ window.ServicesModule = (() => {
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
                 <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;text-align:left;"><strong>Foto da Peça / Serviço:</strong></p>
-                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage('${s.fotoPeca}')" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage(this.src)" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : ''}
             <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Selecione o executante para a atividade: <strong>${s.descricao}</strong></p>
@@ -514,7 +514,7 @@ window.ServicesModule = (() => {
           <div class="modal-body" style="padding-top:10px;">
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
-                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage('${s.fotoPeca}')" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage(this.src)" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : `<p style="font-size:12px;color:#ef4444;margin-bottom:15px;">⚠️ Sem foto anexada.</p>`}
             <p style="margin-bottom:8px;font-size:13px;"><strong>Solicitante:</strong> ${s.origem || 'Não informado'}</p>
