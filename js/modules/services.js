@@ -23,11 +23,12 @@ window.ServicesModule = (() => {
         const dest = s.destino || s.setorDestino;
         if (dest !== session.disciplina) return false;
         if (session.disciplina === 'Usinagem' && s.status === 'Aguardando Aprovação PCM') return false;
+        if (s.status === 'Rejeitada (Retorno PCM)') return false;
         return true;
       });
     }
 
-    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado');
+    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada (Retorno PCM)');
     const andamento = mySols.filter(s => s.status === 'Em Execução' || s.status === 'Em Andamento');
     const concluidas = mySols.filter(s => s.status === 'Concluída' || s.status === 'Rejeitada');
 
@@ -97,7 +98,10 @@ window.ServicesModule = (() => {
                     <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar</button>
                   `;
                 } else if (s.status === 'Aguardando Encarregado' && isMySector) {
-                  actions += `<button class="btn btn-primary btn-xs" onclick="window.ServicesModule.acceptService('${s.id}')">Aceitar Serviço</button>`;
+                  actions += `
+                    <button class="btn btn-primary btn-xs" onclick="window.ServicesModule.acceptService('${s.id}')">Aceitar Serviço</button>
+                    <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.rejectByEncarregado('${s.id}')">Rejeitar</button>
+                  `;
                 } else if ((s.status === 'Em Execução' || s.status === 'Em Andamento') && isMySector) {
                    if ((s.destino || s.setorDestino) === 'Usinagem') {
                      actions += `<button class="btn btn-outline btn-xs" onclick="window.ServicesModule.assignWorker('${s.id}')">Destinar / Alterar Recurso</button>`;
@@ -243,6 +247,29 @@ window.ServicesModule = (() => {
     
     window.DB.solicitacoes.update(id, { status: 'Rejeitada', observacoes: motivo });
     Toast.info('Rejeitada', 'Solicitação foi rejeitada.');
+    Router.navigate('services', { force: true });
+  }
+
+  function rejectByEncarregado(id) {
+    const motivo = prompt('Motivo da rejeição (será enviado ao PCM):');
+    if (motivo === null) return;
+    if (motivo.trim() === '') {
+      Toast.error('Erro', 'O motivo é obrigatório.');
+      return;
+    }
+    
+    window.DB.solicitacoes.update(id, { status: 'Rejeitada (Retorno PCM)', observacoes: motivo });
+    
+    if (window.DB.notifications) {
+      window.DB.notifications.add({
+        titulo: 'Serviço Rejeitado',
+        mensagem: `O Encarregado rejeitou um serviço com o motivo: ${motivo}`,
+        tipo: 'warning',
+        data: new Date().toISOString()
+      });
+    }
+    
+    Toast.info('Rejeitada', 'Solicitação devolvida ao PCM.');
     Router.navigate('services', { force: true });
   }
 
@@ -606,6 +633,7 @@ window.ServicesModule = (() => {
     approvePCM,
     saveApprovePCM,
     reject,
+    rejectByEncarregado,
     assignWorker,
     saveAssign,
     viewDetails,
