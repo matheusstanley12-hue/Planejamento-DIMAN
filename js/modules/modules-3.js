@@ -2168,188 +2168,217 @@ window.ActionPlanModule = (() => {
     if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase(STORAGE_KEY, plans);
   }
 
-  // ---- AI Analysis Engine ----
-  function analyzeEquipment(eq) {
-    const tasks = DB.tasks.getByEquipment(eq.id);
-    const allRestrictions = DB.restrictions.getAll();
-    const restrictions = allRestrictions.filter(r => r.equipmentId === eq.id && r.status === 'Aberta');
-    const parts = DB.parts.getAll().filter(p => p.equipmentId === eq.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
-    const critParts = parts.filter(p => p.critica);
-    const repls = eq.replanning || [];
-    const today = new Date().toISOString().slice(0, 10);
+  function render() {
+    const eqs = DB.equipment.list();
+    const plans = getPlans();
 
-    const openTasks = tasks.filter(t => t.status !== 'Concluída');
-    const blockedTasks = openTasks.filter(t => ['Bloqueada','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação'].includes(t.status));
-    const delayedTasks = openTasks.filter(t => t.dataPlanejadaTermino && t.dataPlanejadaTermino < today);
-    const criticalTasks = openTasks.filter(t => t.critico);
-    const totalDelay = repls.reduce((s, r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
+    const sevColors = { 'Alta': 'danger', 'Média': 'warning', 'Baixa': 'info' };
+    const statusColors = { 'Pendente': 'ghost', 'Em Andamento': 'warning', 'Concluído': 'success' };
+    const statusIcons = { 'Pendente': '⬜', 'Em Andamento': '🔄', 'Concluído': '✅' };
 
-    const totalHPlan = openTasks.reduce((s, t) => s + (t.horasPlanejadas || 0), 0);
-    const totalHReal = openTasks.reduce((s, t) => s + (t.horasRealizadas || 0), 0);
-    const pctAvancoTasks = tasks.length > 0 ? Math.round(tasks.filter(t => t.status === 'Concluída').length / tasks.length * 100) : 0;
+    return `<div class="page-container">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="section-title-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/>
+            </svg>
+          </div>
+          Planos de Ação
+        </div>
+        <button class="btn btn-primary" onclick="openModal('modal-create-plan')">
+          ➕ Novo Plano de Ação
+        </button>
+      </div>
 
-    const items = [];
+      <!-- Existing plans -->
+      ${plans.length === 0 ? `
+        <div class="empty-state" style="padding:var(--space-10);">
+          <div style="font-size:3rem;margin-bottom:var(--space-4);">📋</div>
+          <h3>Nenhum Plano de Ação</h3>
+          <p style="color:var(--text-muted);">Clique em "Novo Plano de Ação" para criar um e adicionar tarefas manualmente.</p>
+        </div>
+      ` : plans.map(plan => {
+        const totalItems = plan.items ? plan.items.length : 0;
+        const done = plan.items ? plan.items.filter(i => i.status === 'Concluído').length : 0;
+        const progress = totalItems > 0 ? Math.round(done / totalItems * 100) : 0;
+        const statusBg = plan.status === 'Concluído' ? 'success' : plan.status === 'Em Andamento' ? 'warning' : 'ghost';
 
-    // Delayed tasks
-    delayedTasks.forEach(t => {
-      const diasAtraso = daysBetween(t.dataPlanejadaTermino, today);
-      items.push({
-        tipo: 'Tarefa Atrasada',
-        severidade: diasAtraso > 5 ? 'Crítica' : diasAtraso > 2 ? 'Alta' : 'Média',
-        descricao: `Atividade "${t.descricao}" está ${diasAtraso} dia(s) atrasada. Disciplina: ${t.disciplina || '—'}. Responsável: ${t.responsavel || 'Não atribuído'}.`,
-        acao: diasAtraso > 5
-          ? `Mobilizar recurso adicional URGENTEMENTE para concluir. Avaliar hora extra ou realocação de equipe de outro equipamento. Prazo: IMEDIATO.`
-          : `Priorizar esta atividade. Verificar se há bloqueio de peça ou recurso. Cobrar atualização do responsável.`,
-        responsavel: t.responsavel || 'Supervisor de Manutenção',
-        prazo: diasAtraso > 5 ? 'Imediato' : `${Math.min(diasAtraso, 3)} dia(s)`,
-        disciplina: t.disciplina || '—',
-        taskId: t.id,
-      });
-    });
+        return `<div class="card" style="margin-bottom:var(--space-5);">
+          <!-- Plan header -->
+          <div style="padding:var(--space-5);border-bottom:1px solid var(--border-card);">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-3);">
+              <div>
+                <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-2);">
+                  <span style="font-weight:800;font-size:var(--text-lg);color:var(--text-primary);">📋 ${plan.title || 'Plano Sem Título'}</span>
+                  <span class="badge badge-${statusBg}">${plan.status}</span>
+                </div>
+                <div style="font-size:var(--text-sm);color:var(--text-primary);margin-bottom:var(--space-2);">
+                  ${plan.equipmentCodigo ? `<strong>Equipamento:</strong> ${plan.equipmentCodigo}` : 'Sem equipamento associado'}
+                </div>
+                <div style="font-size:var(--text-xs);color:var(--text-muted);">
+                  Criado em ${formatDateTime(plan.createdAt)} por <strong>${plan.createdBy}</strong>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:var(--space-3);">
+                <div style="text-align:center;">
+                  <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Progresso</div>
+                  <div style="font-size:1.5rem;font-weight:800;color:var(--color-${progress === 100 ? 'success' : progress > 0 ? 'warning' : 'danger'});">${progress}%</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="ActionPlanModule.deletePlan('${plan.id}')" title="Excluir Plano">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
+                </button>
+              </div>
+            </div>
 
-    // Blocked tasks
-    blockedTasks.filter(t => !delayedTasks.includes(t)).forEach(t => {
-      const motivo = t.status === 'Aguardando Peça' ? 'Aguardando peça' :
-                     t.status === 'Aguardando Recurso' ? 'Aguardando recurso/mão de obra' :
-                     t.status === 'Aguardando Aprovação' ? 'Aguardando aprovação técnica' : 'Bloqueada';
-      items.push({
-        tipo: 'Tarefa Bloqueada',
-        severidade: t.critico ? 'Crítica' : 'Alta',
-        descricao: `Atividade "${t.descricao}" com status "${t.status}". Motivo: ${motivo}. Disciplina: ${t.disciplina || '—'}.`,
-        acao: t.status === 'Aguardando Peça'
-          ? `Verificar status da peça com suprimentos. Buscar alternativa de peça nacional ou canibalização de outro equipamento se o prazo for superior a 3 dias.`
-          : t.status === 'Aguardando Recurso'
-          ? `Solicitar ao planejamento a alocação de mão de obra qualificada. Avaliar remanejamento de outra frente com menor prioridade.`
-          : t.status === 'Aguardando Aprovação'
-          ? `Escalar para o coordenador/gerente para aprovação imediata. Identificar o responsável pela aprovação e cobrar resposta.`
-          : `Investigar causa raiz do bloqueio e registrar restrição formal no sistema. Escalar para a supervisão.`,
-        responsavel: t.responsavel || 'Planejamento',
-        prazo: t.critico ? 'Imediato' : '2 dias',
-        disciplina: t.disciplina || '—',
-        taskId: t.id,
-      });
-    });
+            <!-- Progress bar -->
+            <div style="margin-top:var(--space-4);">
+              <div class="progress-track"><div class="progress-fill ${progress === 100 ? 'success' : progress > 50 ? '' : 'danger'}" style="width:${progress}%"></div></div>
+            </div>
+          </div>
 
-    // Open restrictions
-    restrictions.forEach(r => {
-      items.push({
-        tipo: 'Restrição Aberta',
-        severidade: r.impactoCaminhosCriticos ? 'Crítica' : 'Alta',
-        descricao: `Restrição: "${r.tipo}" — ${r.descricao}. ${r.tarefaBloqueada ? 'Bloqueia tarefa: ' + r.tarefaBloqueada + '.' : ''}`,
-        acao: r.tipo === 'Falta de Peça'
-          ? `Acionar suprimentos para expeditar entrega. Verificar se há alternativa de peça ou possibilidade de canibalização de equipamento já liberado.`
-          : r.tipo === 'Falta de Mão de Obra'
-          ? `Solicitar contratação emergencial ou remanejamento de equipe de outra frente. Considerar subcontratação se prazo for apertado.`
-          : r.tipo === 'Falta de Ferramenta'
-          ? `Verificar disponibilidade de ferramenta no almoxarifado ou unidade vizinha. Avaliar compra/locação emergencial.`
-          : `Reunir equipe de ação para tratamento imediato. Escalar à gerência se necessário.`,
-        responsavel: 'Supervisão / Planejamento',
-        prazo: r.impactoCaminhosCriticos ? 'Imediato' : '3 dias',
-        disciplina: r.disciplina || '—',
-      });
-    });
+          <!-- Action items -->
+          <div style="padding:var(--space-4);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4);">
+              <h4 style="margin:0;">Ações do Plano</h4>
+              <button class="btn btn-secondary btn-sm" onclick="ActionPlanModule.openAddActionModal('${plan.id}')">➕ Adicionar Ação</button>
+            </div>
+            ${!plan.items || plan.items.length === 0 ? `
+              <div style="text-align:center;padding:var(--space-6);color:var(--text-muted);border:1px dashed var(--border-card);border-radius:var(--radius-lg);">
+                <div style="font-weight:700;">Nenhuma ação cadastrada</div>
+                <div style="font-size:var(--text-xs);">Clique em "Adicionar Ação" para listar as tarefas deste plano.</div>
+              </div>
+            ` : `
+              <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+                ${plan.items.map((item, idx) => {
+                  const itemStatus = item.status || 'Pendente';
+                  const isDone = itemStatus === 'Concluído';
+                  return `<div style="display:flex;gap:var(--space-4);padding:var(--space-4);background:var(--bg-base);border-radius:var(--radius-lg);border-left:4px solid var(--color-${sevColors[item.prioridade] || 'ghost'});${isDone ? 'opacity:0.6;' : ''}transition:all .2s;">
+                    <!-- Toggle -->
+                    <div style="flex-shrink:0;padding-top:2px;">
+                      <button onclick="ActionPlanModule.toggleItemStatus('${plan.id}', ${idx})" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;" title="Alterar status">${statusIcons[itemStatus]}</button>
+                    </div>
+                    <!-- Content -->
+                    <div style="flex:1;min-width:0;">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2);flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:var(--space-2);">
+                          <span class="badge badge-${sevColors[item.prioridade] || 'ghost'}" style="font-size:10px;">${item.prioridade}</span>
+                          <span class="badge badge-${statusColors[itemStatus]}" style="font-size:10px;">${itemStatus}</span>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:2px 6px;" onclick="ActionPlanModule.deleteAction('${plan.id}', ${idx})" title="Excluir Ação">🗑️</button>
+                      </div>
+                      <div style="font-size:var(--text-sm);color:var(--text-primary);margin-bottom:var(--space-2);${isDone ? 'text-decoration:line-through;' : ''}"><strong>O que fazer:</strong> ${item.descricao}</div>
+                      <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--text-muted);">
+                        <span>👤 <strong>Resp:</strong> ${item.responsavel}</span>
+                        <span>⏰ <strong>Prazo:</strong> <strong style="color:var(--color-${new Date(item.prazo) < new Date() && !isDone ? 'danger' : 'success'});">${formatDate(item.prazo)}</strong></span>
+                      </div>
+                    </div>
+                  </div>`;
+                }).join('')}
+              </div>
+            `}
+          </div>
+        </div>`;
+      }).join('')}
 
-    // Critical pending parts
-    critParts.forEach(p => {
-      items.push({
-        tipo: 'Peça Crítica Pendente',
-        severidade: 'Crítica',
-        descricao: `Peça "${p.descricao}" (PN: ${p.pn || '—'}) está com status "${p.status}". Impacta diretamente o caminho crítico.`,
-        acao: `Contatar fornecedor para confirmar prazo real. Avaliar frete aéreo se necessário. Verificar possibilidade de canibalização de peça de equipamento já liberado. Comunicar compras e supervisão.`,
-        responsavel: 'Suprimentos / Compras',
-        prazo: 'Imediato',
-        disciplina: '—',
-      });
-    });
+      <!-- MODAL: Criar Novo Plano -->
+      <div id="modal-create-plan" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+          <div class="modal-header">
+            <h3 class="modal-title">Novo Plano de Ação</h3>
+            <button class="modal-close" onclick="closeModal('modal-create-plan')">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Título / Motivo do Plano</label>
+              <input type="text" class="form-input" id="new-plan-title" placeholder="Ex: Recuperação de Atraso">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Equipamento Associado (Opcional)</label>
+              <select class="form-input" id="new-plan-eq">
+                <option value="">Nenhum / Não aplicável</option>
+                ${eqs.map(e => `<option value="${e.id}">${e.codigo} — ${e.cliente || 'Sem cliente'}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-create-plan')">Cancelar</button>
+            <button class="btn btn-primary" onclick="ActionPlanModule.createPlan()">Criar Plano</button>
+          </div>
+        </div>
+      </div>
 
-    // Replanning excessive
-    if (totalDelay > 7) {
-      items.push({
-        tipo: 'Excesso de Replanejamentos',
-        severidade: 'Alta',
-        descricao: `Equipamento acumula ${totalDelay} dias de atraso com ${repls.length} replanejamento(s). Causas: ${repls.map(r => r.motivo).join('; ')}.`,
-        acao: `Realizar reunião de análise de causa raiz com equipe multidisciplinar. Criar cronograma de recuperação com marcos intermediários. Considerar trabalho em finais de semana ou horas extras controladas para recuperar o atraso.`,
-        responsavel: 'Coordenação / Planejamento',
-        prazo: '2 dias',
-        disciplina: '—',
-      });
-    }
+      <!-- MODAL: Adicionar Ação ao Plano -->
+      <div id="modal-add-plan-action" class="modal">
+        <div class="modal-content" style="max-width:500px;">
+          <div class="modal-header">
+            <h3 class="modal-title">Adicionar Ação</h3>
+            <button class="modal-close" onclick="closeModal('modal-add-plan-action')">×</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="add-action-plan-id">
+            <div class="form-group">
+              <label class="form-label">Descrição da Ação</label>
+              <textarea class="form-input" id="add-action-desc" rows="3" placeholder="O que precisa ser feito?"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Responsável</label>
+              <input type="text" class="form-input" id="add-action-resp" placeholder="Nome ou cargo">
+            </div>
+            <div style="display:flex; gap:var(--space-4);">
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">Prazo</label>
+                <input type="date" class="form-input" id="add-action-date">
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label class="form-label">Prioridade</label>
+                <select class="form-input" id="add-action-prio">
+                  <option value="Alta">Alta</option>
+                  <option value="Média" selected>Média</option>
+                  <option value="Baixa">Baixa</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal('modal-add-plan-action')">Cancelar</button>
+            <button class="btn btn-primary" onclick="ActionPlanModule.addAction()">Salvar Ação</button>
+          </div>
+        </div>
+      </div>
 
-    // Low progress warning
-    if (pctAvancoTasks < 50 && openTasks.length > 3) {
-      const daysToRelease = daysBetween(today, eq.dataLiberacaoPlanejada || today);
-      if (daysToRelease < 15 && daysToRelease > 0) {
-        items.push({
-          tipo: 'Baixo Avanço Físico',
-          severidade: 'Crítica',
-          descricao: `Avanço de apenas ${pctAvancoTasks}% com ${daysToRelease} dias restantes até a data de liberação planejada. ${openTasks.length} atividades ainda em aberto.`,
-          acao: `Priorizar atividades do caminho crítico. Considerar turno estendido ou mobilização de equipe adicional. Rever cronograma e comunicar ao cliente qualquer risco de atraso com plano de mitigação.`,
-          responsavel: 'Coordenação / Gerência',
-          prazo: 'Imediato',
-          disciplina: '—',
-        });
-      }
-    }
-
-    // Sort by severity
-    const sevOrder = { 'Crítica': 0, 'Alta': 1, 'Média': 2, 'Baixa': 3 };
-    items.sort((a, b) => (sevOrder[a.severidade] || 99) - (sevOrder[b.severidade] || 99));
-
-    return {
-      equipmentId: eq.id,
-      equipmentCodigo: eq.codigo,
-      equipmentCliente: eq.cliente,
-      equipmentStatus: eq.status,
-      pctAvanco: eq.pctAvanco || pctAvancoTasks,
-      dataLiberacao: eq.dataLiberacaoPlanejada,
-      totalDelay,
-      totalOpenTasks: openTasks.length,
-      totalCritical: criticalTasks.length,
-      totalRestrictions: restrictions.length,
-      totalPendingParts: parts.length,
-      items,
-    };
+    </div>`;
   }
 
-  function generatePlan(eqId) {
-    const eq = DB.equipment.get(eqId);
-    if (!eq) { Toast.error('Erro', 'Equipamento não encontrado'); return; }
+  function createPlan() {
+    const title = document.getElementById('new-plan-title').value.trim();
+    const eqId = document.getElementById('new-plan-eq').value;
 
-    const analysis = analyzeEquipment(eq);
+    if (!title) {
+      Toast.error('Erro', 'Informe o título do plano de ação.');
+      return;
+    }
+
+    const eq = eqId ? DB.equipment.get(eqId) : null;
     const session = window.Auth ? window.Auth.getSession() : null;
 
     const plan = {
       id: `ap-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
-      equipmentId: eqId,
-      equipmentCodigo: eq.codigo,
+      title,
+      equipmentId: eqId || null,
+      equipmentCodigo: eq ? eq.codigo : null,
       createdAt: new Date().toISOString(),
       createdBy: session?.nome || 'Sistema',
-      status: 'Em Andamento',
-      analysis,
-      itemsStatus: analysis.items.map(() => 'Pendente'),
+      status: 'Pendente',
+      items: [],
     };
 
     const plans = getPlans();
     plans.unshift(plan);
     savePlans(plans);
 
-    Toast.success('Plano de Ação Gerado!', `${analysis.items.length} ação(ões) identificadas para ${eq.codigo}`);
-    Router.navigate('action-plans', { force: true });
-  }
-
-  function toggleItemStatus(planId, itemIdx) {
-    const plans = getPlans();
-    const plan = plans.find(p => p.id === planId);
-    if (!plan) return;
-    const current = plan.itemsStatus[itemIdx];
-    plan.itemsStatus[itemIdx] = current === 'Pendente' ? 'Em Andamento' : current === 'Em Andamento' ? 'Concluído' : 'Pendente';
-
-    // Auto-update plan status
-    const allDone = plan.itemsStatus.every(s => s === 'Concluído');
-    const anyStarted = plan.itemsStatus.some(s => s !== 'Pendente');
-    plan.status = allDone ? 'Concluído' : anyStarted ? 'Em Andamento' : 'Pendente';
-
-    savePlans(plans);
+    closeModal('modal-create-plan');
+    Toast.success('Plano Criado!', 'Plano de Ação criado com sucesso.');
     Router.navigate('action-plans', { force: true });
   }
 
@@ -2368,191 +2397,90 @@ window.ActionPlanModule = (() => {
     });
   }
 
-  function render() {
-    const eqs = DB.equipment.list().filter(e => e.status === 'Em Manutenção' || e.status === 'Paralisado');
-    const plans = getPlans();
-
-    const sevColors = {
-      'Crítica': 'danger',
-      'Alta': 'warning',
-      'Média': 'info',
-      'Baixa': 'ghost'
-    };
-    const statusColors = {
-      'Pendente': 'ghost',
-      'Em Andamento': 'warning',
-      'Concluído': 'success'
-    };
-    const statusIcons = {
-      'Pendente': '⬜',
-      'Em Andamento': '🔄',
-      'Concluído': '✅'
-    };
-
-    return `<div class="page-container">
-      <div class="section-header">
-        <div class="section-title">
-          <div class="section-title-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z"/>
-            </svg>
-          </div>
-          Plano de Ação — IA
-        </div>
-      </div>
-
-      <div class="alert alert-info" style="margin-bottom:var(--space-5);">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-        <div class="alert-content">
-          <div class="alert-title">Análise Inteligente de Impacto</div>
-          <div class="alert-msg">A IA analisa automaticamente restrições, tarefas atrasadas, peças pendentes e replanejamentos para gerar planos de ação priorizados por severidade.</div>
-        </div>
-      </div>
-
-      <!-- Generate new plan -->
-      <div class="card" style="margin-bottom:var(--space-5);padding:var(--space-5);">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-4);">
-          <div>
-            <div style="font-weight:800;font-size:var(--text-base);color:var(--text-primary);margin-bottom:var(--space-1);">⚡ Gerar Novo Plano de Ação</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);">Selecione um equipamento para a IA analisar e gerar ações corretivas automaticamente</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:var(--space-3);">
-            <select id="ap-eq-select" style="min-width:200px;">
-              <option value="">Selecione o equipamento...</option>
-              ${eqs.map(e => `<option value="${e.id}">${e.codigo} — ${e.cliente || 'Sem cliente'} (${e.status})</option>`).join('')}
-            </select>
-            <button class="btn btn-primary" onclick="ActionPlanModule.generateFromSelect()" style="white-space:nowrap;">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;vertical-align:middle;">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-              </svg>
-              Gerar Plano IA
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Existing plans -->
-      ${plans.length === 0 ? `
-        <div class="empty-state" style="padding:var(--space-10);">
-          <div style="font-size:3rem;margin-bottom:var(--space-4);">📋</div>
-          <h3>Nenhum Plano de Ação Gerado</h3>
-          <p style="color:var(--text-muted);">Selecione um equipamento acima e clique em "Gerar Plano IA" para que a inteligência artificial identifique os itens que impactam a liberação do equipamento e crie ações corretivas.</p>
-        </div>
-      ` : plans.map(plan => {
-        const totalItems = plan.analysis.items.length;
-        const done = plan.itemsStatus.filter(s => s === 'Concluído').length;
-        const progress = totalItems > 0 ? Math.round(done / totalItems * 100) : 0;
-        const statusBg = plan.status === 'Concluído' ? 'success' : plan.status === 'Em Andamento' ? 'warning' : 'ghost';
-
-        return `<div class="card" style="margin-bottom:var(--space-5);">
-          <!-- Plan header -->
-          <div style="padding:var(--space-5);border-bottom:1px solid var(--border-card);">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-3);">
-              <div>
-                <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-2);">
-                  <span style="font-weight:800;font-size:var(--text-lg);color:var(--text-primary);">📋 ${plan.equipmentCodigo}</span>
-                  <span class="badge badge-${statusBg}">${plan.status}</span>
-                </div>
-                <div style="font-size:var(--text-xs);color:var(--text-muted);">
-                  Gerado em ${formatDateTime(plan.createdAt)} por <strong>${plan.createdBy}</strong>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:var(--space-3);">
-                <div style="text-align:center;">
-                  <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Progresso</div>
-                  <div style="font-size:1.5rem;font-weight:800;color:var(--color-${progress === 100 ? 'success' : progress > 0 ? 'warning' : 'danger'});">${progress}%</div>
-                </div>
-                <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="ActionPlanModule.deletePlan('${plan.id}')" title="Excluir Plano">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- KPI cards -->
-            <div style="display:flex;gap:var(--space-4);margin-top:var(--space-4);flex-wrap:wrap;">
-              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Ações</div>
-                <div style="font-size:1.3rem;font-weight:800;color:var(--text-primary);">${totalItems}</div>
-              </div>
-              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Concluídas</div>
-                <div style="font-size:1.3rem;font-weight:800;color:var(--color-success);">${done}</div>
-              </div>
-              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Atraso Acum.</div>
-                <div style="font-size:1.3rem;font-weight:800;color:${plan.analysis.totalDelay > 0 ? 'var(--color-danger)' : 'var(--color-success)'};">${plan.analysis.totalDelay} dias</div>
-              </div>
-              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Restrições</div>
-                <div style="font-size:1.3rem;font-weight:800;color:${plan.analysis.totalRestrictions > 0 ? 'var(--color-warning)' : 'var(--color-success)'};">${plan.analysis.totalRestrictions}</div>
-              </div>
-              <div style="flex:1;min-width:100px;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-                <div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Liberação</div>
-                <div style="font-size:1rem;font-weight:800;color:var(--text-primary);">${formatDate(plan.analysis.dataLiberacao)}</div>
-              </div>
-            </div>
-
-            <!-- Progress bar -->
-            <div style="margin-top:var(--space-3);">
-              <div class="progress-track"><div class="progress-fill ${progress === 100 ? 'success' : progress > 50 ? '' : 'danger'}" style="width:${progress}%"></div></div>
-            </div>
-          </div>
-
-          <!-- Action items -->
-          <div style="padding:var(--space-4);">
-            ${plan.analysis.items.length === 0 ? `
-              <div style="text-align:center;padding:var(--space-6);color:var(--text-muted);">
-                <div style="font-size:2rem;margin-bottom:var(--space-2);">✅</div>
-                <div style="font-weight:700;">Nenhum item de impacto identificado</div>
-                <div style="font-size:var(--text-xs);">Este equipamento não possui itens bloqueando a liberação.</div>
-              </div>
-            ` : `
-              <div style="display:flex;flex-direction:column;gap:var(--space-3);">
-                ${plan.analysis.items.map((item, idx) => {
-                  const itemStatus = plan.itemsStatus[idx] || 'Pendente';
-                  const isDone = itemStatus === 'Concluído';
-                  return `<div style="display:flex;gap:var(--space-4);padding:var(--space-4);background:var(--bg-base);border-radius:var(--radius-lg);border-left:4px solid var(--color-${sevColors[item.severidade] || 'ghost'});${isDone ? 'opacity:0.6;' : ''}transition:all .2s;">
-                    <!-- Toggle -->
-                    <div style="flex-shrink:0;padding-top:2px;">
-                      <button onclick="ActionPlanModule.toggleItemStatus('${plan.id}', ${idx})" style="background:none;border:none;cursor:pointer;font-size:1.3rem;line-height:1;" title="Alterar status">${statusIcons[itemStatus]}</button>
-                    </div>
-                    <!-- Content -->
-                    <div style="flex:1;min-width:0;">
-                      <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2);flex-wrap:wrap;">
-                        <span class="badge badge-${sevColors[item.severidade] || 'ghost'}" style="font-size:10px;">${item.severidade}</span>
-                        <span class="badge badge-ghost" style="font-size:10px;">${item.tipo}</span>
-                        <span class="badge badge-${statusColors[itemStatus]}" style="font-size:10px;">${itemStatus}</span>
-                        ${item.disciplina !== '—' ? `<span class="badge badge-ghost" style="font-size:10px;">📐 ${item.disciplina}</span>` : ''}
-                      </div>
-                      <div style="font-size:var(--text-sm);color:var(--text-primary);margin-bottom:var(--space-2);${isDone ? 'text-decoration:line-through;' : ''}">${item.descricao}</div>
-                      <div style="font-size:var(--text-xs);color:var(--brand-primary-light);background:rgba(21,101,192,0.08);padding:var(--space-2) var(--space-3);border-radius:var(--radius-md);margin-bottom:var(--space-2);line-height:1.5;">
-                        💡 <strong>Ação Recomendada:</strong> ${item.acao}
-                      </div>
-                      <div style="display:flex;gap:var(--space-4);font-size:var(--text-xs);color:var(--text-muted);">
-                        <span>👤 ${item.responsavel}</span>
-                        <span>⏰ Prazo: <strong style="color:var(--color-${item.prazo === 'Imediato' ? 'danger' : 'warning'});">${item.prazo}</strong></span>
-                      </div>
-                    </div>
-                  </div>`;
-                }).join('')}
-              </div>
-            `}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+  function openAddActionModal(planId) {
+    document.getElementById('add-action-plan-id').value = planId;
+    document.getElementById('add-action-desc').value = '';
+    document.getElementById('add-action-resp').value = '';
+    document.getElementById('add-action-date').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('add-action-prio').value = 'Média';
+    openModal('modal-add-plan-action');
   }
 
-  function generateFromSelect() {
-    const select = document.getElementById('ap-eq-select');
-    if (!select || !select.value) {
-      Toast.error('Erro', 'Selecione um equipamento para gerar o plano.');
+  function addAction() {
+    const planId = document.getElementById('add-action-plan-id').value;
+    const descricao = document.getElementById('add-action-desc').value.trim();
+    const responsavel = document.getElementById('add-action-resp').value.trim();
+    const prazo = document.getElementById('add-action-date').value;
+    const prioridade = document.getElementById('add-action-prio').value;
+
+    if (!descricao || !responsavel || !prazo) {
+      Toast.error('Erro', 'Preencha todos os campos da ação.');
       return;
     }
-    generatePlan(select.value);
+
+    const plans = getPlans();
+    const plan = plans.find(p => p.id === planId);
+    if (!plan) return;
+
+    if (!plan.items) plan.items = [];
+
+    plan.items.push({
+      id: `act-${Date.now()}`,
+      descricao,
+      responsavel,
+      prazo,
+      prioridade,
+      status: 'Pendente'
+    });
+
+    updatePlanStatus(plan);
+    savePlans(plans);
+
+    closeModal('modal-add-plan-action');
+    Toast.success('Ação Adicionada');
+    Router.navigate('action-plans', { force: true });
   }
 
-  return { render, generatePlan, generateFromSelect, toggleItemStatus, deletePlan };
+  function deleteAction(planId, itemIdx) {
+    window.uiConfirm('Excluir esta ação?', (res) => {
+      if (!res) return;
+      const plans = getPlans();
+      const plan = plans.find(p => p.id === planId);
+      if (!plan || !plan.items) return;
+
+      plan.items.splice(itemIdx, 1);
+      updatePlanStatus(plan);
+      savePlans(plans);
+
+      Toast.success('Ação Excluída');
+      Router.navigate('action-plans', { force: true });
+    });
+  }
+
+  function toggleItemStatus(planId, itemIdx) {
+    const plans = getPlans();
+    const plan = plans.find(p => p.id === planId);
+    if (!plan || !plan.items) return;
+
+    const current = plan.items[itemIdx].status;
+    plan.items[itemIdx].status = current === 'Pendente' ? 'Em Andamento' : current === 'Em Andamento' ? 'Concluído' : 'Pendente';
+
+    updatePlanStatus(plan);
+    savePlans(plans);
+    Router.navigate('action-plans', { force: true });
+  }
+
+  function updatePlanStatus(plan) {
+    if (!plan.items || plan.items.length === 0) {
+      plan.status = 'Pendente';
+      return;
+    }
+    const allDone = plan.items.every(i => i.status === 'Concluído');
+    const anyStarted = plan.items.some(i => i.status !== 'Pendente');
+    plan.status = allDone ? 'Concluído' : anyStarted ? 'Em Andamento' : 'Pendente';
+  }
+
+  return { render, createPlan, deletePlan, openAddActionModal, addAction, deleteAction, toggleItemStatus };
 })();
 
 
