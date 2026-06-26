@@ -16,8 +16,16 @@ window.ServicesModule = (() => {
 
     const solicitacoes = window.DB.solicitacoes ? window.DB.solicitacoes.list() : [];
     
-    // All PCM and Encarregados see all requests now, but actions are restricted
     let mySols = solicitacoes;
+    
+    if (!isPCM && isEncarregado) {
+      mySols = mySols.filter(s => {
+        const dest = s.destino || s.setorDestino;
+        if (dest !== session.disciplina) return false;
+        if (session.disciplina === 'Usinagem' && s.status === 'Aguardando Aprovação PCM') return false;
+        return true;
+      });
+    }
 
     const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado');
     const andamento = mySols.filter(s => s.status === 'Em Execução' || s.status === 'Em Andamento');
@@ -315,18 +323,35 @@ window.ServicesModule = (() => {
   function acceptService(id) {
     const s = window.DB.solicitacoes.list().find(x => x.id === id);
     if (!s) return;
+    const dest = s.destino || s.setorDestino;
     const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+    const workers = window.DB.workforce ? window.DB.workforce.list().filter(w => w.disciplina === dest) : [];
+
     const modalHtml = `
       <div class="modal-overlay" id="modal-accept">
         <div class="modal" style="max-width:500px;">
           <div class="modal-header">
-            <div class="modal-title">Aceitar Serviço</div>
+            <div class="modal-title">Aceitar e Destinar Serviço</div>
             <button class="modal-close" onclick="closeModal('modal-accept')">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
           <div class="modal-body" style="padding-top:10px;">
             <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Serviço: <strong>${s.descricao}</strong></p>
+            
+            <div class="form-group">
+              <label>Executante (${dest}) *</label>
+              <select id="sv-acc-worker" class="form-control" onchange="window.ServicesModule.onWorkerChange(this.value, '${dest}')">
+                <option value="">-- Selecione --</option>
+                ${workers.map(w => `<option value="${w.id}">${w.nome}</option>`).join('')}
+              </select>
+            </div>
+            
+            <div class="form-group" id="sv-acc-just-container" style="display:none;">
+              <label style="color:var(--color-warning);">Motivo da Troca de Alocação ${dest !== 'Usinagem' ? '*' : '(Opcional)'}</label>
+              <textarea id="sv-acc-justificativa" class="form-control" placeholder="Descreva o motivo de tirar o executante da atividade atual..."></textarea>
+            </div>
+
             <div class="form-group">
               <label>Data/Hora de Início *</label>
               <input type="datetime-local" id="sv-acc-inicio" class="form-control" value="${nowStr}" />
@@ -335,14 +360,14 @@ window.ServicesModule = (() => {
               <label>Prazo de Execução (Dias/Horas) *</label>
               <input type="text" id="sv-acc-prazo" class="form-control" placeholder="Ex: 2 dias, ou 4 horas" />
             </div>
-            <div class="form-group">
+            <div class="form-group" style="display:none;">
               <label>Avanço Atual (%) *</label>
               <input type="number" id="sv-acc-avanco" class="form-control" value="0" min="0" max="100" />
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-accept')">Cancelar</button>
-            <button class="btn btn-primary" onclick="window.ServicesModule.saveAccept('${s.id}')">Confirmar</button>
+            <button class="btn btn-primary" onclick="window.ServicesModule.saveAccept('${s.id}')">Confirmar e Destinar</button>
           </div>
         </div>
       </div>
@@ -351,19 +376,75 @@ window.ServicesModule = (() => {
     openModal('modal-accept');
   }
 
+  function onWorkerChange(workerId, dest) {
+    const w = window.DB.workforce.list().find(x => x.id === workerId);
+    const justContainer = document.getElementById('sv-acc-just-container');
+    if (!w) {
+      justContainer.style.display = 'none';
+      return;
+    }
+    const eqIds = w.equipmentIds || (w.equipmentId ? [w.equipmentId] : []);
+    const eqsAllocated = eqIds.map(id => window.DB.equipment.get(id)).filter(e => e && e.status !== 'Liberado');
+    if (eqsAllocated.length > 0) {
+      justContainer.style.display = 'block';
+    } else {
+      justContainer.style.display = 'none';
+    }
+  }
+
   function saveAccept(id) {
     const inicio = document.getElementById('sv-acc-inicio').value;
     const prazo = document.getElementById('sv-acc-prazo').value.trim();
     const avanco = document.getElementById('sv-acc-avanco').value;
-    if(!inicio || !prazo || !avanco) { Toast.error('Erro','Preencha todos os campos.'); return; }
+    const workerId = document.getElementById('sv-acc-worker').value;
+    
+    if(!inicio || !prazo || !workerId) { Toast.error('Erro','Preencha todos os campos obrigatórios.'); return; }
+    
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    const dest = s.destino || s.setorDestino;
+    const w = window.DB.workforce.list().find(x => x.id === workerId);
+    
+    const justContainer = document.getElementById('sv-acc-just-container');
+    const justificativa = document.getElementById('sv-acc-justificativa').value.trim();
+    if (justContainer.style.display === 'block' && dest !== 'Usinagem' && !justificativa) {
+      Toast.error('Erro', 'Por favor, informe a justificativa da troca de alocação.');
+      return;
+    }
+
     window.DB.solicitacoes.update(id, {
       status: 'Em Execução',
       dataInicioExecucao: inicio,
       prazoExecucao: prazo,
       pctAvanço: avanco
     });
+    
+    if (s.osId) {
+      window.DB.tasks.update(s.osId, { responsavel: w.nome, status: 'Em Execução' });
+    }
+
+    // Update worker allocation
+    let eqIds = w.equipmentIds || (w.equipmentId ? [w.equipmentId] : []);
+    if (s.equipmentId && !eqIds.includes(s.equipmentId)) {
+      eqIds.push(s.equipmentId);
+    }
+    window.DB.workforce.update(w.id, { 
+      equipmentIds: eqIds, 
+      justificativa: justificativa || w.justificativa 
+    });
+
+    // Send notification
+    if (window.DB.notifications) {
+      const eq = window.DB.equipment.get(s.equipmentId);
+      window.DB.notifications.add({
+        titulo: 'Nova OS Destinada',
+        mensagem: `Você foi alocado no equipamento ${eq ? eq.codigo : s.equipmentId} para a atividade: ${s.descricao}`,
+        tipo: 'info',
+        data: new Date().toISOString()
+      });
+    }
+
+    Toast.success('Destinado', 'O serviço foi repassado e aceito com sucesso.');
     closeModal('modal-accept');
-    Toast.success('Aceito', 'Serviço em execução.');
     Router.navigate('services', { force: true });
   }
 
@@ -517,6 +598,7 @@ window.ServicesModule = (() => {
     deleteRequest,
     acceptService,
     saveAccept,
+    onWorkerChange,
     updateProgress,
     saveProgress,
     finishService,
