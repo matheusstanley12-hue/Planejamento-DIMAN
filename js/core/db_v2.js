@@ -516,7 +516,7 @@ window.DB = (() => {
 
           if (window.Router) {
             const current = window.Router.getCurrent();
-            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home'];
+            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home', 'equipment', 'services', 'planning'];
             if (current && liveViews.includes(current)) {
               const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
               if (!hasOpenModal) {
@@ -544,11 +544,36 @@ window.DB = (() => {
       const { data, error } = await supabaseClient.from('diman_store').select('*');
       if (error) throw error;
       if (data && data.length > 0) {
+        const groupedData = {};
+        const allData = {};
+        
         data.forEach(row => {
           if (row.key === 'all') {
-            localStorage.setItem(row.collection, JSON.stringify(row.data));
+            allData[row.collection] = row.data;
+          } else {
+            if (!groupedData[row.collection]) groupedData[row.collection] = [];
+            groupedData[row.collection].push(row.data);
           }
         });
+        
+        // Restore all collections to base arrays
+        for (const [collection, arr] of Object.entries(allData)) {
+          localStorage.setItem(collection, JSON.stringify(arr));
+        }
+        
+        // Merge individual rows
+        for (const [collection, arr] of Object.entries(groupedData)) {
+          let baseArr = [];
+          try { baseArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
+          if (!Array.isArray(baseArr)) baseArr = [];
+          const mergedMap = new Map();
+          baseArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+          arr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+          let finalArray = Array.from(mergedMap.values());
+          if (collection === 'diman_tasks') finalArray = stripLargeFields(collection, finalArray);
+          try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
+        }
+
         localStorage.setItem('diman_unsynced', 'false');
         alert("Restruturação concluída com sucesso! Suas tarefas foram recuperadas da nuvem.");
         window.location.reload();

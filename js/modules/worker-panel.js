@@ -38,12 +38,12 @@ window.WorkerPanel = (() => {
     const eqs = window.DB.equipment.list();
     const allTasks = window.DB.tasks.getAll();
     const myWorker = getMyWorker(session);
-    const myDirectEqId = myWorker ? myWorker.equipmentId : null;
+    const myEqIds = myWorker && myWorker.equipmentIds ? myWorker.equipmentIds : (myWorker && myWorker.equipmentId ? [myWorker.equipmentId] : []);
     const myWorkerName = myWorker ? myWorker.nome : session.nome;
     
     return eqs.filter(e => {
       const map = e.workforceMap || {};
-      if (Object.values(map).includes(myWorkerName) || Object.values(map).includes(session.nome) || e.id === myDirectEqId) return true;
+      if (Object.values(map).includes(myWorkerName) || Object.values(map).includes(session.nome) || myEqIds.includes(e.id)) return true;
       
       const eqTasks = allTasks.filter(t => t.equipmentId === e.id && t.status !== 'Concluída');
       return eqTasks.some(t => t.responsavel && (t.responsavel.includes(myWorkerName) || t.responsavel.includes(session.nome)));
@@ -945,22 +945,24 @@ window.WorkerPanel = (() => {
     }
   }
 
-  function formatTimeDiff(isoStart) {
-    if (!isoStart) return '00:00:00';
-    const s = new Date(isoStart);
-    const n = new Date();
-    const diff = Math.floor((n - s) / 1000); // seconds
-    const h = Math.floor(diff / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    const secs = diff % 60;
-    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+  function getAccumulatedSeconds(workerId, taskId) {
+    if (!workerId || !taskId) return 0;
+    const tss = window.DB.timesheets.list().filter(ts => ts.workerId === workerId && ts.taskId === taskId && ts.tipo !== 'Atraso Tarefa');
+    let totalHrs = 0;
+    tss.forEach(ts => {
+      totalHrs += parseFloat(ts.horasTrabalhadas) || 0;
+    });
+    return Math.floor(totalHrs * 3600);
   }
 
-  function formatTimeDiff(isoStart) {
-    if (!isoStart) return '00:00:00';
-    const s = new Date(isoStart);
-    const n = new Date();
-    const diff = Math.floor((n - s) / 1000); // seconds
+  function formatTimeDiff(isoStart, accumulatedSecs = 0) {
+    if (!isoStart && accumulatedSecs === 0) return '00:00:00';
+    let diff = parseInt(accumulatedSecs, 10) || 0;
+    if (isoStart) {
+      const s = new Date(isoStart);
+      const n = new Date();
+      diff += Math.floor((n - s) / 1000); // seconds
+    }
     const h = Math.floor(diff / 3600);
     const m = Math.floor((diff % 3600) / 60);
     const secs = diff % 60;
@@ -1033,8 +1035,9 @@ window.WorkerPanel = (() => {
       try {
         document.querySelectorAll('.live-timer-wp').forEach(el => {
           const startTime = el.getAttribute('data-start-time');
-          if (startTime) {
-             el.textContent = formatTimeDiff(startTime);
+          const acc = parseInt(el.getAttribute('data-accumulated') || '0', 10);
+          if (startTime || acc > 0) {
+             el.textContent = formatTimeDiff(startTime, acc);
           }
         });
 
@@ -1056,27 +1059,29 @@ window.WorkerPanel = (() => {
         const eq = eqs.find(e => e.id === (currentT ? currentT.equipmentId : null));
         
         if (state === 'Trabalhando') {
+          const accSecs = getAccumulatedSeconds(w.id, w.currentTaskId);
           return `
             <div class="active-task-card working" style="margin-bottom: 15px;">
               <div class="pulse-indicator"></div>
               <div class="task-state">EM EXECUÇÃO - ${w.nome}</div>
-              ${currentT && !canExecuteTask(session, currentT) ? 
+              ${currentT && !canExecuteTask(session, currentT) && w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) ? 
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tempo Restrito (Outro Setor)</div>` : 
-                `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}">${formatTimeDiff(w.currentActionStartTime)}</div>`
+                `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}" data-accumulated="${accSecs}">${formatTimeDiff(w.currentActionStartTime, accSecs)}</div>`
               }
               <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
               <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
               ${currentT && currentT.fotoPeca ? `
-                <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;" onclick="WorkerPanel.openTaskDetail('${currentT.id}')">
                   <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
+                  <div style="text-align:center;font-size:9px;color:white;background:rgba(0,0,0,0.6);padding:2px;font-weight:600;position:absolute;bottom:0;width:100%;">TOCAR PARA AMPLIAR</div>
                 </div>
               ` : ''}
               
-              ${currentT && !canExecuteTask(session, currentT) ? `
+              ${w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) ? `
                 <div class="action-buttons">
-                  <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
+                  <div style="color:var(--text-muted);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                    Acesso Restrito ao Cargo
+                    Sendo executada por ${w.nome}
                   </div>
                 </div>
               ` : `
@@ -1101,23 +1106,24 @@ window.WorkerPanel = (() => {
           return `
             <div class="active-task-card paused" style="margin-bottom: 15px;">
               <div class="task-state">EM PAUSA: ${w.currentPauseReason} - ${w.nome}</div>
-              ${currentT && !canExecuteTask(session, currentT) ? 
+              ${currentT && !canExecuteTask(session, currentT) && w.id !== (myWorker ? myWorker.id : null) ? 
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tempo Restrito (Outro Setor)</div>` : 
                 `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}">${formatTimeDiff(w.currentActionStartTime)}</div>`
               }
               <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
               <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
               ${currentT && currentT.fotoPeca ? `
-                <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+                <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;" onclick="WorkerPanel.openTaskDetail('${currentT.id}')">
                   <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
+                  <div style="text-align:center;font-size:9px;color:white;background:rgba(0,0,0,0.6);padding:2px;font-weight:600;position:absolute;bottom:0;width:100%;">TOCAR PARA AMPLIAR</div>
                 </div>
               ` : ''}
               
-              ${currentT && !canExecuteTask(session, currentT) ? `
+              ${w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) ? `
                 <div class="action-buttons">
-                  <div style="color:var(--color-danger);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
+                  <div style="color:var(--text-muted);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
-                    Acesso Restrito ao Cargo
+                    Sendo executada por ${w.nome}
                   </div>
                 </div>
               ` : `
@@ -1130,10 +1136,12 @@ window.WorkerPanel = (() => {
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   RETOMAR
                 </button>
+                ${(session.role === 'admin' || session.role === 'planejador') ? `
                 <button class="btn-action complete" onclick="WorkerPanel.promptComplete('${w.id}')">
                   <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
                   CONCLUIR
                 </button>
+                ` : ''}
               </div>
               `}
             </div>
@@ -1269,9 +1277,6 @@ window.WorkerPanel = (() => {
                   <div style="width:8px;height:8px;border-radius:50%;background:${statusColor};box-shadow:0 0 8px ${statusColor};"></div>
                   ${statusLabel}: <div style="display:flex;gap:4px;flex-wrap:wrap;">${namesHtml}</div>
                 </div>
-                <button class="btn btn-outline" style="height:32px;font-size:11px;font-weight:700;padding:0 12px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.startPromptTask('${t.id}')">
-                  ENTRAR NA TAREFA
-                </button>
               </div>
             `;
           }
@@ -1295,8 +1300,9 @@ window.WorkerPanel = (() => {
             <span class="task-prio ${priorityClass}">${t.prioridade || 'Média'}</span>
           </div>
           ${t.fotoPeca ? `
-          <div style="margin-top:10px;margin-bottom:10px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-card);">
+          <div style="margin-top:10px;margin-bottom:10px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-card);cursor:pointer;" onclick="WorkerPanel.openTaskDetail('${t.id}')">
             <img src="${t.fotoPeca}" style="width:100%;height:140px;object-fit:cover;display:block;" />
+            <div style="text-align:center;font-size:10px;color:white;background:rgba(0,0,0,0.6);padding:4px;font-weight:600;position:absolute;bottom:0;width:100%;">TOCAR PARA AMPLIAR</div>
           </div>
           ` : ''}
           <div class="task-card-title">${t.descricao}</div>
@@ -2203,6 +2209,71 @@ window.WorkerPanel = (() => {
     Router.navigate('worker-panel', { force: true });
   }
 
+  function openTaskDetail(taskId) {
+    const t = window.DB.tasks.get(taskId);
+    if (!t) return;
+    const eq = window.DB.equipment.get(t.equipmentId);
+    
+    if (!document.getElementById('modal-worker-task-detail')) {
+      const modalsDiv = document.getElementById('app-modals');
+      if (modalsDiv) {
+        modalsDiv.innerHTML += `
+        <div class="modal-overlay" id="modal-worker-task-detail" style="z-index:9999;">
+          <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+              <div class="modal-title">Detalhes da Tarefa</div>
+              <button class="modal-close" onclick="closeModal('modal-worker-task-detail')">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="modal-body" style="max-height:80vh;overflow-y:auto;padding:20px;">
+              <div style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:12px;" id="mw-td-desc"></div>
+              <div style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;display:flex;align-items:center;gap:6px;">
+                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <span id="mw-td-eq"></span>
+              </div>
+              
+              <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+                <span class="badge badge-info" id="mw-td-disc"></span>
+                <span class="badge" id="mw-td-prio"></span>
+              </div>
+              
+              <div id="mw-td-photo-container" style="display:none;margin-top:20px;text-align:center;">
+                <h4 style="font-size:14px;color:var(--text-muted);margin-bottom:10px;text-align:left;">Foto Anexada:</h4>
+                <img id="mw-td-photo" style="max-width:100%;border-radius:8px;box-shadow:var(--shadow-md);display:inline-block;" />
+              </div>
+            </div>
+          </div>
+        </div>
+        `;
+      }
+    }
+    
+    const descEl = document.getElementById('mw-td-desc');
+    const eqEl = document.getElementById('mw-td-eq');
+    const discEl = document.getElementById('mw-td-disc');
+    const prioEl = document.getElementById('mw-td-prio');
+    
+    if (descEl) descEl.textContent = t.descricao;
+    if (eqEl) eqEl.textContent = eq ? eq.codigo + ' - ' + eq.nome : 'Sem equipamento';
+    if (discEl) discEl.textContent = t.disciplina || 'Geral';
+    if (prioEl) prioEl.textContent = t.prioridade || 'Média';
+    
+    const photoEl = document.getElementById('mw-td-photo');
+    const photoCont = document.getElementById('mw-td-photo-container');
+    if (photoEl && photoCont) {
+      if (t.fotoPeca) {
+        photoEl.src = t.fotoPeca;
+        photoCont.style.display = 'block';
+      } else {
+        photoCont.style.display = 'none';
+        photoEl.src = '';
+      }
+    }
+    
+    openModal('modal-worker-task-detail');
+  }
+
   return {
     render,
     setEqFilter,
@@ -2238,7 +2309,8 @@ window.WorkerPanel = (() => {
     previewPhoto,
     finalizeTask,
     getMyEquipments,
-    compressImage
+    compressImage,
+    openTaskDetail
   };
 })();
 // ================================================================
