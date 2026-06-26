@@ -1448,7 +1448,7 @@ window.ReportsModule = (() => {
         formatDate(t.dataPlanejadaTermino),
         `${t.pctExecutado || 0}%`,
         t.status
-      ]);
+      ]).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
       doc.autoTable({
         startY: 68,
@@ -1519,7 +1519,7 @@ window.ReportsModule = (() => {
           `${eqTasks.filter(t=>t.status==='Concluída').length}/${eqTasks.length}`,
           `${eqRestr}`
         ];
-      });
+      }).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
       doc.autoTable({
         startY: 68,
@@ -1583,7 +1583,7 @@ window.ReportsModule = (() => {
         p.fornecedor || '—',
         formatDate(p.prazoEntrega),
         p.critica ? 'SIM' : 'Não'
-      ]);
+      ]).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
       doc.autoTable({
         startY: 68,
@@ -1650,7 +1650,7 @@ window.ReportsModule = (() => {
           `${diff > 0 ? '+' : ''}${formatCurrency(diff)}`,
           formatDate(c.data)
         ];
-      });
+      }).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
       doc.autoTable({
         startY: 68,
@@ -1708,7 +1708,7 @@ window.ReportsModule = (() => {
         r.status || '—',
         formatDate(r.createdAt),
         r.status === 'Fechada' ? `FECHADA em ${formatDate(r.closedAt || r.updatedAt)}\nResolução: ${r.resolution || '—'}` : 'PENDENTE'
-      ]);
+      ]).sort((a, b) => String(a[0]).localeCompare(String(b[0])));
 
       doc.autoTable({
         startY: 68,
@@ -1772,7 +1772,7 @@ window.ReportsModule = (() => {
           w.status || 'Ativo',
           `${wHours.toFixed(1)}h`
         ];
-      });
+      }).sort((a, b) => String(a[1]).localeCompare(String(b[1])));
 
       doc.autoTable({
         startY: 72,
@@ -1807,7 +1807,7 @@ window.ReportsModule = (() => {
             `${(t.horasTrabalhadas || 0).toFixed(1)}h`,
             t.observacao || '—'
           ];
-        });
+        }).sort((a, b) => String(a[1]).localeCompare(String(b[1])));
 
         doc.autoTable({
           startY: startY2 + 4,
