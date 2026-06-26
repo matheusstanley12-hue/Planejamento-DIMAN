@@ -654,6 +654,8 @@ window.WorkerPanel = (() => {
       const now = new Date();
       let elapsedHrs = (now - pauseStart) / (1000 * 60 * 60);
       if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
+      const isTimeCountingPause = t.pauseReason && (t.pauseReason.startsWith('Falta de Peça') || t.pauseReason.startsWith('Falta de Peças') || t.pauseReason.startsWith('Outros'));
+      
       DB.timesheets.create({
         workerId: null, // Task-level delay
         workerNome: 'SISTEMA',
@@ -663,10 +665,16 @@ window.WorkerPanel = (() => {
         horaInicio: pauseStart.toISOString(),
         horaFim: now.toISOString(),
         horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
-        tipo: 'Atraso Tarefa',
+        tipo: isTimeCountingPause ? 'Trabalho (Espera)' : 'Atraso Tarefa',
         motivoPausa: t.pauseReason || 'Pausada',
         observacao: `Fim do atraso. Justificativa: ${desc}`
       });
+
+      if (isTimeCountingPause) {
+        DB.tasks.update(t.id, { 
+          horasRealizadas: (t.horasRealizadas || 0) + Math.max(0.01, Math.round(elapsedHrs * 100) / 100)
+        });
+      }
     }
 
     // Start mechanic's timer for everyone
@@ -987,6 +995,58 @@ window.WorkerPanel = (() => {
     return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
   }
 
+  // --- FUNÇÃO PARA GERENCIAR PAUSAS E RETOMADAS AUTOMÁTICAS ---
+  function autoProcessTimeEvents() {
+    if (!window.DB || !window.DB.workforce) return;
+    const now = new Date();
+    const hh = now.getHours();
+    const mm = now.getMinutes();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    // 12:00 -> Pausa Almoço
+    if (hh === 12) {
+      if (window.lastLunchPauseDate !== todayStr) {
+        window.lastLunchPauseDate = todayStr;
+        let activeWorkers = window.DB.workforce.list().filter(w => w.currentState === 'Trabalhando');
+        if (activeWorkers.length > 0) {
+          activeWorkers.forEach(w => pauseWork('Almoço', w.id));
+          Toast.info('Almoço', 'Pausa de almoço iniciada automaticamente.');
+        }
+      }
+    }
+
+    // 13:00 -> Retorno Almoço
+    if (hh === 13) {
+      if (window.lastLunchResumeDate !== todayStr) {
+        window.lastLunchResumeDate = todayStr;
+        let pausedWorkers = window.DB.workforce.list().filter(w => w.currentState === 'Em Pausa' && w.currentPauseReason === 'Almoço');
+        if (pausedWorkers.length > 0) {
+          pausedWorkers.forEach(w => resumeWork(w.id));
+          Toast.info('Retorno Almoço', 'Retorno do almoço automático.');
+        }
+      }
+    }
+
+    // 17:30 -> Fim Expediente
+    if ((hh === 17 && mm >= 30) || hh > 17) {
+      if (window.lastEndShiftDate !== todayStr) {
+        window.lastEndShiftDate = todayStr;
+        let workersToEnd = window.DB.workforce.list().filter(w => (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId);
+        if (workersToEnd.length > 0) {
+          let processedTaskIds = [];
+          workersToEnd.forEach(w => {
+            if (!processedTaskIds.includes(w.currentTaskId)) {
+              processedTaskIds.push(w.currentTaskId);
+              // pauseWork applies to all workers in the task, so we only need to call it once per task
+              pauseWork('Fim Expediente', w.id);
+            }
+          });
+          Toast.info('Fim Expediente', 'Tarefas pausadas automaticamente para o fim de turno.');
+        }
+      }
+    }
+  }
+
   function render() {
     const session = Auth.getSession();
     if (!session) return `<div class="page-container">Sessão expirada</div>`;
@@ -1051,6 +1111,7 @@ window.WorkerPanel = (() => {
     
     window.workerTimerInterval = setInterval(() => {
       try {
+        autoProcessTimeEvents();
         document.querySelectorAll('.live-timer-wp').forEach(el => {
           const startTime = el.getAttribute('data-start-time');
           const acc = parseInt(el.getAttribute('data-accumulated') || '0', 10);
@@ -1221,13 +1282,17 @@ window.WorkerPanel = (() => {
         `;
       } else if (t.status === 'Aguardando Peça' || t.status === 'Aguardando Setor' || t.status === 'Pausada') {
         const pauseReason = t.pauseReason || t.status;
+        let timeStr = '';
+        if (t.pauseStartTime && (pauseReason.startsWith('Falta de Peça') || pauseReason.startsWith('Falta de Peças') || pauseReason.startsWith('Outros'))) {
+          timeStr = `<span class="live-pause-timer" data-start="${t.pauseStartTime}"> - ${formatTimeDiff(t.pauseStartTime)}</span>`;
+        }
         
         if (!canExecuteTask(session, t)) {
           actionBtn = `
             <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
               <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                ${pauseReason}
+                ${pauseReason}${timeStr}
               </div>
               <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>Apenas ${t.disciplina}</div>
             </div>
@@ -1242,7 +1307,7 @@ window.WorkerPanel = (() => {
             <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
               <div style="font-size:12px;color:#ef4444;font-weight:600;display:flex;align-items:center;gap:4px;">
                 <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:14px;height:14px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                ${pauseReason}
+                ${pauseReason}${timeStr}
               </div>
               <button class="btn btn-outline" style="width:100%;height:32px;border-color:var(--brand-primary);color:var(--brand-primary);" onclick="WorkerPanel.promptResumeTask('${t.id}')">${btnText}</button>
             </div>
