@@ -7,8 +7,8 @@ window.ServicesModule = (() => {
 
   function render() {
     const session = Auth.getSession();
-    const isPCM = ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente'].includes(session.perfil);
-    const isEncarregado = ['Supervisor', 'Encarregado'].includes(session.perfil);
+    const isPCM = session && ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente'].includes(session.perfil);
+    const isEncarregado = session && ['Supervisor', 'Encarregado'].includes(session.perfil);
     
     if (!isPCM && !isEncarregado) {
       return `<div class="empty-state"><h3>Acesso Restrito</h3><p>Apenas PCM e Encarregados podem gerenciar solicitações.</p></div>`;
@@ -78,8 +78,8 @@ window.ServicesModule = (() => {
                 const eq = DB.equipment.get(s.equipmentId);
                 
                 let actions = '';
-                const isMySector = isEncarregado && (s.destino || s.setorDestino) === session.disciplina;
-                const isDeleteAllowed = ['Planejador', 'Administrador', 'Gerente'].includes(session.perfil);
+                const isMySector = isEncarregado && session && (s.destino || s.setorDestino) === session.disciplina;
+                const isDeleteAllowed = session && ['Planejador', 'Administrador', 'Gerente'].includes(session.perfil);
 
                 actions += `<button class="btn btn-ghost btn-xs" onclick="window.ServicesModule.viewDetails('${s.id}')" title="Ver Detalhes e OS">🔍 Detalhes</button>`;
 
