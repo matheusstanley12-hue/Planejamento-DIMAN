@@ -222,10 +222,12 @@ window.Auth = (() => {
       
       // Validação em tempo real: se o usuário foi deletado ou inativado, derruba a sessão
       const users = getUsers();
-      const user = users.find(u => u.matricula === session.matricula);
-      if (!user || user.status === 'Inativo') {
-        sessionStorage.removeItem(SESSION_KEY);
-        return null;
+      if (users.length > 0) {
+        const user = users.find(u => u.matricula === session.matricula);
+        if (!user || user.status === 'Inativo') {
+          sessionStorage.removeItem(SESSION_KEY);
+          return null;
+        }
       }
       
       return session;

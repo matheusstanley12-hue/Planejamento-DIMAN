@@ -1049,7 +1049,7 @@ window.WorkerPanel = (() => {
 
   function render() {
     const session = Auth.getSession();
-    if (!session) return `<div class="page-container">Sessão expirada</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     window.GlobalEqFilter = '';
     const myWorker = getMyWorker(session);
@@ -2399,7 +2399,7 @@ window.WorkerPanel = (() => {
 window.WorkerParts = (() => {
   function render() {
     const session = window.Auth.getSession();
-    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     const eqs = window.DB.equipment.list() || [];
     const myEqs = window.WorkerPanel.getMyEquipments(session);
@@ -2508,7 +2508,7 @@ window.WorkerParts = (() => {
 window.WorkerServices = (() => {
   function render() {
     const session = window.Auth.getSession();
-    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     const eqs = window.DB.equipment.list() || [];
     const myEqs = window.WorkerPanel.getMyEquipments(session);
