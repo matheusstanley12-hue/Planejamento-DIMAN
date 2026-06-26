@@ -134,7 +134,6 @@ window.ServicesModule = (() => {
                       <span class="badge ${s.status.includes('Rejeit') ? 'badge-danger' : s.status.includes('PCM') ? 'badge-warning' : s.status.includes('Aguardando') ? 'badge-primary' : s.status.includes('Execução') || s.status.includes('Andamento') ? 'badge-info' : s.status === 'Concluída' ? 'badge-success' : 'badge-danger'}">
                         ${s.status}
                       </span>
-                      ${s.status.includes('Rejeit') && s.observacoes ? `<div style="margin-top:6px;font-size:11px;color:var(--color-danger);background:rgba(239,68,68,0.1);padding:6px;border-radius:4px;border:1px solid rgba(239,68,68,0.2);max-width:200px;"><strong>Motivo:</strong><br/>${s.observacoes}</div>` : ''}
                     </td>
                     <td style="text-align:right;display:flex;gap:4px;justify-content:flex-end;">
                       ${actions}
