@@ -94,10 +94,10 @@ window.ServicesModule = (() => {
 
                 actions += `<button class="btn btn-ghost btn-xs" onclick="window.ServicesModule.viewDetails('${s.id}')" title="Ver Detalhes e OS">🔍 Detalhes</button>`;
 
-                if (s.status === 'Aguardando Aprovação PCM' && isPCM) {
+                if ((s.status === 'Aguardando Aprovação PCM' || s.status === 'Rejeitada (Retorno PCM)') && isPCM) {
                   actions += `
                     <button class="btn btn-success btn-xs" onclick="window.ServicesModule.approvePCM('${s.id}')">Aprovar OS</button>
-                    <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar</button>
+                    <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar (Cancelar)</button>
                   `;
                 } else if (s.status === 'Aguardando Encarregado' && isMySector) {
                   actions += `
@@ -131,7 +131,7 @@ window.ServicesModule = (() => {
                       ${s.prazoExecucao ? `<div style="font-size:10px;color:var(--text-secondary);">Prazo: <strong>${s.prazoExecucao}</strong></div>` : ''}
                     </td>
                     <td>
-                      <span class="badge ${s.status.includes('PCM') ? 'badge-warning' : s.status.includes('Aguardando') ? 'badge-primary' : s.status.includes('Execução') || s.status.includes('Andamento') ? 'badge-info' : s.status === 'Concluída' ? 'badge-success' : 'badge-danger'}">
+                      <span class="badge ${s.status.includes('Rejeit') ? 'badge-danger' : s.status.includes('PCM') ? 'badge-warning' : s.status.includes('Aguardando') ? 'badge-primary' : s.status.includes('Execução') || s.status.includes('Andamento') ? 'badge-info' : s.status === 'Concluída' ? 'badge-success' : 'badge-danger'}">
                         ${s.status}
                       </span>
                     </td>
