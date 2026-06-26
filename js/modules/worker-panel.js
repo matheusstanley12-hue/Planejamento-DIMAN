@@ -2580,8 +2580,9 @@ window.WorkerServices = (() => {
       });
 
       document.getElementById('btn-w-sv-save')?.addEventListener('click', () => {
-        const desc = document.getElementById('w-sv-desc').value.trim();
+        let desc = document.getElementById('w-sv-desc').value.trim();
         const dest = document.getElementById('w-sv-dest').value;
+        const qty = document.getElementById('w-sv-qty')?.value || 1;
 
         if (!desc) {
           window.Toast.error('Erro', 'Descrição do serviço é obrigatória.');
@@ -2591,6 +2592,9 @@ window.WorkerServices = (() => {
           window.Toast.error('Erro', 'Setor de destino é obrigatório.');
           return;
         }
+        
+        // Add quantity to description
+        desc = `(Qtd: ${qty}) - ${desc}`;
 
         const eqId = document.getElementById('w-sv-eq').value;
         const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Execução';
@@ -2639,21 +2643,27 @@ window.WorkerServices = (() => {
                 ${myEqs.map(e => `<option value="${e.id}">${e.codigo} - ${e.nome}</option>`).join('')}
               </select>
             </div>
-            <div class="form-group">
-              <label>Setor de Destino *</label>
-              <select id="w-sv-dest" class="form-control">
-                <option value="">Selecione o setor...</option>
-                <option value="Usinagem">Usinagem</option>
-                <option value="Caldeiraria">Caldeiraria</option>
-                <option value="Mecânica">Mecânica</option>
-                <option value="Teste">Teste</option>
-                <option value="Retrabalho">Retrabalho</option>
-                <option value="Elétrica">Elétrica</option>
-                <option value="Lubrificação">Lubrificação</option>
-                <option value="Subconjunto">Subconjunto</option>
-                <option value="Pintura">Pintura</option>
-                <option value="Lavador">Lavador</option>
-              </select>
+            <div class="form-row" style="display:flex;gap:var(--space-3);">
+              <div class="form-group" style="flex:1;">
+                <label>Setor de Destino *</label>
+                <select id="w-sv-dest" class="form-control">
+                  <option value="">Selecione o setor...</option>
+                  <option value="Usinagem">Usinagem</option>
+                  <option value="Caldeiraria">Caldeiraria</option>
+                  <option value="Mecânica">Mecânica</option>
+                  <option value="Teste">Teste</option>
+                  <option value="Retrabalho">Retrabalho</option>
+                  <option value="Elétrica">Elétrica</option>
+                  <option value="Lubrificação">Lubrificação</option>
+                  <option value="Subconjunto">Subconjunto</option>
+                  <option value="Pintura">Pintura</option>
+                  <option value="Lavador">Lavador</option>
+                </select>
+              </div>
+              <div class="form-group" style="width:120px;">
+                <label>Quantidade *</label>
+                <input type="number" id="w-sv-qty" class="form-control" value="1" min="1" required />
+              </div>
             </div>
             <div class="form-group">
               <label>Descrição do que precisa ser feito *</label>
