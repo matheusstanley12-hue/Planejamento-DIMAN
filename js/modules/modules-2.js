@@ -857,7 +857,7 @@ window.WorkforceModule = (() => {
       return eq && eq.status !== 'Liberado';
     }) && !canBypassLock;
     const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
-    const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador'];
+    const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador','Sondador'];
     
     const activeDiscs = [...discs];
     if (worker?.disciplina && !activeDiscs.includes(worker.disciplina)) {
