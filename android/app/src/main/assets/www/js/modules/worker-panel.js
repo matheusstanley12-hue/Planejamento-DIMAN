@@ -468,32 +468,47 @@ window.WorkerPanel = (() => {
     let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
     if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h to prevent runaway timers
 
-    // Save Timesheet (Work)
-    DB.timesheets.create({
-      workerId: myWorker.id,
-      workerNome: session.nome,
-      equipmentId: t ? t.equipmentId : null,
-      taskId: t ? t.id : null,
-      data: now.toISOString().slice(0, 10),
-      horaInicio: startTime.toISOString(),
-      horaFim: now.toISOString(),
-      horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
-      tipo: 'Trabalho',
-      observacao: `Timer (Automático)`
+    const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
+    
+    targetWorkers.forEach(w => {
+      // Save Timesheet (Work)
+      DB.timesheets.create({
+        workerId: w.id,
+        workerNome: w.nome,
+        equipmentId: t ? t.equipmentId : null,
+        taskId: t ? t.id : null,
+        data: now.toISOString().slice(0, 10),
+        horaInicio: startTime.toISOString(),
+        horaFim: now.toISOString(),
+        horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+        tipo: 'Trabalho',
+        observacao: `Trabalho antes da pausa: ${reason}`
+      });
+
+      if (t) {
+        DB.tasks.update(t.id, { 
+          horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100)
+        });
+      }
+
+      // Update to Em Pausa
+      DB.workforce.update(w.id, {
+        currentState: 'Em Pausa',
+        currentPauseReason: reason,
+        currentActionStartTime: now.toISOString()
+      });
     });
 
     if (t) {
-      let updatePayload = { horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100) };
+      let updatePayload = {};
       const freesWorker = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason.startsWith('Outros') || reason.startsWith('Dependência') || reason === 'Fim Expediente' || reason === '5S';
       
       if (freesWorker) {
-        const workers = DB.workforce.list() || [];
-        const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId == t.id);
-        if (!otherActive) {
-          updatePayload.status = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') ? 'Aguardando Peça' : (reason.startsWith('Dependência') ? 'Aguardando Setor' : 'Pausada');
-          updatePayload.pauseReason = reason;
-          updatePayload.pauseStartTime = now.toISOString();
-        }
+        // Because targetWorkers is now a subset of all workers, we can just check if any worker is NOT in targetWorkers
+        // Actually, if we are pausing everyone connected to this task, then no one is active anymore.
+        updatePayload.status = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') ? 'Aguardando Peça' : (reason.startsWith('Dependência') ? 'Aguardando Setor' : 'Pausada');
+        updatePayload.pauseReason = reason;
+        updatePayload.pauseStartTime = now.toISOString();
       }
       DB.tasks.update(t.id, updatePayload);
     }
@@ -740,21 +755,21 @@ window.WorkerPanel = (() => {
 
       const t = DB.tasks.get(myWorker.currentTaskId);
 
-      DB.workforce.update(myWorker.id, {
-        currentState: 'Ocioso',
-        currentTaskId: null,
-        currentActionStartTime: null,
-        currentPauseReason: ''
+      const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+
+      targetWorkers.forEach(w => {
+        DB.workforce.update(w.id, {
+          currentState: 'Ocioso',
+          currentTaskId: null,
+          currentActionStartTime: null,
+          currentPauseReason: ''
+        });
       });
 
       if (t) {
-        // Check if there are other workers executing this task or past timesheets
-        const workers = DB.workforce.list() || [];
-        const otherActive = workers.some(w => w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && w.currentTaskId == t.id);
+        // Because targetWorkers covers all active workers for this task, there are no others
         const timesheets = DB.timesheets.list() || [];
-        if (!otherActive) {
-          DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '' });
-        }
+        DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '' });
       }
 
       Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
@@ -833,52 +848,53 @@ window.WorkerPanel = (() => {
     const t = DB.tasks.get(myWorker.currentTaskId);
     
     const processSave = function(base64Img) {
+      const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id);
       
-      // If working, stop and save time
-      if (myWorker.currentState === 'Trabalhando') {
-        const startTime = new Date(myWorker.currentActionStartTime);
-        const now = new Date();
-        let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
-        if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
+      targetWorkers.forEach(w => {
+        if (w.currentState === 'Trabalhando') {
+          const startTime = new Date(w.currentActionStartTime);
+          const now = new Date();
+          let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+          if (elapsedHrs > 12) elapsedHrs = 12;
 
-        DB.timesheets.create({
-          workerId: myWorker.id,
-          workerNome: session.nome,
-          equipmentId: t ? t.equipmentId : null,
-          taskId: t ? t.id : null,
-          data: now.toISOString().slice(0, 10),
-          horaInicio: startTime.toISOString(),
-          horaFim: now.toISOString(),
-          horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
-          tipo: 'Trabalho',
-          observacao: 'Timer (Automático - Conclusão)'
-        });
+          DB.timesheets.create({
+            workerId: w.id,
+            workerNome: w.nome,
+            equipmentId: t ? t.equipmentId : null,
+            taskId: t ? t.id : null,
+            data: now.toISOString().slice(0, 10),
+            horaInicio: startTime.toISOString(),
+            horaFim: now.toISOString(),
+            horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+            tipo: 'Trabalho',
+            observacao: 'Timer (Automático - Conclusão)'
+          });
 
-        if (t) {
-          DB.tasks.update(t.id, { 
-            horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100)
+          if (t) {
+            DB.tasks.update(t.id, { 
+              horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100)
+            });
+          }
+        } else if (w.currentState === 'Em Pausa') {
+           const startTime = new Date(w.currentActionStartTime);
+           const now = new Date();
+           let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
+           if (elapsedHrs > 12) elapsedHrs = 12;
+           DB.timesheets.create({
+            workerId: w.id,
+            workerNome: w.nome,
+            equipmentId: t ? t.equipmentId : null,
+            taskId: t ? t.id : null,
+            data: now.toISOString().slice(0, 10),
+            horaInicio: startTime.toISOString(),
+            horaFim: now.toISOString(),
+            horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+            tipo: 'Pausa',
+            motivoPausa: w.currentPauseReason,
+            observacao: 'Pausa'
           });
         }
-      } else if (myWorker.currentState === 'Em Pausa') {
-         // Just close the pause
-         const startTime = new Date(myWorker.currentActionStartTime);
-         const now = new Date();
-         let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
-         if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
-         DB.timesheets.create({
-          workerId: myWorker.id,
-          workerNome: session.nome,
-          equipmentId: t ? t.equipmentId : null,
-          taskId: t ? t.id : null,
-          data: now.toISOString().slice(0, 10),
-          horaInicio: startTime.toISOString(),
-          horaFim: now.toISOString(),
-          horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
-          tipo: 'Pausa',
-          motivoPausa: myWorker.currentPauseReason,
-          observacao: 'Pausa'
-        });
-      }
+      });
 
       if (t) {
         // Add attachment and observation
@@ -925,12 +941,14 @@ window.WorkerPanel = (() => {
         });
       }
 
-      // Set to Ocioso
-      DB.workforce.update(myWorker.id, {
-        currentState: 'Ocioso',
-        currentTaskId: null,
-        currentActionStartTime: null,
-        currentPauseReason: ''
+      // Set all to Ocioso
+      targetWorkers.forEach(w => {
+        DB.workforce.update(w.id, {
+          currentState: 'Ocioso',
+          currentTaskId: null,
+          currentActionStartTime: null,
+          currentPauseReason: ''
+        });
       });
 
       closeModal('modal-worker-complete');
