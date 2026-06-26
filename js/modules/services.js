@@ -166,7 +166,7 @@ window.ServicesModule = (() => {
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
                 <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;text-align:left;"><strong>Foto da Peça / Serviço:</strong></p>
-                <img src="${s.fotoPeca}" style="max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage('${s.fotoPeca}')" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : `<p style="font-size:12px;color:#ef4444;margin-bottom:15px;">⚠️ Foto não anexada (Solicitação Antiga).</p>`}
             
@@ -272,7 +272,7 @@ window.ServicesModule = (() => {
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
                 <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;text-align:left;"><strong>Foto da Peça / Serviço:</strong></p>
-                <img src="${s.fotoPeca}" style="max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage('${s.fotoPeca}')" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : ''}
             <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Selecione o executante para a atividade: <strong>${s.descricao}</strong></p>
@@ -514,7 +514,7 @@ window.ServicesModule = (() => {
           <div class="modal-body" style="padding-top:10px;">
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
-                <img src="${s.fotoPeca}" style="max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="window.ServicesModule.openImage('${s.fotoPeca}')" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : `<p style="font-size:12px;color:#ef4444;margin-bottom:15px;">⚠️ Sem foto anexada.</p>`}
             <p style="margin-bottom:8px;font-size:13px;"><strong>Solicitante:</strong> ${s.origem || 'Não informado'}</p>
@@ -586,6 +586,20 @@ window.ServicesModule = (() => {
     Router.navigate('services', { force: true });
   }
 
+  function openImage(src) {
+    const lightboxHtml = `
+      <div class="modal-overlay" id="modal-lightbox" style="display:flex;align-items:center;justify-content:center;z-index:99999;background:rgba(0,0,0,0.8);" onclick="this.remove()">
+        <div style="position:relative; max-width:90vw; max-height:90vh;" onclick="event.stopPropagation()">
+          <button style="position:absolute; top:-40px; right:0; background:transparent; border:none; color:white; font-size:36px; cursor:pointer;" onclick="document.getElementById('modal-lightbox').remove()">&times;</button>
+          <img src="${src}" style="max-width:90vw; max-height:85vh; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); object-fit:contain;" />
+        </div>
+      </div>
+    `;
+    const div = document.createElement('div');
+    div.innerHTML = lightboxHtml.trim();
+    document.body.appendChild(div.firstElementChild);
+  }
+
   return {
     render,
     setTab,
@@ -602,6 +616,7 @@ window.ServicesModule = (() => {
     updateProgress,
     saveProgress,
     finishService,
-    saveFinish
+    saveFinish,
+    openImage
   };
 })();
