@@ -20,7 +20,7 @@ window.WorkforceTimeModule = (() => {
   function render() {
     const session = Auth.getSession();
     if (!session || !Auth.hasPermission('workforce')) {
-      return `<div class="page-container"><div class="empty-state"><h3>Acesso Restrito</h3></div></div>`;
+      return `<div class="page-container"><div class="empty-state"><h3>Acesso Restrito (Debug: session=${!!session}, perfil=${session ? session.perfil : 'N/A'}, hasPerm=${session ? Auth.hasPermission('workforce') : 'N/A'})</h3></div></div>`;
     }
 
     let workers = DB.workforce.list();

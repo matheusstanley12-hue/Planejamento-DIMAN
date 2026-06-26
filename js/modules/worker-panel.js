@@ -1014,7 +1014,7 @@ window.WorkerPanel = (() => {
 
       if (myWorker && w.id === myWorker.id) return true;
       
-      if (myTasks.find(mt => mt.id === t.id)) return true;
+      if (myTasks.find(mt => mt.id === t.id) && canExecuteTask(session, t)) return true;
       
       return false;
     });
@@ -2215,9 +2215,7 @@ window.WorkerPanel = (() => {
     const eq = window.DB.equipment.get(t.equipmentId);
     
     if (!document.getElementById('modal-worker-task-detail')) {
-      const modalsDiv = document.getElementById('app-modals');
-      if (modalsDiv) {
-        modalsDiv.innerHTML += `
+      const modalHtml = `
         <div class="modal-overlay" id="modal-worker-task-detail" style="z-index:9999;">
           <div class="modal" style="max-width:600px;">
             <div class="modal-header">
@@ -2245,8 +2243,10 @@ window.WorkerPanel = (() => {
             </div>
           </div>
         </div>
-        `;
-      }
+      `;
+      const div = document.createElement('div');
+      div.innerHTML = modalHtml;
+      document.body.appendChild(div.firstElementChild);
     }
     
     const descEl = document.getElementById('mw-td-desc');
