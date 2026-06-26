@@ -365,7 +365,8 @@ window.EquipmentModule = (() => {
           <div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75"/></svg></div>
           Gestão de Equipamentos
         </div>
-        <div style="display:flex;gap:var(--space-3);">
+        <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
+          <input type="text" id="eq-search" placeholder="Buscar equipamento..." class="input" style="padding: 6px 12px; width: 250px; font-size:13px;" onkeyup="EquipmentModule.filterList(this.value)">
           <button class="btn btn-outline" style="border-color:var(--border-hover);color:var(--text-secondary);" onclick="EquipmentModule.toggleLiberados()">
             ${showLiberados ? 'Esconder Liberados' : 'Mostrar Liberados'}
           </button>
@@ -412,7 +413,7 @@ window.EquipmentModule = (() => {
               }
 
               return `
-                <tr class="hover-bg card-clickable" style="border-bottom:1px solid var(--border-card); transition:background 0.2s;" onclick="EquipmentModule.openDetail('${e.id}')">
+                <tr class="hover-bg card-clickable eq-row" data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()} ${(e.cliente||'').toLowerCase()}" style="border-bottom:1px solid var(--border-card); transition:background 0.2s;" onclick="EquipmentModule.openDetail('${e.id}')">
                   <td style="padding:var(--space-3);">
                     <div style="font-weight:700; color:var(--text-primary); font-size:14px;">${e.codigo}</div>
                     <div style="font-size:12px; color:var(--text-muted);">${e.nome}</div>
@@ -1109,8 +1110,20 @@ window.EquipmentModule = (() => {
     window.Router.navigate('equipment', { force: true });
     window.Toast.success('Restaurado!', `Equipamento ${bundle.equipment.codigo} foi restaurado.`);
   }
+  function filterList(term) {
+    const rows = document.querySelectorAll('.eq-row');
+    const lowerTerm = term.toLowerCase().trim();
+    rows.forEach(row => {
+      const searchData = row.getAttribute('data-search') || '';
+      if (searchData.includes(lowerTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, openTrash, restoreTrash };
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, openTrash, restoreTrash, filterList };
 })();
 
 // ================================================================
