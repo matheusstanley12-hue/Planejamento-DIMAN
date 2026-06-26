@@ -2542,6 +2542,7 @@ window.WorkerServices = (() => {
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">SETOR</th>
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">DESCRIÇÃO</th>
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">STATUS</th>
+                  <th style="padding:10px;font-size:12px;color:var(--text-muted);text-align:right;">AÇÕES</th>
                 </tr>
               </thead>
               <tbody>
@@ -2558,6 +2559,9 @@ window.WorkerServices = (() => {
                     <td style="padding:10px;font-weight:600;font-size:14px;">${s.destino}</td>
                     <td style="padding:10px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;" title="${s.descricao}">${s.descricao}</td>
                     <td style="padding:10px;"><span class="badge ${badge}" style="font-size:11px;">${s.status}</span></td>
+                    <td style="padding:10px;text-align:right;">
+                      ${s.status.includes('Rejeit') ? `<button class="btn btn-outline btn-xs" onclick="window.WorkerPanel.openEditRequest('${s.id}')">✏️ Editar / Reenviar</button>` : ''}
+                    </td>
                   </tr>`;
                 }).join('')}
               </tbody>

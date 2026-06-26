@@ -24,12 +24,12 @@ window.ServicesModule = (() => {
         const dest = s.destino || s.setorDestino;
         if (dest !== session.disciplina) return false;
         if (session.disciplina === 'Usinagem' && s.status === 'Aguardando Aprovação PCM') return false;
-        if (s.status === 'Rejeitada (Retorno PCM)') return false;
+        if (s.status === 'Rejeitada pelo Encarregado') return false;
         return true;
       });
     }
 
-    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada (Retorno PCM)');
+    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada pelo Encarregado');
     const andamento = mySols.filter(s => s.status === 'Em Execução' || s.status === 'Em Andamento');
     const concluidas = mySols.filter(s => s.status === 'Concluída' || s.status === 'Rejeitada');
 
@@ -94,7 +94,7 @@ window.ServicesModule = (() => {
 
                 actions += `<button class="btn btn-ghost btn-xs" onclick="window.ServicesModule.viewDetails('${s.id}')" title="Ver Detalhes e OS">🔍 Detalhes</button>`;
 
-                if ((s.status === 'Aguardando Aprovação PCM' || s.status === 'Rejeitada (Retorno PCM)') && isPCM) {
+                if ((s.status === 'Aguardando Aprovação PCM' || s.status === 'Rejeitada pelo Encarregado') && isPCM) {
                   actions += `
                     <button class="btn btn-success btn-xs" onclick="window.ServicesModule.approvePCM('${s.id}')">Aprovar OS</button>
                     <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar (Cancelar)</button>
@@ -289,7 +289,7 @@ window.ServicesModule = (() => {
       return;
     }
     
-    window.DB.solicitacoes.update(id, { status: 'Rejeitada (Retorno PCM)', observacoes: motivo });
+    window.DB.solicitacoes.update(id, { status: 'Rejeitada pelo Encarregado', observacoes: motivo });
     
     if (window.DB.notifications) {
       window.DB.notifications.add({
