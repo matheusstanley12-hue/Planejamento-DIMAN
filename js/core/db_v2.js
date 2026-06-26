@@ -236,6 +236,8 @@ window.DB = (() => {
      if (!supabaseClient) return;
      try {
         await supabaseClient.from('diman_store').delete().match({ collection: collection, key: key });
+        // Clean up legacy 'all' key to avoid ghost records coming back on next page reload
+        await supabaseClient.from('diman_store').update({ data: [], updated_at: new Date().toISOString() }).match({ collection: collection, key: 'all' });
      } catch (err) {
         console.error('Supabase Delete Error:', err);
      }

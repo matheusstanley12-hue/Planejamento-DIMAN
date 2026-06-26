@@ -117,7 +117,7 @@ window.Auth = (() => {
 
   async function initSuperAdmin() {
     const users = getUsers();
-    if (!users.find(u => u.matricula === '013429')) {
+    if (users.length === 0) {
       const hashed = await hashPassword('35215415');
       users.push({
         id: 'u-superadmin',
@@ -129,7 +129,7 @@ window.Auth = (() => {
         disciplina: 'TI',
         perfil: 'Desenvolvedor',
         senhaHash: hashed,
-        senhaInicial: true, // must change on first login
+        senhaInicial: true,
         status: 'Ativo',
         createdAt: new Date().toISOString(),
         permissions: getAllPermissions()
