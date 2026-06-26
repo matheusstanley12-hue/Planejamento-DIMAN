@@ -29,7 +29,7 @@ window.ServicesModule = (() => {
       });
     }
 
-    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada pelo Encarregado');
+    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada pelo Encarregado' || s.status === 'Rejeitada (Retorno PCM)');
     const andamento = mySols.filter(s => s.status === 'Em Execução' || s.status === 'Em Andamento');
     const concluidas = mySols.filter(s => s.status === 'Concluída' || s.status === 'Rejeitada');
 
