@@ -677,7 +677,7 @@ window.WorkforceModule = (() => {
                   <button class="btn btn-sm ${activeSector === s ? 'btn-primary' : 'btn-ghost'}" style="border:1px solid var(--border-color);" onclick="WorkforceModule.setSector('${s}')">${s}</button>
                 `).join('')}
                 <button class="btn btn-sm ${activeSector === '2º Turno' ? 'btn-primary' : 'btn-ghost'}" style="border:1px solid var(--border-color);" onclick="WorkforceModule.setSector('2º Turno')">2º Turno</button>
-                <input type="text" placeholder="Buscar funcionário..." class="input" style="max-width:250px; margin-left:auto;" oninput="WorkforceModule.filterWorkers(this.value)">
+                <input type="text" placeholder="Buscar nome ou matrícula..." class="input" style="max-width:250px; margin-left:auto;" oninput="WorkforceModule.filterWorkers(this.value)">
               </div>
             `;
             
@@ -857,7 +857,7 @@ window.WorkforceModule = (() => {
       const eq = allEqs.find(e => e.id === id);
       return eq && eq.status !== 'Liberado';
     }) && !canBypassLock;
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador','Sondador'];
     
     const activeDiscs = [...discs];
@@ -1214,7 +1214,7 @@ window.RestrictionsModule = (() => {
   function openCreate() {
     const eqs = DB.equipment.list();
     const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('restriction-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Tipo *</label><select id="rs-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
       <div class="form-group"><label>Equipamento</label><select id="rs-eq"><option value="">—</option>${eqs.map(e=>`<option value="${e.id}">${e.codigo}</option>`).join('')}</select></div></div>

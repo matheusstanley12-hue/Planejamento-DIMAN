@@ -694,7 +694,7 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma','Lavador','Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto','Teste','Retrabalho'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma','Lavador','Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto','Teste','Retrabalho'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -707,10 +707,15 @@ window.EquipmentModule = (() => {
             <select id="eq-wf-mecanica">${getOptions('Mecânica')}</select>
           </div>
           <div class="form-group">
+            <label>Mecânica de poço</label>
+            <select id="eq-wf-mecanicapoco">${getOptions('Mecânica de poço')}</select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label>Elétrica</label>
             <select id="eq-wf-eletrica">${getOptions('Elétrica')}</select>
           </div>
-        </div>
         <div class="form-row">
           <div class="form-group">
             <label>Caldeiraria</label>
@@ -772,6 +777,7 @@ window.EquipmentModule = (() => {
       observacoes: document.getElementById('eq-obs').value.trim(),
       workforceMap: {
         'Mecânica': document.getElementById('eq-wf-mecanica').value,
+        'Mecânica de poço': document.getElementById('eq-wf-mecanicapoco') ? document.getElementById('eq-wf-mecanicapoco').value : '',
         'Elétrica': document.getElementById('eq-wf-eletrica').value,
         'Caldeiraria': document.getElementById('eq-wf-caldeiraria').value,
         'Usinagem': document.getElementById('eq-wf-usinagem').value,
@@ -790,7 +796,7 @@ window.EquipmentModule = (() => {
       let oldWorker = null;
       let newWorker = null;
 
-      for (const disc of ['Mecânica', 'Elétrica', 'Caldeiraria', 'Usinagem', 'Pintor', 'Lavador', 'Montagem', 'Subconjunto']) {
+      for (const disc of ['Mecânica', 'Mecânica de poço', 'Elétrica', 'Caldeiraria', 'Usinagem', 'Pintor', 'Lavador', 'Montagem', 'Subconjunto']) {
         const oldW = existingEq.workforceMap ? existingEq.workforceMap[disc] : '';
         const newW = data.workforceMap[disc];
         // If changed and the new worker is not empty/Não atribuído
@@ -1384,7 +1390,7 @@ window.TasksModule = (() => {
       }
     }
 
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     const statuses = ['Não Iniciada','Em Andamento','Aguardando Peça','Aguardando Recurso','Aguardando Aprovação','Aguardando Setor','Bloqueada','Paralisada','Concluída'];
     const prios = ['Crítica','Alta','Média','Baixa'];
     let obsHistoryHtml = '';

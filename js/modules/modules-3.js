@@ -1280,7 +1280,7 @@ window.LessonsModule = (() => {
   }
 
   function openCreate() {
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('lesson-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="ll-disc">${discs.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
       <div class="form-group"><label>Tipo de Equipamento</label><input id="ll-tipo" placeholder="Sonda, Perfuratriz..." /></div></div>
@@ -1877,7 +1877,7 @@ window.UsersModule = (() => {
                   <div class="form-group"><label>Nome *</label><input type="text" id="nu-nome" placeholder="Nome Completo" /></div>
                   <div class="form-group"><label>Email</label><input type="email" id="nu-email" placeholder="email@exemplo.com" /></div>
                   <div class="form-group"><label>Perfil de Acesso *</label><select id="nu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
-                  <div class="form-group"><label>Setor / Disciplina</label><select id="nu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="nu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Mecânica de poço">Mecânica de poço</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
                   <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="Gerada automaticamente ao salvar" readonly style="background:var(--bg-base);color:var(--text-muted);font-style:italic;" /></div>
                   <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O sistema gerará uma senha aleatória que deverá ser informada ao funcionário.</div>
                 </div>
@@ -1900,7 +1900,7 @@ window.UsersModule = (() => {
                   <input type="hidden" id="eu-id" />
                   <div class="form-group"><label>Nome do Usuário *</label><input type="text" id="eu-nome" /></div>
                   <div class="form-group"><label>Nível / Perfil de Acesso *</label><select id="eu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
-                  <div class="form-group"><label>Setor / Disciplina</label><select id="eu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="eu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Mecânica de poço">Mecânica de poço</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
                 </div>
               </div>
               <div class="modal-footer">

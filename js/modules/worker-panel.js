@@ -2101,6 +2101,7 @@ window.WorkerPanel = (() => {
                 <label>Setor Destino *</label>
                   <option value="Usinagem">Usinagem</option>
                   <option value="Mecânica">Mecânica</option>
+                  <option value="Mecânica de poço">Mecânica de poço</option>
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
@@ -2655,6 +2656,7 @@ window.WorkerServices = (() => {
                   <option value="Usinagem">Usinagem</option>
                   <option value="Caldeiraria">Caldeiraria</option>
                   <option value="Mecânica">Mecânica</option>
+                  <option value="Mecânica de poço">Mecânica de poço</option>
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Elétrica">Elétrica</option>
