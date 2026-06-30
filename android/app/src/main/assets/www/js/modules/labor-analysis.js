@@ -33,7 +33,7 @@ window.LaborAnalysisModule = (() => {
       try {
         const currentMonthPrefix = new Date().toISOString().slice(0, 7);
         const allTasks = DB.tasks.getAll();
-        const disciplines = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+        const disciplines = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
         
         function discHours(disc, type) {
           const val = allTasks.filter(t=>t.disciplina===disc && ((t.createdAt && t.createdAt.startsWith(currentMonthPrefix)) || (t.dataFim && t.dataFim.startsWith(currentMonthPrefix)))).reduce((s,t)=>s+(parseFloat(t[type])||0),0);

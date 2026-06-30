@@ -100,7 +100,7 @@ window.WorkerPanel = (() => {
     const blockedBy = [];
     preds.forEach(pid => {
       const pTask = allTasks.find(t => t.id === pid);
-      if (pTask && pTask.status !== 'Concluída') {
+      if (pTask && pTask.status !== 'Não Iniciada' && pTask.status !== 'Concluída') {
         const pDesc = pTask.descricao || 'Tarefa sem descrição';
         const pDisc = pTask.disciplina ? `[${pTask.disciplina}] ` : '';
         const pCod = pTask.codigo ? ` (${pTask.codigo})` : '';
@@ -2462,7 +2462,6 @@ window.WorkerPanel = (() => {
 
   return {
     render,
-    setActiveTab,
     setEqFilter,
     setDiscFilter,
     openCreateTask,

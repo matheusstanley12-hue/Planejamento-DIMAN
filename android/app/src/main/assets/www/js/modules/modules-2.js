@@ -677,6 +677,7 @@ window.WorkforceModule = (() => {
                   <button class="btn btn-sm ${activeSector === s ? 'btn-primary' : 'btn-ghost'}" style="border:1px solid var(--border-color);" onclick="WorkforceModule.setSector('${s}')">${s}</button>
                 `).join('')}
                 <button class="btn btn-sm ${activeSector === '2º Turno' ? 'btn-primary' : 'btn-ghost'}" style="border:1px solid var(--border-color);" onclick="WorkforceModule.setSector('2º Turno')">2º Turno</button>
+                <input type="text" placeholder="Buscar nome ou matrícula..." class="input" style="max-width:250px; margin-left:auto;" oninput="WorkforceModule.filterWorkers(this.value)">
               </div>
             `;
             
@@ -706,7 +707,7 @@ window.WorkforceModule = (() => {
                         (w.justificativa ? `<div style="font-size:10px;color:var(--text-muted);font-style:italic;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px auto 0;" title="${w.justificativa}">${w.justificativa}</div>` : '')
                       : `<div style="margin:var(--space-1) 0"><span class="badge badge-success">Disponível</span></div>`;
 
-                    return `<div class="card" style="text-align:center;padding:var(--space-4);display:flex;flex-direction:column;justify-content:space-between;min-height:280px;">
+                    return `<div class="card worker-card" data-search="${(w.nome||'').toLowerCase()} ${(w.matricula||'').toLowerCase()}" style="text-align:center;padding:var(--space-4);display:flex;flex-direction:column;justify-content:space-between;min-height:280px;">
                       <div>
                         <div class="avatar" style="width:48px;height:48px;font-size:var(--text-base);margin:0 auto var(--space-2);">${avatarInitials(w.nome)}</div>
                         <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${w.nome}">${w.nome}</div>
@@ -856,8 +857,8 @@ window.WorkforceModule = (() => {
       const eq = allEqs.find(e => e.id === id);
       return eq && eq.status !== 'Liberado';
     }) && !canBypassLock;
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
-    const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const funcs = ['Mecânico','Mecânico poços','Ajudante','Ajudante de poços','Eletrecista','Lavador','Soldador','Torneiro','Fresador','Ajustador','Sondador'];
     
     const activeDiscs = [...discs];
     if (worker?.disciplina && !activeDiscs.includes(worker.disciplina)) {
@@ -1115,7 +1116,16 @@ window.WorkforceModule = (() => {
     });
   }
 
-  return { render, setTab, setSector, openCreateWorker, openEditWorker, saveWorker, deleteWorker, openCreateTimesheet, saveTimesheet, openVacationModal, saveVacation, resetAllHours };
+  function filterWorkers(q) {
+    const query = q.toLowerCase();
+    const cards = document.querySelectorAll('.worker-card');
+    cards.forEach(card => {
+      const text = card.getAttribute('data-search') || '';
+      card.style.display = text.includes(query) ? '' : 'none';
+    });
+  }
+
+  return { render, setTab, setSector, filterWorkers, openCreateWorker, openEditWorker, saveWorker, deleteWorker, openCreateTimesheet, saveTimesheet, openVacationModal, saveVacation, resetAllHours };
 })();
 
 // ================================================================
@@ -1204,7 +1214,7 @@ window.RestrictionsModule = (() => {
   function openCreate() {
     const eqs = DB.equipment.list();
     const tipos = ['Falta de Peça','Falta de Mão de Obra','Falta de Ferramenta','Aguardando Aprovação','Equipamento Não Liberado','Dependência Não Concluída','Outra'];
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('restriction-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Tipo *</label><select id="rs-tipo">${tipos.map(t=>`<option>${t}</option>`).join('')}</select></div>
       <div class="form-group"><label>Equipamento</label><select id="rs-eq"><option value="">—</option>${eqs.map(e=>`<option value="${e.id}">${e.codigo}</option>`).join('')}</select></div></div>

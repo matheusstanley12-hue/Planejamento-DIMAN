@@ -5,6 +5,7 @@
 window.WorkerPanel = (() => {
   let activeTab = 'hoje'; // 'atrasadas' | 'hoje' | 'futuras' | 'concluidas'
   let eqFilter = '';
+  let discFilter = '';
 
   function compressImage(file, callback) {
     const reader = new FileReader();
@@ -99,7 +100,7 @@ window.WorkerPanel = (() => {
     const blockedBy = [];
     preds.forEach(pid => {
       const pTask = allTasks.find(t => t.id === pid);
-      if (pTask && pTask.status !== 'Concluída') {
+      if (pTask && pTask.status !== 'Não Iniciada' && pTask.status !== 'Concluída') {
         const pDesc = pTask.descricao || 'Tarefa sem descrição';
         const pDisc = pTask.disciplina ? `[${pTask.disciplina}] ` : '';
         const pCod = pTask.codigo ? ` (${pTask.codigo})` : '';
@@ -761,9 +762,8 @@ window.WorkerPanel = (() => {
       const myWorker = workerId ? DB.workforce.get(workerId) : getMyWorker(session);
       if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
-      const t = DB.tasks.get(myWorker.currentTaskId);
-
-      const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+      const tId = myWorker.currentTaskId;
+      const targetWorkers = DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
 
       targetWorkers.forEach(w => {
         DB.workforce.update(w.id, {
@@ -774,10 +774,16 @@ window.WorkerPanel = (() => {
         });
       });
 
-      if (t) {
-        // Because targetWorkers covers all active workers for this task, there are no others
+      if (tId) {
+        // Delete any open timesheets for this task
         const timesheets = DB.timesheets.list() || [];
-        DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '' });
+        const openTs = timesheets.filter(ts => String(ts.taskId) === String(tId) && !ts.horaFim);
+        openTs.forEach(ts => DB.timesheets.delete(ts.id));
+
+        const t = DB.tasks.get(tId);
+        if (t) {
+            DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '', pauseStartTime: null });
+        }
       }
 
       Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
@@ -1049,7 +1055,7 @@ window.WorkerPanel = (() => {
 
   function render() {
     const session = Auth.getSession();
-    if (!session) return `<div class="page-container">Sessão expirada</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     window.GlobalEqFilter = '';
     const myWorker = getMyWorker(session);
@@ -1072,7 +1078,10 @@ window.WorkerPanel = (() => {
       if (!myTasks.find(x => x.id === t.id)) myTasks.push(t);
     });
 
+    const availableDisciplines = [...new Set(myTasks.map(t => t.disciplina).filter(Boolean))].sort();
+
     if (eqFilter) myTasks = myTasks.filter(t => t.equipmentId === eqFilter);
+    if (discFilter) myTasks = myTasks.filter(t => t.disciplina === discFilter);
 
     // Live Status Panel
     let statusPanelHtml = '';
@@ -1237,17 +1246,21 @@ window.WorkerPanel = (() => {
       `;
     }
 
-    // Horizontal Machines List
     const machinesHtml = `
-      <div class="machines-scroll">
-        ${myEqs.map(e => `
-          <div class="machine-chip ${eqFilter === e.id ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('${e.id}')">
-            <strong>${e.codigo}</strong>
-            <span>${e.pctAvanco || 0}%</span>
-          </div>
-        `).join('')}
-        <div class="machine-chip ${!eqFilter ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('')">
-          <strong>TODAS AS MÁQUINAS</strong>
+      <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:140px;">
+          <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:block; margin-bottom:6px;">Equipamento</label>
+          <select onchange="WorkerPanel.setEqFilter(this.value)" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-card); background:var(--bg-card); color:var(--text-primary); font-weight:700; font-size:14px; outline:none; cursor:pointer;">
+            <option value="">Todas as Máquinas</option>
+            ${myEqs.map(e => `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)</option>`).join('')}
+          </select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:block; margin-bottom:6px;">Setor (Disciplina)</label>
+          <select onchange="WorkerPanel.setDiscFilter(this.value)" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-card); background:var(--bg-card); color:var(--text-primary); font-weight:700; font-size:14px; outline:none; cursor:pointer;">
+            <option value="">Todos os Setores</option>
+            ${availableDisciplines.map(d => `<option value="${d}" ${discFilter === d ? 'selected' : ''}>${d}</option>`).join('')}
+          </select>
         </div>
       </div>
     `;
@@ -1516,6 +1529,12 @@ window.WorkerPanel = (() => {
 
   function setEqFilter(id) {
     eqFilter = id;
+    render();
+    Router.navigate('worker-panel', { force: true });
+  }
+
+  function setDiscFilter(disc) {
+    discFilter = disc;
     render();
     Router.navigate('worker-panel', { force: true });
   }
@@ -2101,6 +2120,7 @@ window.WorkerPanel = (() => {
                 <label>Setor Destino *</label>
                   <option value="Usinagem">Usinagem</option>
                   <option value="Mecânica">Mecânica</option>
+                  <option value="Mecânica de poço">Mecânica de poço</option>
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
@@ -2163,7 +2183,7 @@ window.WorkerPanel = (() => {
       setorDestino: setor,
       prazo: prazo,
       critico: critica,
-      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Execução',
+      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado',
       createdAt: DB.now()
     };
 
@@ -2353,10 +2373,99 @@ window.WorkerPanel = (() => {
     openModal('modal-worker-task-detail');
   }
 
+  // ---------------------------------------------------------------
+  // Editar / Reenviar Solicitação Rejeitada
+  // ---------------------------------------------------------------
+  function openEditRequest(id) {
+    const s = window.DB.solicitacoes ? window.DB.solicitacoes.list().find(x => x.id === id) : null;
+    if (!s) { window.Toast.error('Erro', 'Solicitação não encontrada.'); return; }
+
+    // Extrair quantidade e descrição pura do formato "(Qtd: N) - Descrição"
+    let pureDesc = s.descricao || '';
+    let qty = '1';
+    const qtyMatch = pureDesc.match(/^\(Qtd:\s*(\d+)\)\s*-\s*/);
+    if (qtyMatch) {
+      qty = qtyMatch[1];
+      pureDesc = pureDesc.slice(qtyMatch[0].length);
+    }
+
+    const motivoHtml = s.observacoes ? `
+      <div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:var(--radius-md);padding:var(--space-3);margin-bottom:var(--space-4);">
+        <p style="color:#ef4444;font-weight:700;font-size:13px;margin-bottom:4px;">⚠️ Motivo da Rejeição:</p>
+        <p style="color:var(--text-primary);font-size:14px;margin:0;">${s.observacoes}</p>
+      </div>` : '';
+
+    const setores = ['Usinagem','Caldeiraria','Mecânica','Mecânica de poço','Teste','Retrabalho','Elétrica','Lubrificação','Subconjunto','Pintura','Lavador'];
+    const setorOptions = setores.map(st => `<option value="${st}" ${st === s.destino ? 'selected' : ''}>${st}</option>`).join('');
+
+    // Remover modal anterior se existir
+    const oldModal = document.getElementById('modal-edit-request');
+    if (oldModal) oldModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="modal-overlay" id="modal-edit-request" style="z-index:9999;">
+        <div class="modal" style="max-width:520px;width:calc(100% - 32px);">
+          <div class="modal-header">
+            <h3 class="modal-title">✏️ Editar e Reenviar Solicitação</h3>
+            <button class="modal-close" onclick="closeModal('modal-edit-request')">✕</button>
+          </div>
+          <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+            ${motivoHtml}
+            <div class="form-group">
+              <label>Setor de Destino *</label>
+              <select id="edit-req-dest" class="form-control">${setorOptions}</select>
+            </div>
+            <div class="form-group" style="max-width:140px;">
+              <label>Quantidade *</label>
+              <input type="number" id="edit-req-qty" class="form-control" value="${qty}" min="1" required />
+            </div>
+            <div class="form-group">
+              <label>Descrição *</label>
+              <textarea id="edit-req-desc" class="form-control" rows="4" placeholder="Detalhe o serviço necessário...">${pureDesc}</textarea>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex;gap:var(--space-3);justify-content:flex-end;">
+            <button class="btn btn-secondary" onclick="closeModal('modal-edit-request')">Cancelar</button>
+            <button class="btn btn-primary" onclick="window.WorkerPanel.saveEditRequest('${id}')">
+              🚀 Reenviar Solicitação
+            </button>
+          </div>
+        </div>
+      </div>
+    `);
+    openModal('modal-edit-request');
+  }
+
+  function saveEditRequest(id) {
+    const dest = document.getElementById('edit-req-dest')?.value;
+    const qty  = document.getElementById('edit-req-qty')?.value || '1';
+    const desc = (document.getElementById('edit-req-desc')?.value || '').trim();
+
+    if (!desc) { window.Toast.error('Erro', 'A descrição é obrigatória.'); return; }
+    if (!dest) { window.Toast.error('Erro', 'O setor de destino é obrigatório.'); return; }
+
+    const fullDesc = `(Qtd: ${qty}) - ${desc}`;
+    const newStatus = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
+
+    window.DB.solicitacoes.update(id, {
+      destino: dest,
+      descricao: fullDesc,
+      status: newStatus,
+      observacoes: '',
+      updatedAt: window.DB.now()
+    });
+
+    closeModal('modal-edit-request');
+    window.Toast.success('Reenviada!', `Solicitação corrigida e reenviada para ${dest}.`);
+    window.Router.navigate('worker-services', { force: true });
+  }
+
   return {
     render,
     setEqFilter,
+    setDiscFilter,
     openCreateTask,
+    openTaskDetail,
     saveNewTask,
     openEditTask,
     saveEditedTask,
@@ -2389,7 +2498,9 @@ window.WorkerPanel = (() => {
     finalizeTask,
     getMyEquipments,
     compressImage,
-    openTaskDetail
+    openTaskDetail,
+    openEditRequest,
+    saveEditRequest
   };
 })();
 // ================================================================
@@ -2399,7 +2510,7 @@ window.WorkerPanel = (() => {
 window.WorkerParts = (() => {
   function render() {
     const session = window.Auth.getSession();
-    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     const eqs = window.DB.equipment.list() || [];
     const myEqs = window.WorkerPanel.getMyEquipments(session);
@@ -2508,7 +2619,7 @@ window.WorkerParts = (() => {
 window.WorkerServices = (() => {
   function render() {
     const session = window.Auth.getSession();
-    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     const eqs = window.DB.equipment.list() || [];
     const myEqs = window.WorkerPanel.getMyEquipments(session);
@@ -2542,12 +2653,14 @@ window.WorkerServices = (() => {
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">SETOR</th>
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">DESCRIÇÃO</th>
                   <th style="padding:10px;font-size:12px;color:var(--text-muted);">STATUS</th>
+                  <th style="padding:10px;font-size:12px;color:var(--text-muted);text-align:right;">AÇÕES</th>
                 </tr>
               </thead>
               <tbody>
                 ${myHistory.map(s => {
                   let badge = 'badge-ghost';
-                  if (s.status.includes('PCM')) badge = 'badge-warning';
+                  if (s.status.includes('Rejeit')) badge = 'badge-danger';
+                  else if (s.status.includes('PCM')) badge = 'badge-warning';
                   else if (s.status.includes('Encarregado')) badge = 'badge-primary';
                   else if (s.status === 'Em Execução') badge = 'badge-info';
                   else if (s.status === 'Concluída') badge = 'badge-success';
@@ -2558,6 +2671,9 @@ window.WorkerServices = (() => {
                     <td style="padding:10px;font-weight:600;font-size:14px;">${s.destino}</td>
                     <td style="padding:10px;color:var(--text-secondary);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;" title="${s.descricao}">${s.descricao}</td>
                     <td style="padding:10px;"><span class="badge ${badge}" style="font-size:11px;">${s.status}</span></td>
+                    <td style="padding:10px;text-align:right;">
+                      ${s.status.includes('Rejeit') ? `<button class="btn btn-outline btn-xs" onclick="window.WorkerPanel.openEditRequest('${s.id}')">✏️ Editar / Reenviar</button>` : ''}
+                    </td>
                   </tr>`;
                 }).join('')}
               </tbody>
@@ -2580,8 +2696,9 @@ window.WorkerServices = (() => {
       });
 
       document.getElementById('btn-w-sv-save')?.addEventListener('click', () => {
-        const desc = document.getElementById('w-sv-desc').value.trim();
+        let desc = document.getElementById('w-sv-desc').value.trim();
         const dest = document.getElementById('w-sv-dest').value;
+        const qty = document.getElementById('w-sv-qty')?.value || 1;
 
         if (!desc) {
           window.Toast.error('Erro', 'Descrição do serviço é obrigatória.');
@@ -2591,9 +2708,12 @@ window.WorkerServices = (() => {
           window.Toast.error('Erro', 'Setor de destino é obrigatório.');
           return;
         }
+        
+        // Add quantity to description
+        desc = `(Qtd: ${qty}) - ${desc}`;
 
         const eqId = document.getElementById('w-sv-eq').value;
-        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Execução';
+        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
         
         const payload = {
           id: window.DB.uid('sol'),
@@ -2639,21 +2759,28 @@ window.WorkerServices = (() => {
                 ${myEqs.map(e => `<option value="${e.id}">${e.codigo} - ${e.nome}</option>`).join('')}
               </select>
             </div>
-            <div class="form-group">
-              <label>Setor de Destino *</label>
-              <select id="w-sv-dest" class="form-control">
-                <option value="">Selecione o setor...</option>
-                <option value="Usinagem">Usinagem</option>
-                <option value="Caldeiraria">Caldeiraria</option>
-                <option value="Mecânica">Mecânica</option>
-                <option value="Teste">Teste</option>
-                <option value="Retrabalho">Retrabalho</option>
-                <option value="Elétrica">Elétrica</option>
-                <option value="Lubrificação">Lubrificação</option>
-                <option value="Subconjunto">Subconjunto</option>
-                <option value="Pintura">Pintura</option>
-                <option value="Lavador">Lavador</option>
-              </select>
+            <div class="form-row" style="display:flex;gap:var(--space-3);">
+              <div class="form-group" style="flex:1;">
+                <label>Setor de Destino *</label>
+                <select id="w-sv-dest" class="form-control">
+                  <option value="">Selecione o setor...</option>
+                  <option value="Usinagem">Usinagem</option>
+                  <option value="Caldeiraria">Caldeiraria</option>
+                  <option value="Mecânica">Mecânica</option>
+                  <option value="Mecânica de poço">Mecânica de poço</option>
+                  <option value="Teste">Teste</option>
+                  <option value="Retrabalho">Retrabalho</option>
+                  <option value="Elétrica">Elétrica</option>
+                  <option value="Lubrificação">Lubrificação</option>
+                  <option value="Subconjunto">Subconjunto</option>
+                  <option value="Pintura">Pintura</option>
+                  <option value="Lavador">Lavador</option>
+                </select>
+              </div>
+              <div class="form-group" style="width:120px;">
+                <label>Quantidade *</label>
+                <input type="number" id="w-sv-qty" class="form-control" value="1" min="1" required />
+              </div>
             </div>
             <div class="form-group">
               <label>Descrição do que precisa ser feito *</label>
@@ -2684,8 +2811,104 @@ window.WorkerServices = (() => {
         </div>
 
         ${historyHtml}
+        <div id="worker-services-modals"></div>
       </div>
     `;
   }
-  return { render };
+
+  function openEditRequest(id) {
+    const s = window.DB.solicitacoes ? window.DB.solicitacoes.list().find(x => x.id === id) : null;
+    if (!s) return;
+
+    // Parse quantity from description
+    let qtdVal = 1;
+    let descVal = s.descricao || '';
+    const qtdMatch = descVal.match(/^\(Qtd:\s*(\d+)\)\s*-\s*(.*)/s);
+    if (qtdMatch) {
+      qtdVal = qtdMatch[1];
+      descVal = qtdMatch[2];
+    }
+
+    const motivoHtml = (s.observacoes && s.status.includes('Rejeit'))
+      ? `<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);">
+           <p style="font-size:12px;font-weight:700;color:var(--color-danger);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">⚠️ Motivo da Rejeição</p>
+           <p style="font-size:13px;color:var(--text-primary);margin:0;">${s.observacoes}</p>
+         </div>`
+      : '';
+
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-edit-request">
+        <div class="modal" style="max-width:520px;">
+          <div class="modal-header">
+            <div class="modal-title">✏️ Editar e Reenviar Solicitação</div>
+            <button class="modal-close" onclick="closeModal('modal-edit-request')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            ${motivoHtml}
+            <div class="form-group">
+              <label>Setor de Destino</label>
+              <input type="text" class="form-control" value="${s.destino || s.setorDestino || ''}" disabled style="opacity:.65;cursor:not-allowed;" />
+            </div>
+            <div class="form-group">
+              <label>Quantidade *</label>
+              <input type="number" id="edit-req-qty" class="form-control" value="${qtdVal}" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Descrição *</label>
+              <textarea id="edit-req-desc" class="form-control" rows="4">${descVal}</textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-edit-request')">Cancelar</button>
+            <button class="btn btn-primary" onclick="window.WorkerServices.saveEditRequest('${id}')">🚀 Reenviar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('worker-services-modals');
+    if (container) container.innerHTML = modalHtml;
+    openModal('modal-edit-request');
+  }
+
+  function saveEditRequest(id) {
+    const s = window.DB.solicitacoes ? window.DB.solicitacoes.list().find(x => x.id === id) : null;
+    if (!s) return;
+
+    const qty = document.getElementById('edit-req-qty')?.value || 1;
+    let desc = document.getElementById('edit-req-desc')?.value.trim() || '';
+    if (!desc) { window.Toast.error('Erro', 'A descrição é obrigatória.'); return; }
+
+    // Rebuild description with quantity
+    const fullDesc = `(Qtd: ${qty}) - ${desc}`;
+
+    // Determine new status based on destination
+    const dest = s.destino || s.setorDestino || '';
+    const newStatus = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
+
+    window.DB.solicitacoes.update(id, {
+      descricao: fullDesc,
+      status: newStatus,
+      observacoes: '', // clear rejection reason
+      updatedAt: window.DB.now()
+    });
+
+    if (window.DB.notifications) {
+      window.DB.notifications.add({
+        type: 'warning',
+        title: 'Solicitação Reenviada',
+        message: `Solicitação de ${s.origem} para ${dest} foi reenviada para análise.`,
+        read: false,
+        createdAt: window.DB.now()
+      });
+    }
+
+    closeModal('modal-edit-request');
+    window.Toast.success('Reenviado!', `Solicitação corrigida e reenviada para ${dest}.`);
+    window.Router.navigate('worker-services', { force: true });
+  }
+
+  return { render, openEditRequest, saveEditRequest };
 })();

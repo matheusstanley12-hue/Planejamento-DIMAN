@@ -235,7 +235,14 @@ window.DB = (() => {
   async function deleteFromSupabase(collection, key) {
      if (!supabaseClient) return;
      try {
-        await supabaseClient.from('diman_store').delete().match({ collection: collection, key: key });
+        // We MUST NOT hard delete! We need a tombstone so other clients know to delete it locally when they sync.
+        await supabaseClient.from('diman_store').upsert({ 
+            collection: collection, 
+            key: key, 
+            data: { id: key, _deleted: true }, 
+            updated_at: new Date().toISOString() 
+        }, { onConflict: 'collection,key' });
+        
         // Clean up legacy 'all' key to avoid ghost records coming back on next page reload
         await supabaseClient.from('diman_store').update({ data: [], updated_at: new Date().toISOString() }).match({ collection: collection, key: 'all' });
      } catch (err) {
@@ -378,18 +385,21 @@ window.DB = (() => {
           for (const [collection, arr] of Object.entries(allData)) {
             localStorage.setItem(collection, JSON.stringify(arr));
           }
-          
           // Then merge the individual rows into them
           for (const [collection, arr] of Object.entries(groupedData)) {
-            let baseArr = [];
-            try { baseArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
+            let baseArr = allData[collection] || [];
             if (!Array.isArray(baseArr)) baseArr = [];
             
-            // Map by id to prevent duplicates and prefer the newest row
+            // Map by id to prevent duplicates and process tombstones
             const mergedMap = new Map();
             baseArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+            
             arr.forEach(item => { 
               if (item && item.id) {
+                if (item._deleted) {
+                  mergedMap.delete(item.id);
+                  return;
+                }
                 const existing = mergedMap.get(item.id);
                 const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                 const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
@@ -410,6 +420,15 @@ window.DB = (() => {
             
             let finalArray = Array.from(mergedMap.values());
             finalArray = stripLargeFields(collection, finalArray);
+            
+            if (collection === 'diman_users') {
+              try {
+                const blacklist = JSON.parse(localStorage.getItem('diman_deleted_users')||'[]');
+                if (blacklist.length > 0) {
+                  finalArray = finalArray.filter(u => !blacklist.includes(u.id));
+                }
+              } catch(e) {}
+            }
             
             try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
           }

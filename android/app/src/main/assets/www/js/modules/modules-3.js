@@ -561,9 +561,8 @@ window.AIAssistant = (() => {
         if (totalDelay > 0) {
           resp += `• **Atraso Acumulado:** ${totalDelay} dias identificados ao longo de ${repls.length} replanejamento(s).\n`;
           resp += `• **Última Causa Registrada:** ${repls[repls.length-1].motivo}\n`;
-        } else if (eq.dataLiberacaoAtual || eq.dataLiberacaoPlanejada) {
-          const datePrev = eq.dataLiberacaoAtual || eq.dataLiberacaoPlanejada;
-          const daysToLib = window.daysBetween(new Date().toISOString().slice(0,10), datePrev);
+        } else if (eq.dataLiberacaoPlanejada) {
+          const daysToLib = window.daysBetween(new Date().toISOString().slice(0,10), eq.dataLiberacaoPlanejada);
           if (daysToLib < 0) {
             resp += `• **Motivo do Atraso:** O equipamento encontra-se ATRASADO em ${Math.abs(daysToLib)} dias em relação à data planejada, porém **nenhum motivo formal de replanejamento foi registrado no sistema** pela equipe técnica.\n`;
           }
@@ -1280,7 +1279,7 @@ window.LessonsModule = (() => {
   }
 
   function openCreate() {
-    const discs = ['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
+    const discs = ['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Subconjunto','Teste','Retrabalho','Liderança'];
     document.getElementById('lesson-modal-body').innerHTML = `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row"><div class="form-group"><label>Disciplina</label><select id="ll-disc">${discs.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
       <div class="form-group"><label>Tipo de Equipamento</label><input id="ll-tipo" placeholder="Sonda, Perfuratriz..." /></div></div>
@@ -1859,7 +1858,7 @@ window.AuditModule = (() => {
 window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
-    const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    const users = window.Auth ? window.Auth.listUsers() : [];
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
@@ -1877,7 +1876,7 @@ window.UsersModule = (() => {
                   <div class="form-group"><label>Nome *</label><input type="text" id="nu-nome" placeholder="Nome Completo" /></div>
                   <div class="form-group"><label>Email</label><input type="email" id="nu-email" placeholder="email@exemplo.com" /></div>
                   <div class="form-group"><label>Perfil de Acesso *</label><select id="nu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
-                  <div class="form-group"><label>Setor / Disciplina</label><select id="nu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="nu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Mecânica de poço">Mecânica de poço</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
                   <div class="form-group"><label>Senha Temporária</label><input type="text" id="nu-senha" value="Gerada automaticamente ao salvar" readonly style="background:var(--bg-base);color:var(--text-muted);font-style:italic;" /></div>
                   <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--space-2);">O sistema gerará uma senha aleatória que deverá ser informada ao funcionário.</div>
                 </div>
@@ -1900,7 +1899,7 @@ window.UsersModule = (() => {
                   <input type="hidden" id="eu-id" />
                   <div class="form-group"><label>Nome do Usuário *</label><input type="text" id="eu-nome" /></div>
                   <div class="form-group"><label>Nível / Perfil de Acesso *</label><select id="eu-perfil">${perfis.map(p=>`<option>${p}</option>`).join('')}</select></div>
-                  <div class="form-group"><label>Setor / Disciplina</label><select id="eu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
+                  <div class="form-group"><label>Setor / Disciplina</label><select id="eu-disciplina"><option value="">Nenhum</option><option value="Usinagem">Usinagem</option><option value="Mecânica">Mecânica</option><option value="Mecânica de poço">Mecânica de poço</option><option value="Caldeiraria">Caldeiraria</option><option value="Elétrica">Elétrica</option><option value="Retrabalho">Retrabalho</option><option value="Teste">Teste</option><option value="Subconjunto">Subconjunto</option><option value="Pintura">Pintura</option><option value="Lavador">Lavador</option></select></div>
                 </div>
               </div>
               <div class="modal-footer">
@@ -1950,8 +1949,8 @@ window.UsersModule = (() => {
   
   async function saveUser() {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem criar usuários.');
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem criar usuários.');
       return;
     }
 
@@ -1966,7 +1965,7 @@ window.UsersModule = (() => {
       return;
     }
     
-    const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    const users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
     if(users.find(u => u.matricula === matricula)) {
       Toast && Toast.error('Erro', 'Matrícula já existe.');
       return;
@@ -2064,8 +2063,8 @@ window.UsersModule = (() => {
 
   function deleteUser(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir usuários.');
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem excluir usuários.');
       return;
     }
     window.uiConfirm('Tem certeza que deseja excluir este usuário?', (res) => {
@@ -2074,7 +2073,7 @@ window.UsersModule = (() => {
         window.Auth.deleteUser(id);
       }
       // Fallback/Garanta que deletou do localStorage e do Supabase
-      let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      let users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
       users = users.filter(u => u.id !== id);
       localStorage.setItem('diman_users', JSON.stringify(users));
       if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
@@ -2087,12 +2086,12 @@ window.UsersModule = (() => {
 
   function openEditUser(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem editar usuários.');
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem editar usuários.');
       return;
     }
     
-    let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    let users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
     const user = users.find(u => u.id === id);
     if(!user) return;
     
@@ -2112,7 +2111,7 @@ window.UsersModule = (() => {
     
     if(!id || !newPerfil || !newNome) return;
     
-    let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    let users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
     const userIndex = users.findIndex(u => u.id === id);
     if(userIndex === -1) return;
     
@@ -2131,13 +2130,13 @@ window.UsersModule = (() => {
 
   function resetPassword(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem resetar senhas.');
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem resetar senhas.');
       return;
     }
     window.uiConfirm('Tem certeza que deseja resetar a senha deste usuário para 123456?', (res) => {
       if (!res) return;
-      let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      let users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
       const userIndex = users.findIndex(u => u.id === id);
       if(userIndex === -1) return;
       

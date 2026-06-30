@@ -502,7 +502,7 @@ window.WorkerManuals = (() => {
 
   function render() {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session) return `<div class="page-container">Sessão expirada.</div>`;
+    if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     const allEquipments = window.DB.equipment.list() || [];
     const allManuals = window.DB.manuals.list() || [];

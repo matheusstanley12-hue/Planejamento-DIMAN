@@ -7,8 +7,9 @@ window.ServicesModule = (() => {
 
   function render() {
     const session = Auth.getSession();
-    const isPCM = ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente'].includes(session.perfil);
-    const isEncarregado = ['Supervisor', 'Encarregado'].includes(session.perfil);
+    const p = session ? (session.perfil || '').trim().toLowerCase() : '';
+    const isPCM = ['desenvolvedor', 'administrador', 'planejador', 'gerente'].includes(p);
+    const isEncarregado = ['supervisor', 'encarregado'].includes(p);
     
     if (!isPCM && !isEncarregado) {
       return `<div class="empty-state"><h3>Acesso Restrito</h3><p>Apenas PCM e Encarregados podem gerenciar solicitações.</p></div>`;
@@ -16,17 +17,35 @@ window.ServicesModule = (() => {
 
     const solicitacoes = window.DB.solicitacoes ? window.DB.solicitacoes.list() : [];
     
-    // All PCM and Encarregados see all requests now, but actions are restricted
     let mySols = solicitacoes;
+    
+    if (isPCM) {
+      // PCM (Planejador) só vê solicitações de Usinagem — os outros setores vão direto para o encarregado
+      mySols = mySols.filter(s => {
+        const dest = s.destino || s.setorDestino;
+        return dest === 'Usinagem';
+      });
+    } else if (isEncarregado) {
+      // Encarregado vê solicitações do seu setor
+      mySols = mySols.filter(s => {
+        const dest = s.destino || s.setorDestino;
+        if (dest !== session.disciplina) return false;
+        // Usinagem: encarregado só vê após PCM aprovar (não ver 'Aguardando Aprovação PCM')
+        if (session.disciplina === 'Usinagem' && s.status === 'Aguardando Aprovação PCM') return false;
+        // Encarregado não vê solicitações que ele já rejeitou (voltou ao PCM)
+        if (s.status === 'Rejeitada pelo Encarregado') return false;
+        return true;
+      });
+    }
 
-    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado');
+    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada pelo Encarregado' || s.status === 'Rejeitada (Retorno PCM)');
     const andamento = mySols.filter(s => s.status === 'Em Execução' || s.status === 'Em Andamento');
     const concluidas = mySols.filter(s => s.status === 'Concluída' || s.status === 'Rejeitada');
 
     let currentList = activeTab === 'pendentes' ? pendentes : activeTab === 'andamento' ? andamento : concluidas;
 
     const pageTitle = 'Solicitação de Serviço';
-    const pageSubtitle = isPCM ? 'Aprovações de OS de Usinagem' : 'Destinação de Mão de Obra';
+    const pageSubtitle = isPCM ? 'Aprovações PCM — Usinagem' : 'Gerenciamento de Solicitações';
 
     const html = `
       <div class="page-container">
@@ -78,18 +97,22 @@ window.ServicesModule = (() => {
                 const eq = DB.equipment.get(s.equipmentId);
                 
                 let actions = '';
-                const isMySector = isEncarregado && (s.destino || s.setorDestino) === session.disciplina;
-                const isDeleteAllowed = ['Planejador', 'Administrador', 'Gerente'].includes(session.perfil);
+                const isMySector = isEncarregado && session && (s.destino || s.setorDestino) === session.disciplina;
+                const pForDelete = session ? (session.perfil || '').trim().toLowerCase() : '';
+                const isDeleteAllowed = ['planejador', 'administrador', 'gerente'].includes(pForDelete);
 
                 actions += `<button class="btn btn-ghost btn-xs" onclick="window.ServicesModule.viewDetails('${s.id}')" title="Ver Detalhes e OS">🔍 Detalhes</button>`;
 
-                if (s.status === 'Aguardando Aprovação PCM' && isPCM) {
+                if ((s.status === 'Aguardando Aprovação PCM' || s.status === 'Rejeitada pelo Encarregado') && isPCM) {
                   actions += `
                     <button class="btn btn-success btn-xs" onclick="window.ServicesModule.approvePCM('${s.id}')">Aprovar OS</button>
-                    <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar</button>
+                    <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.reject('${s.id}')">Rejeitar (Cancelar)</button>
                   `;
                 } else if (s.status === 'Aguardando Encarregado' && isMySector) {
-                  actions += `<button class="btn btn-primary btn-xs" onclick="window.ServicesModule.acceptService('${s.id}')">Aceitar Serviço</button>`;
+                  actions += `
+                    <button class="btn btn-primary btn-xs" onclick="window.ServicesModule.acceptService('${s.id}')">Aceitar Serviço</button>
+                    <button class="btn btn-danger btn-xs" onclick="window.ServicesModule.rejectByEncarregado('${s.id}')">Rejeitar</button>
+                  `;
                 } else if ((s.status === 'Em Execução' || s.status === 'Em Andamento') && isMySector) {
                    if ((s.destino || s.setorDestino) === 'Usinagem') {
                      actions += `<button class="btn btn-outline btn-xs" onclick="window.ServicesModule.assignWorker('${s.id}')">Destinar / Alterar Recurso</button>`;
@@ -117,7 +140,7 @@ window.ServicesModule = (() => {
                       ${s.prazoExecucao ? `<div style="font-size:10px;color:var(--text-secondary);">Prazo: <strong>${s.prazoExecucao}</strong></div>` : ''}
                     </td>
                     <td>
-                      <span class="badge ${s.status.includes('PCM') ? 'badge-warning' : s.status.includes('Aguardando') ? 'badge-primary' : s.status.includes('Execução') || s.status.includes('Andamento') ? 'badge-info' : s.status === 'Concluída' ? 'badge-success' : 'badge-danger'}">
+                      <span class="badge ${s.status.includes('Rejeit') ? 'badge-danger' : s.status.includes('PCM') ? 'badge-warning' : s.status.includes('Aguardando') ? 'badge-primary' : s.status.includes('Execução') || s.status.includes('Andamento') ? 'badge-info' : s.status === 'Concluída' ? 'badge-success' : 'badge-danger'}">
                         ${s.status}
                       </span>
                     </td>
@@ -158,7 +181,7 @@ window.ServicesModule = (() => {
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
                 <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;text-align:left;"><strong>Foto da Peça / Serviço:</strong></p>
-                <img src="${s.fotoPeca}" style="max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:999999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const x = document.createElement('div'); x.innerHTML='&times;'; x.style.cssText='position:absolute;top:20px;right:30px;color:white;font-size:40px;font-weight:bold;cursor:pointer;line-height:1;'; d.appendChild(x); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : `<p style="font-size:12px;color:#ef4444;margin-bottom:15px;">⚠️ Foto não anexada (Solicitação Antiga).</p>`}
             
@@ -230,11 +253,93 @@ window.ServicesModule = (() => {
   }
 
   function reject(id) {
-    const motivo = prompt('Motivo da rejeição:');
-    if (motivo === null) return;
-    
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    if (!s) return;
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-reject-pcm">
+        <div class="modal" style="max-width:400px;">
+          <div class="modal-header">
+            <div class="modal-title">Rejeitar Solicitação (PCM)</div>
+            <button class="modal-close" onclick="closeModal('modal-reject-pcm')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Solicitação: <strong>${s.descricao}</strong></p>
+            <div class="form-group">
+              <label>Motivo da Rejeição *</label>
+              <textarea id="rej-pcm-motivo" class="form-control" rows="3" placeholder="Descreva o motivo para cancelar esta solicitação"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-reject-pcm')">Cancelar</button>
+            <button class="btn btn-danger" onclick="window.ServicesModule.saveRejectPCM('${id}')">Confirmar Rejeição</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('services-modals').innerHTML = modalHtml;
+    openModal('modal-reject-pcm');
+  }
+
+  function saveRejectPCM(id) {
+    const motivo = document.getElementById('rej-pcm-motivo').value.trim();
+    if (!motivo) { Toast.error('Erro', 'O motivo é obrigatório.'); return; }
     window.DB.solicitacoes.update(id, { status: 'Rejeitada', observacoes: motivo });
-    Toast.info('Rejeitada', 'Solicitação foi rejeitada.');
+    closeModal('modal-reject-pcm');
+    Toast.info('Rejeitada', 'Solicitação foi rejeitada pelo PCM.');
+    Router.navigate('services', { force: true });
+  }
+
+  function rejectByEncarregado(id) {
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    if (!s) return;
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-reject-encarregado">
+        <div class="modal" style="max-width:400px;">
+          <div class="modal-header">
+            <div class="modal-title">Rejeitar Serviço</div>
+            <button class="modal-close" onclick="closeModal('modal-reject-encarregado')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <div class="form-group">
+              <label>Motivo da Rejeição (Será enviado ao PCM) *</label>
+              <textarea id="rej-motivo" class="form-control" rows="3" placeholder="Descreva por que o serviço não pode ser aceito"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-reject-encarregado')">Cancelar</button>
+            <button class="btn btn-danger" onclick="window.ServicesModule.saveRejectByEncarregado('${s.id}')">Confirmar Rejeição</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('services-modals').innerHTML = modalHtml;
+    openModal('modal-reject-encarregado');
+  }
+
+  function saveRejectByEncarregado(id) {
+    const motivo = document.getElementById('rej-motivo').value;
+    if (!motivo || motivo.trim() === '') {
+      Toast.error('Erro', 'O motivo é obrigatório.');
+      return;
+    }
+    
+    window.DB.solicitacoes.update(id, { status: 'Rejeitada pelo Encarregado', observacoes: motivo });
+    
+    if (window.DB.notifications) {
+      window.DB.notifications.add({
+        titulo: 'Serviço Rejeitado',
+        mensagem: `O Encarregado rejeitou um serviço com o motivo: ${motivo}`,
+        tipo: 'warning',
+        data: new Date().toISOString()
+      });
+    }
+    
+    closeModal('modal-reject-encarregado');
+    Toast.info('Rejeitada', 'Solicitação devolvida ao PCM.');
     Router.navigate('services', { force: true });
   }
 
@@ -264,7 +369,7 @@ window.ServicesModule = (() => {
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
                 <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;text-align:left;"><strong>Foto da Peça / Serviço:</strong></p>
-                <img src="${s.fotoPeca}" style="max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:999999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const x = document.createElement('div'); x.innerHTML='&times;'; x.style.cssText='position:absolute;top:20px;right:30px;color:white;font-size:40px;font-weight:bold;cursor:pointer;line-height:1;'; d.appendChild(x); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : ''}
             <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Selecione o executante para a atividade: <strong>${s.descricao}</strong></p>
@@ -315,18 +420,35 @@ window.ServicesModule = (() => {
   function acceptService(id) {
     const s = window.DB.solicitacoes.list().find(x => x.id === id);
     if (!s) return;
+    const dest = s.destino || s.setorDestino;
     const nowStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+    const workers = window.DB.workforce ? window.DB.workforce.list().filter(w => w.disciplina === dest) : [];
+
     const modalHtml = `
       <div class="modal-overlay" id="modal-accept">
         <div class="modal" style="max-width:500px;">
           <div class="modal-header">
-            <div class="modal-title">Aceitar Serviço</div>
+            <div class="modal-title">Aceitar e Destinar Serviço</div>
             <button class="modal-close" onclick="closeModal('modal-accept')">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
           <div class="modal-body" style="padding-top:10px;">
             <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Serviço: <strong>${s.descricao}</strong></p>
+            
+            <div class="form-group">
+              <label>Executante (${dest}) *</label>
+              <select id="sv-acc-worker" class="form-control" onchange="window.ServicesModule.onWorkerChange(this.value, '${dest}')">
+                <option value="">-- Selecione --</option>
+                ${workers.map(w => `<option value="${w.id}">${w.nome}</option>`).join('')}
+              </select>
+            </div>
+            
+            <div class="form-group" id="sv-acc-just-container" style="display:none;">
+              <label style="color:var(--color-warning);">Motivo da Troca de Alocação ${dest !== 'Usinagem' ? '*' : '(Opcional)'}</label>
+              <textarea id="sv-acc-justificativa" class="form-control" placeholder="Descreva o motivo de tirar o executante da atividade atual..."></textarea>
+            </div>
+
             <div class="form-group">
               <label>Data/Hora de Início *</label>
               <input type="datetime-local" id="sv-acc-inicio" class="form-control" value="${nowStr}" />
@@ -335,14 +457,14 @@ window.ServicesModule = (() => {
               <label>Prazo de Execução (Dias/Horas) *</label>
               <input type="text" id="sv-acc-prazo" class="form-control" placeholder="Ex: 2 dias, ou 4 horas" />
             </div>
-            <div class="form-group">
+            <div class="form-group" style="display:none;">
               <label>Avanço Atual (%) *</label>
               <input type="number" id="sv-acc-avanco" class="form-control" value="0" min="0" max="100" />
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn btn-secondary" onclick="closeModal('modal-accept')">Cancelar</button>
-            <button class="btn btn-primary" onclick="window.ServicesModule.saveAccept('${s.id}')">Confirmar</button>
+            <button class="btn btn-primary" onclick="window.ServicesModule.saveAccept('${s.id}')">Confirmar e Destinar</button>
           </div>
         </div>
       </div>
@@ -351,19 +473,75 @@ window.ServicesModule = (() => {
     openModal('modal-accept');
   }
 
+  function onWorkerChange(workerId, dest) {
+    const w = window.DB.workforce.list().find(x => x.id === workerId);
+    const justContainer = document.getElementById('sv-acc-just-container');
+    if (!w) {
+      justContainer.style.display = 'none';
+      return;
+    }
+    const eqIds = w.equipmentIds || (w.equipmentId ? [w.equipmentId] : []);
+    const eqsAllocated = eqIds.map(id => window.DB.equipment.get(id)).filter(e => e && e.status !== 'Liberado');
+    if (eqsAllocated.length > 0) {
+      justContainer.style.display = 'block';
+    } else {
+      justContainer.style.display = 'none';
+    }
+  }
+
   function saveAccept(id) {
     const inicio = document.getElementById('sv-acc-inicio').value;
     const prazo = document.getElementById('sv-acc-prazo').value.trim();
     const avanco = document.getElementById('sv-acc-avanco').value;
-    if(!inicio || !prazo || !avanco) { Toast.error('Erro','Preencha todos os campos.'); return; }
+    const workerId = document.getElementById('sv-acc-worker').value;
+    
+    if(!inicio || !prazo || !workerId) { Toast.error('Erro','Preencha todos os campos obrigatórios.'); return; }
+    
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    const dest = s.destino || s.setorDestino;
+    const w = window.DB.workforce.list().find(x => x.id === workerId);
+    
+    const justContainer = document.getElementById('sv-acc-just-container');
+    const justificativa = document.getElementById('sv-acc-justificativa').value.trim();
+    if (justContainer.style.display === 'block' && dest !== 'Usinagem' && !justificativa) {
+      Toast.error('Erro', 'Por favor, informe a justificativa da troca de alocação.');
+      return;
+    }
+
     window.DB.solicitacoes.update(id, {
       status: 'Em Execução',
       dataInicioExecucao: inicio,
       prazoExecucao: prazo,
       pctAvanço: avanco
     });
+    
+    if (s.osId) {
+      window.DB.tasks.update(s.osId, { responsavel: w.nome, status: 'Em Execução' });
+    }
+
+    // Update worker allocation
+    let eqIds = w.equipmentIds || (w.equipmentId ? [w.equipmentId] : []);
+    if (s.equipmentId && !eqIds.includes(s.equipmentId)) {
+      eqIds.push(s.equipmentId);
+    }
+    window.DB.workforce.update(w.id, { 
+      equipmentIds: eqIds, 
+      justificativa: justificativa || w.justificativa 
+    });
+
+    // Send notification
+    if (window.DB.notifications) {
+      const eq = window.DB.equipment.get(s.equipmentId);
+      window.DB.notifications.add({
+        titulo: 'Nova OS Destinada',
+        mensagem: `Você foi alocado no equipamento ${eq ? eq.codigo : s.equipmentId} para a atividade: ${s.descricao}`,
+        tipo: 'info',
+        data: new Date().toISOString()
+      });
+    }
+
+    Toast.success('Destinado', 'O serviço foi repassado e aceito com sucesso.');
     closeModal('modal-accept');
-    Toast.success('Aceito', 'Serviço em execução.');
     Router.navigate('services', { force: true });
   }
 
@@ -411,6 +589,16 @@ window.ServicesModule = (() => {
     const task = s.osId ? window.DB.tasks.get(s.osId) : null;
     const osNumber = task ? task.codigo : (s.osNumber || 'Não informada (ou via PCM)');
     
+    let qtd = "Não informada";
+    let descFinal = s.descricao || '';
+    if (descFinal.startsWith('(Qtd: ')) {
+      const match = descFinal.match(/^\(Qtd:\s*(\d+)\)\s*-\s*(.*)/s);
+      if (match) {
+        qtd = match[1];
+        descFinal = match[2];
+      }
+    }
+
     const modalHtml = `
       <div class="modal-overlay" id="modal-details">
         <div class="modal" style="max-width:500px;">
@@ -423,11 +611,14 @@ window.ServicesModule = (() => {
           <div class="modal-body" style="padding-top:10px;">
             ${s.fotoPeca ? `
               <div style="margin-bottom:15px;text-align:center;">
-                <img src="${s.fotoPeca}" style="max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
+                <img src="${s.fotoPeca}" onclick="const d = document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);z-index:999999;display:flex;justify-content:center;align-items:center;cursor:zoom-out;'; d.onclick=()=>d.remove(); const x = document.createElement('div'); x.innerHTML='&times;'; x.style.cssText='position:absolute;top:20px;right:30px;color:white;font-size:40px;font-weight:bold;cursor:pointer;line-height:1;'; d.appendChild(x); const i = document.createElement('img'); i.src=this.src; i.style.cssText='max-width:90%;max-height:90%;object-fit:contain;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.5);'; d.appendChild(i); document.body.appendChild(d);" style="cursor:zoom-in;max-width:100%;max-height:250px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border-card);" />
               </div>
             ` : `<p style="font-size:12px;color:#ef4444;margin-bottom:15px;">⚠️ Sem foto anexada.</p>`}
-            <p style="margin-bottom:8px;font-size:13px;"><strong>Descrição:</strong> ${s.descricao}</p>
+            <p style="margin-bottom:8px;font-size:13px;"><strong>Solicitante:</strong> ${s.origem || 'Não informado'}</p>
+            <p style="margin-bottom:8px;font-size:13px;"><strong>Quantidade:</strong> <span style="background:var(--bg-hover);padding:2px 6px;border-radius:4px;font-weight:bold;">${qtd}</span></p>
+            <p style="margin-bottom:8px;font-size:13px;"><strong>Descrição:</strong> ${descFinal}</p>
             <p style="margin-bottom:8px;font-size:13px;"><strong>Status:</strong> ${s.status}</p>
+            ${s.status.includes('Rejeit') && s.observacoes ? `<p style="margin-bottom:8px;font-size:13px;color:var(--color-danger);background:rgba(239,68,68,0.1);padding:4px 8px;border-radius:4px;border:1px solid rgba(239,68,68,0.2);"><strong>Motivo da Rejeição:</strong> ${s.observacoes}</p>` : ''}
             <p style="margin-bottom:8px;font-size:13px;"><strong>Ordem de Serviço (OS):</strong> ${osNumber}</p>
             <p style="margin-bottom:8px;font-size:13px;"><strong>Avanço:</strong> ${s.pctAvanço || 0}%</p>
           </div>
@@ -493,18 +684,24 @@ window.ServicesModule = (() => {
     Router.navigate('services', { force: true });
   }
 
+
+
   return {
     render,
     setTab,
     approvePCM,
     saveApprovePCM,
     reject,
+    saveRejectPCM,
+    rejectByEncarregado,
+    saveRejectByEncarregado,
     assignWorker,
     saveAssign,
     viewDetails,
     deleteRequest,
     acceptService,
     saveAccept,
+    onWorkerChange,
     updateProgress,
     saveProgress,
     finishService,
