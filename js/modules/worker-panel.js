@@ -534,8 +534,7 @@ window.WorkerPanel = (() => {
       }
     }
 
-    const freesWorker = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason.startsWith('Outros') || reason.startsWith('Dependência') || reason === 'Fim Expediente' || reason === '5S';
-    
+    // The duplicate freesWorker declaration was here    
     if (freesWorker) {
       DB.workforce.update(myWorker.id, {
         currentState: 'Ocioso',
