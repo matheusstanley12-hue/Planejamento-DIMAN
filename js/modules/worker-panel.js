@@ -5,6 +5,7 @@
 window.WorkerPanel = (() => {
   let activeTab = 'hoje'; // 'atrasadas' | 'hoje' | 'futuras' | 'concluidas'
   let eqFilter = '';
+  let discFilter = '';
 
   function compressImage(file, callback) {
     const reader = new FileReader();
@@ -1077,7 +1078,10 @@ window.WorkerPanel = (() => {
       if (!myTasks.find(x => x.id === t.id)) myTasks.push(t);
     });
 
+    const availableDisciplines = [...new Set(myTasks.map(t => t.disciplina).filter(Boolean))].sort();
+
     if (eqFilter) myTasks = myTasks.filter(t => t.equipmentId === eqFilter);
+    if (discFilter) myTasks = myTasks.filter(t => t.disciplina === discFilter);
 
     // Live Status Panel
     let statusPanelHtml = '';
@@ -1242,17 +1246,21 @@ window.WorkerPanel = (() => {
       `;
     }
 
-    // Horizontal Machines List
     const machinesHtml = `
-      <div class="machines-scroll">
-        ${myEqs.map(e => `
-          <div class="machine-chip ${eqFilter === e.id ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('${e.id}')">
-            <strong>${e.codigo}</strong>
-            <span>${e.pctAvanco || 0}%</span>
-          </div>
-        `).join('')}
-        <div class="machine-chip ${!eqFilter ? 'active' : ''}" onclick="WorkerPanel.setEqFilter('')">
-          <strong>TODAS AS MÁQUINAS</strong>
+      <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:140px;">
+          <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:block; margin-bottom:6px;">Equipamento</label>
+          <select onchange="WorkerPanel.setEqFilter(this.value)" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-card); background:var(--bg-card); color:var(--text-primary); font-weight:700; font-size:14px; outline:none; cursor:pointer;">
+            <option value="">Todas as Máquinas</option>
+            ${myEqs.map(e => `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)</option>`).join('')}
+          </select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:block; margin-bottom:6px;">Setor (Disciplina)</label>
+          <select onchange="WorkerPanel.setDiscFilter(this.value)" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-card); background:var(--bg-card); color:var(--text-primary); font-weight:700; font-size:14px; outline:none; cursor:pointer;">
+            <option value="">Todos os Setores</option>
+            ${availableDisciplines.map(d => `<option value="${d}" ${discFilter === d ? 'selected' : ''}>${d}</option>`).join('')}
+          </select>
         </div>
       </div>
     `;
@@ -1521,6 +1529,12 @@ window.WorkerPanel = (() => {
 
   function setEqFilter(id) {
     eqFilter = id;
+    render();
+    Router.navigate('worker-panel', { force: true });
+  }
+
+  function setDiscFilter(disc) {
+    discFilter = disc;
     render();
     Router.navigate('worker-panel', { force: true });
   }
@@ -2448,8 +2462,11 @@ window.WorkerPanel = (() => {
 
   return {
     render,
+    setActiveTab,
     setEqFilter,
+    setDiscFilter,
     openCreateTask,
+    openTaskDetail,
     saveNewTask,
     openEditTask,
     saveEditedTask,
