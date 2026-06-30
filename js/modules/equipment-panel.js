@@ -516,7 +516,7 @@ window.EquipmentPanel = (() => {
   function renderDisciplina(tasks, eq, disc) {
     const allEqTasks = DB.tasks.getByEquipment(eq.id);
     const session = window.Auth.getSession();
-    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+    const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
     let html = '';
     if (tasks.length === 0) {
       html = `<div class="empty-state" style="padding:var(--space-4)"><p>Nenhuma atividade desta disciplina.</p></div>`;
@@ -928,16 +928,22 @@ window.EquipmentPanel = (() => {
       if (deleteBtn) deleteBtn.style.display = 'block';
       
       const session = window.Auth.getSession();
-      const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+      const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+      const canComment = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Coordenador', 'Supervisor', 'Encarregado'].includes(session.perfil);
+      
       const saveBtn = document.getElementById('new-task-save-btn');
       if (!canEdit) {
         if (saveBtn) saveBtn.style.display = 'none';
         if (deleteBtn) deleteBtn.style.display = 'none';
+      } else {
+        if (saveBtn) saveBtn.style.display = 'block';
+      }
+
+      if (!canComment) {
         document.getElementById('new-task-obs').disabled = true;
         const sendBtn = document.querySelector('#new-task-obs').nextElementSibling;
         if (sendBtn) sendBtn.style.display = 'none';
       } else {
-        if (saveBtn) saveBtn.style.display = 'block';
         document.getElementById('new-task-obs').disabled = false;
         const sendBtn = document.querySelector('#new-task-obs').nextElementSibling;
         if (sendBtn) sendBtn.style.display = 'block';
