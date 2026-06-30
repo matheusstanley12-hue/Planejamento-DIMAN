@@ -46,8 +46,8 @@ window.HomeModule = (() => {
     const emManutencao = eqs.filter(e => e.status !== 'Liberado').length;
     let atrasados = 0;
     eqs.forEach(e => {
-      if (e.status !== 'Liberado' && e.dataLiberacaoAtual) {
-        const days = daysBetween(today, e.dataLiberacaoAtual);
+      if (e.status !== 'Liberado' && e.dataLiberacaoPlanejada) {
+        const days = daysBetween(today, e.dataLiberacaoPlanejada);
         if (days < 0) atrasados++;
       }
     });
@@ -80,7 +80,7 @@ window.HomeModule = (() => {
       }
       
       const isManutencao = e.status !== 'Liberado' ? '1' : '0';
-      const isAtrasado = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) < 0) ? '1' : '0';
+      const isAtrasado = (e.status !== 'Liberado' && e.dataLiberacaoPlanejada && daysBetween(today, e.dataLiberacaoPlanejada) < 0) ? '1' : '0';
       const isLib7 = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) >= 0 && daysBetween(today, e.dataLiberacaoAtual) <= 7) ? '1' : '0';
       const hasRestr = restrictions.some(r => r.equipmentId === e.id && r.status === 'Aberta') ? '1' : '0';
       const hasPecas = parts.some(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status)) ? '1' : '0';

@@ -561,9 +561,8 @@ window.AIAssistant = (() => {
         if (totalDelay > 0) {
           resp += `• **Atraso Acumulado:** ${totalDelay} dias identificados ao longo de ${repls.length} replanejamento(s).\n`;
           resp += `• **Última Causa Registrada:** ${repls[repls.length-1].motivo}\n`;
-        } else if (eq.dataLiberacaoAtual || eq.dataLiberacaoPlanejada) {
-          const datePrev = eq.dataLiberacaoAtual || eq.dataLiberacaoPlanejada;
-          const daysToLib = window.daysBetween(new Date().toISOString().slice(0,10), datePrev);
+        } else if (eq.dataLiberacaoPlanejada) {
+          const daysToLib = window.daysBetween(new Date().toISOString().slice(0,10), eq.dataLiberacaoPlanejada);
           if (daysToLib < 0) {
             resp += `• **Motivo do Atraso:** O equipamento encontra-se ATRASADO em ${Math.abs(daysToLib)} dias em relação à data planejada, porém **nenhum motivo formal de replanejamento foi registrado no sistema** pela equipe técnica.\n`;
           }
