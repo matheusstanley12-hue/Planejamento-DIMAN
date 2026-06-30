@@ -1859,7 +1859,7 @@ window.AuditModule = (() => {
 window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
-    const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    const users = window.Auth ? window.Auth.listUsers() : [];
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
@@ -1966,7 +1966,7 @@ window.UsersModule = (() => {
       return;
     }
     
-    const users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    const users = window.Auth ? window.Auth.getUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
     if(users.find(u => u.matricula === matricula)) {
       Toast && Toast.error('Erro', 'Matrícula já existe.');
       return;
@@ -2074,7 +2074,7 @@ window.UsersModule = (() => {
         window.Auth.deleteUser(id);
       }
       // Fallback/Garanta que deletou do localStorage e do Supabase
-      let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      let users = window.Auth ? window.Auth.getUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
       users = users.filter(u => u.id !== id);
       localStorage.setItem('diman_users', JSON.stringify(users));
       if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
@@ -2092,7 +2092,7 @@ window.UsersModule = (() => {
       return;
     }
     
-    let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    let users = window.Auth ? window.Auth.getUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
     const user = users.find(u => u.id === id);
     if(!user) return;
     
@@ -2112,7 +2112,7 @@ window.UsersModule = (() => {
     
     if(!id || !newPerfil || !newNome) return;
     
-    let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+    let users = window.Auth ? window.Auth.getUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
     const userIndex = users.findIndex(u => u.id === id);
     if(userIndex === -1) return;
     
@@ -2137,7 +2137,7 @@ window.UsersModule = (() => {
     }
     window.uiConfirm('Tem certeza que deseja resetar a senha deste usuário para 123456?', (res) => {
       if (!res) return;
-      let users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      let users = window.Auth ? window.Auth.getUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
       const userIndex = users.findIndex(u => u.id === id);
       if(userIndex === -1) return;
       

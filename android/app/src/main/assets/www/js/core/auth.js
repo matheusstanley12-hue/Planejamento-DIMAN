@@ -117,7 +117,7 @@ window.Auth = (() => {
 
   async function initSuperAdmin() {
     const users = getUsers();
-    if (!users.find(u => u.matricula === '013429')) {
+    if (users.length === 0) {
       const hashed = await hashPassword('35215415');
       users.push({
         id: 'u-superadmin',
@@ -129,7 +129,7 @@ window.Auth = (() => {
         disciplina: 'TI',
         perfil: 'Desenvolvedor',
         senhaHash: hashed,
-        senhaInicial: true, // must change on first login
+        senhaInicial: true,
         status: 'Ativo',
         createdAt: new Date().toISOString(),
         permissions: getAllPermissions()
@@ -154,10 +154,10 @@ window.Auth = (() => {
     switch(p) {
       case 'desenvolvedor': return getAllPermissions();
       case 'administrador': return getAllPermissions();
-      case 'gerente': return { ...getAllPermissions(), users: false };
-      case 'planejador': return getAllPermissions();
+      case 'gerente': return getAllPermissions();
+      case 'planejador': return { ...getAllPermissions(), users: false };
       case 'coordenador': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
-      case 'encarregado': return getAllPermissions();
+      case 'encarregado': return { ...getAllPermissions(), users: false };
       case 'supervisor': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
       case 'executante': return { dashboard: false, equipment: false, tasks: false, gantt: false, parts: false, workforce: false, workshop: false, restrictions: false, timeline: false, kpi: false, ai: false, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: false, managerDashboard: false, simulator: false, workerPanel: true };
       case 'cliente': return { dashboard: true, equipment: true, tasks: false, gantt: true, parts: false, workforce: false, workshop: true, restrictions: false, timeline: true, kpi: true, ai: false, reports: true, audit: false, users: false, planning: false, impacts: true, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
@@ -222,10 +222,12 @@ window.Auth = (() => {
       
       // Validação em tempo real: se o usuário foi deletado ou inativado, derruba a sessão
       const users = getUsers();
-      const user = users.find(u => u.matricula === session.matricula);
-      if (!user || user.status === 'Inativo') {
-        sessionStorage.removeItem(SESSION_KEY);
-        return null;
+      if (users.length > 0) {
+        const user = users.find(u => u.matricula === session.matricula);
+        if (!user || user.status === 'Inativo') {
+          sessionStorage.removeItem(SESSION_KEY);
+          return null;
+        }
       }
       
       return session;

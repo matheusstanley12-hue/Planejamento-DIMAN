@@ -103,7 +103,14 @@ window.Auth = (() => {
   }
 
   function getUsers() {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    try {
+      const blacklist = JSON.parse(localStorage.getItem('diman_deleted_users') || '[]');
+      if (blacklist.length > 0) {
+        users = users.filter(u => !blacklist.includes(u.id));
+      }
+    } catch(e) {}
+    return users;
   }
 
   function saveUsers(users) {
@@ -308,6 +315,15 @@ window.Auth = (() => {
     const users = getUsers();
     const user = users.find(u => u.id === id);
     if (!user) return false;
+    
+    try {
+      const blacklist = JSON.parse(localStorage.getItem('diman_deleted_users') || '[]');
+      if (!blacklist.includes(id)) {
+        blacklist.push(id);
+        localStorage.setItem('diman_deleted_users', JSON.stringify(blacklist));
+      }
+    } catch(e) {}
+
     const filtered = users.filter(u => u.id !== id);
     saveUsers(filtered);
     if (window.DB && window.DB.deleteFromSupabase) {

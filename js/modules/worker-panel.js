@@ -2164,7 +2164,7 @@ window.WorkerPanel = (() => {
       setorDestino: setor,
       prazo: prazo,
       critico: critica,
-      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Execução',
+      status: setor === 'Usinagem' ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado',
       createdAt: DB.now()
     };
 
@@ -2354,6 +2354,93 @@ window.WorkerPanel = (() => {
     openModal('modal-worker-task-detail');
   }
 
+  // ---------------------------------------------------------------
+  // Editar / Reenviar Solicitação Rejeitada
+  // ---------------------------------------------------------------
+  function openEditRequest(id) {
+    const s = window.DB.solicitacoes ? window.DB.solicitacoes.list().find(x => x.id === id) : null;
+    if (!s) { window.Toast.error('Erro', 'Solicitação não encontrada.'); return; }
+
+    // Extrair quantidade e descrição pura do formato "(Qtd: N) - Descrição"
+    let pureDesc = s.descricao || '';
+    let qty = '1';
+    const qtyMatch = pureDesc.match(/^\(Qtd:\s*(\d+)\)\s*-\s*/);
+    if (qtyMatch) {
+      qty = qtyMatch[1];
+      pureDesc = pureDesc.slice(qtyMatch[0].length);
+    }
+
+    const motivoHtml = s.observacoes ? `
+      <div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:var(--radius-md);padding:var(--space-3);margin-bottom:var(--space-4);">
+        <p style="color:#ef4444;font-weight:700;font-size:13px;margin-bottom:4px;">⚠️ Motivo da Rejeição:</p>
+        <p style="color:var(--text-primary);font-size:14px;margin:0;">${s.observacoes}</p>
+      </div>` : '';
+
+    const setores = ['Usinagem','Caldeiraria','Mecânica','Mecânica de poço','Teste','Retrabalho','Elétrica','Lubrificação','Subconjunto','Pintura','Lavador'];
+    const setorOptions = setores.map(st => `<option value="${st}" ${st === s.destino ? 'selected' : ''}>${st}</option>`).join('');
+
+    // Remover modal anterior se existir
+    const oldModal = document.getElementById('modal-edit-request');
+    if (oldModal) oldModal.remove();
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="modal-overlay" id="modal-edit-request" style="z-index:9999;">
+        <div class="modal" style="max-width:520px;width:calc(100% - 32px);">
+          <div class="modal-header">
+            <h3 class="modal-title">✏️ Editar e Reenviar Solicitação</h3>
+            <button class="modal-close" onclick="closeModal('modal-edit-request')">✕</button>
+          </div>
+          <div class="modal-body" style="display:flex;flex-direction:column;gap:var(--space-4);">
+            ${motivoHtml}
+            <div class="form-group">
+              <label>Setor de Destino *</label>
+              <select id="edit-req-dest" class="form-control">${setorOptions}</select>
+            </div>
+            <div class="form-group" style="max-width:140px;">
+              <label>Quantidade *</label>
+              <input type="number" id="edit-req-qty" class="form-control" value="${qty}" min="1" required />
+            </div>
+            <div class="form-group">
+              <label>Descrição *</label>
+              <textarea id="edit-req-desc" class="form-control" rows="4" placeholder="Detalhe o serviço necessário...">${pureDesc}</textarea>
+            </div>
+          </div>
+          <div class="modal-footer" style="display:flex;gap:var(--space-3);justify-content:flex-end;">
+            <button class="btn btn-secondary" onclick="closeModal('modal-edit-request')">Cancelar</button>
+            <button class="btn btn-primary" onclick="window.WorkerPanel.saveEditRequest('${id}')">
+              🚀 Reenviar Solicitação
+            </button>
+          </div>
+        </div>
+      </div>
+    `);
+    openModal('modal-edit-request');
+  }
+
+  function saveEditRequest(id) {
+    const dest = document.getElementById('edit-req-dest')?.value;
+    const qty  = document.getElementById('edit-req-qty')?.value || '1';
+    const desc = (document.getElementById('edit-req-desc')?.value || '').trim();
+
+    if (!desc) { window.Toast.error('Erro', 'A descrição é obrigatória.'); return; }
+    if (!dest) { window.Toast.error('Erro', 'O setor de destino é obrigatório.'); return; }
+
+    const fullDesc = `(Qtd: ${qty}) - ${desc}`;
+    const newStatus = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
+
+    window.DB.solicitacoes.update(id, {
+      destino: dest,
+      descricao: fullDesc,
+      status: newStatus,
+      observacoes: '',
+      updatedAt: window.DB.now()
+    });
+
+    closeModal('modal-edit-request');
+    window.Toast.success('Reenviada!', `Solicitação corrigida e reenviada para ${dest}.`);
+    window.Router.navigate('worker-services', { force: true });
+  }
+
   return {
     render,
     setEqFilter,
@@ -2390,7 +2477,9 @@ window.WorkerPanel = (() => {
     finalizeTask,
     getMyEquipments,
     compressImage,
-    openTaskDetail
+    openTaskDetail,
+    openEditRequest,
+    saveEditRequest
   };
 })();
 // ================================================================
@@ -2549,7 +2638,8 @@ window.WorkerServices = (() => {
               <tbody>
                 ${myHistory.map(s => {
                   let badge = 'badge-ghost';
-                  if (s.status.includes('PCM')) badge = 'badge-warning';
+                  if (s.status.includes('Rejeit')) badge = 'badge-danger';
+                  else if (s.status.includes('PCM')) badge = 'badge-warning';
                   else if (s.status.includes('Encarregado')) badge = 'badge-primary';
                   else if (s.status === 'Em Execução') badge = 'badge-info';
                   else if (s.status === 'Concluída') badge = 'badge-success';
@@ -2602,7 +2692,7 @@ window.WorkerServices = (() => {
         desc = `(Qtd: ${qty}) - ${desc}`;
 
         const eqId = document.getElementById('w-sv-eq').value;
-        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Execução';
+        const statusReq = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
         
         const payload = {
           id: window.DB.uid('sol'),
@@ -2700,8 +2790,104 @@ window.WorkerServices = (() => {
         </div>
 
         ${historyHtml}
+        <div id="worker-services-modals"></div>
       </div>
     `;
   }
-  return { render };
+
+  function openEditRequest(id) {
+    const s = window.DB.solicitacoes ? window.DB.solicitacoes.list().find(x => x.id === id) : null;
+    if (!s) return;
+
+    // Parse quantity from description
+    let qtdVal = 1;
+    let descVal = s.descricao || '';
+    const qtdMatch = descVal.match(/^\(Qtd:\s*(\d+)\)\s*-\s*(.*)/s);
+    if (qtdMatch) {
+      qtdVal = qtdMatch[1];
+      descVal = qtdMatch[2];
+    }
+
+    const motivoHtml = (s.observacoes && s.status.includes('Rejeit'))
+      ? `<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);">
+           <p style="font-size:12px;font-weight:700;color:var(--color-danger);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">⚠️ Motivo da Rejeição</p>
+           <p style="font-size:13px;color:var(--text-primary);margin:0;">${s.observacoes}</p>
+         </div>`
+      : '';
+
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-edit-request">
+        <div class="modal" style="max-width:520px;">
+          <div class="modal-header">
+            <div class="modal-title">✏️ Editar e Reenviar Solicitação</div>
+            <button class="modal-close" onclick="closeModal('modal-edit-request')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            ${motivoHtml}
+            <div class="form-group">
+              <label>Setor de Destino</label>
+              <input type="text" class="form-control" value="${s.destino || s.setorDestino || ''}" disabled style="opacity:.65;cursor:not-allowed;" />
+            </div>
+            <div class="form-group">
+              <label>Quantidade *</label>
+              <input type="number" id="edit-req-qty" class="form-control" value="${qtdVal}" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Descrição *</label>
+              <textarea id="edit-req-desc" class="form-control" rows="4">${descVal}</textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-edit-request')">Cancelar</button>
+            <button class="btn btn-primary" onclick="window.WorkerServices.saveEditRequest('${id}')">🚀 Reenviar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const container = document.getElementById('worker-services-modals');
+    if (container) container.innerHTML = modalHtml;
+    openModal('modal-edit-request');
+  }
+
+  function saveEditRequest(id) {
+    const s = window.DB.solicitacoes ? window.DB.solicitacoes.list().find(x => x.id === id) : null;
+    if (!s) return;
+
+    const qty = document.getElementById('edit-req-qty')?.value || 1;
+    let desc = document.getElementById('edit-req-desc')?.value.trim() || '';
+    if (!desc) { window.Toast.error('Erro', 'A descrição é obrigatória.'); return; }
+
+    // Rebuild description with quantity
+    const fullDesc = `(Qtd: ${qty}) - ${desc}`;
+
+    // Determine new status based on destination
+    const dest = s.destino || s.setorDestino || '';
+    const newStatus = (dest === 'Usinagem') ? 'Aguardando Aprovação PCM' : 'Aguardando Encarregado';
+
+    window.DB.solicitacoes.update(id, {
+      descricao: fullDesc,
+      status: newStatus,
+      observacoes: '', // clear rejection reason
+      updatedAt: window.DB.now()
+    });
+
+    if (window.DB.notifications) {
+      window.DB.notifications.add({
+        type: 'warning',
+        title: 'Solicitação Reenviada',
+        message: `Solicitação de ${s.origem} para ${dest} foi reenviada para análise.`,
+        read: false,
+        createdAt: window.DB.now()
+      });
+    }
+
+    closeModal('modal-edit-request');
+    window.Toast.success('Reenviado!', `Solicitação corrigida e reenviada para ${dest}.`);
+    window.Router.navigate('worker-services', { force: true });
+  }
+
+  return { render, openEditRequest, saveEditRequest };
 })();

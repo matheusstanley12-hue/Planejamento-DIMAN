@@ -19,11 +19,20 @@ window.ServicesModule = (() => {
     
     let mySols = solicitacoes;
     
-    if (!isPCM && isEncarregado) {
+    if (isPCM) {
+      // PCM (Planejador) só vê solicitações de Usinagem — os outros setores vão direto para o encarregado
+      mySols = mySols.filter(s => {
+        const dest = s.destino || s.setorDestino;
+        return dest === 'Usinagem';
+      });
+    } else if (isEncarregado) {
+      // Encarregado vê solicitações do seu setor
       mySols = mySols.filter(s => {
         const dest = s.destino || s.setorDestino;
         if (dest !== session.disciplina) return false;
+        // Usinagem: encarregado só vê após PCM aprovar (não ver 'Aguardando Aprovação PCM')
         if (session.disciplina === 'Usinagem' && s.status === 'Aguardando Aprovação PCM') return false;
+        // Encarregado não vê solicitações que ele já rejeitou (voltou ao PCM)
         if (s.status === 'Rejeitada pelo Encarregado') return false;
         return true;
       });
@@ -36,7 +45,7 @@ window.ServicesModule = (() => {
     let currentList = activeTab === 'pendentes' ? pendentes : activeTab === 'andamento' ? andamento : concluidas;
 
     const pageTitle = 'Solicitação de Serviço';
-    const pageSubtitle = isPCM ? 'Aprovações de OS de Usinagem' : 'Destinação de Mão de Obra';
+    const pageSubtitle = isPCM ? 'Aprovações PCM — Usinagem' : 'Gerenciamento de Solicitações';
 
     const html = `
       <div class="page-container">
@@ -244,11 +253,41 @@ window.ServicesModule = (() => {
   }
 
   function reject(id) {
-    const motivo = prompt('Motivo da rejeição:');
-    if (motivo === null) return;
-    
+    const s = window.DB.solicitacoes.list().find(x => x.id === id);
+    if (!s) return;
+    const modalHtml = `
+      <div class="modal-overlay" id="modal-reject-pcm">
+        <div class="modal" style="max-width:400px;">
+          <div class="modal-header">
+            <div class="modal-title">Rejeitar Solicitação (PCM)</div>
+            <button class="modal-close" onclick="closeModal('modal-reject-pcm')">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="modal-body" style="padding-top:10px;">
+            <p style="margin-bottom:12px;color:var(--text-secondary);font-size:13px;">Solicitação: <strong>${s.descricao}</strong></p>
+            <div class="form-group">
+              <label>Motivo da Rejeição *</label>
+              <textarea id="rej-pcm-motivo" class="form-control" rows="3" placeholder="Descreva o motivo para cancelar esta solicitação"></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('modal-reject-pcm')">Cancelar</button>
+            <button class="btn btn-danger" onclick="window.ServicesModule.saveRejectPCM('${id}')">Confirmar Rejeição</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('services-modals').innerHTML = modalHtml;
+    openModal('modal-reject-pcm');
+  }
+
+  function saveRejectPCM(id) {
+    const motivo = document.getElementById('rej-pcm-motivo').value.trim();
+    if (!motivo) { Toast.error('Erro', 'O motivo é obrigatório.'); return; }
     window.DB.solicitacoes.update(id, { status: 'Rejeitada', observacoes: motivo });
-    Toast.info('Rejeitada', 'Solicitação foi rejeitada.');
+    closeModal('modal-reject-pcm');
+    Toast.info('Rejeitada', 'Solicitação foi rejeitada pelo PCM.');
     Router.navigate('services', { force: true });
   }
 
@@ -653,6 +692,7 @@ window.ServicesModule = (() => {
     approvePCM,
     saveApprovePCM,
     reject,
+    saveRejectPCM,
     rejectByEncarregado,
     saveRejectByEncarregado,
     assignWorker,
