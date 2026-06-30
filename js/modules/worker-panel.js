@@ -279,7 +279,7 @@ window.WorkerPanel = (() => {
     }
 
     // Check allocation blocking
-    let divergingWorkers = targetWorkers.filter(w => w.equipmentId && w.equipmentId !== t.equipmentId);
+    let divergingWorkers = targetWorkers.filter(w => w.equipmentId && w.equipmentId !== t.equipmentId && (!myWorker || w.id !== myWorker.id));
     if (divergingWorkers.length > 0) {
       const names = divergingWorkers.map(w => w.nome).join(', ');
       const jModalHtml = `
@@ -469,8 +469,8 @@ window.WorkerPanel = (() => {
     let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
     if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h to prevent runaway timers
 
-    // ONLY target the specific worker if workerId is passed
-    const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
+    // Target ALL workers on this task
+    const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
     
     targetWorkers.forEach(w => {
       // Save Timesheet (Work)
@@ -782,7 +782,8 @@ window.WorkerPanel = (() => {
       if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
       const tId = myWorker.currentTaskId;
-      const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+      // Target ALL workers on this task
+      const targetWorkers = DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
 
       targetWorkers.forEach(w => {
         DB.workforce.update(w.id, {
@@ -901,8 +902,8 @@ window.WorkerPanel = (() => {
     const t = DB.tasks.get(myWorker.currentTaskId);
     
     const processSave = (base64Img) => {
-      // ONLY target the specific worker that clicked 'Concluir'
-      const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => w.currentTaskId === t.id);
+      // Target ALL workers on this task
+      const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id);
       
       targetWorkers.forEach(w => {
         if (w.currentState === 'Trabalhando') {
