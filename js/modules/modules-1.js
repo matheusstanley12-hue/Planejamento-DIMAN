@@ -11,8 +11,14 @@
 // ================================================================
 window.Dashboard = (() => {
   let charts = {};
+  let selectedMonth = new Date().toISOString().slice(0, 7);
 
   function destroyCharts() { Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} }); charts = {}; }
+
+  function setMonth(val) {
+    if (val) selectedMonth = val;
+    Router.navigate('dashboard', { force: true });
+  }
 
   function chartDefaults() {
     return {
@@ -44,15 +50,22 @@ window.Dashboard = (() => {
 
   function render() {
     destroyCharts();
-    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+    const currentMonthPrefix = selectedMonth;
+    const isCurrentMonth = currentMonthPrefix === new Date().toISOString().slice(0, 7);
     const todayStr = new Date().toISOString().slice(0, 10);
     const stats = DB.kpi.getEquipmentStats(currentMonthPrefix);
     
     const eqs = DB.equipment.list();
     const parts = DB.parts.getAll();
     const restrictions = DB.restrictions.getAll();
-    const tasks = DB.tasks.getAll();
-    const timesheets = window.DB && DB.timesheets ? DB.timesheets.list() : [];
+    
+    // Filter tasks and timesheets by selected month
+    const tasks = DB.tasks.getAll().filter(t => {
+      const dt = t.dataRealInicio || t.dataPlanejadaInicio || t.dataRealTermino || '';
+      return dt.startsWith(currentMonthPrefix);
+    });
+    const timesheets = (window.DB && DB.timesheets ? DB.timesheets.list() : []).filter(ts => ts.data && ts.data.startsWith(currentMonthPrefix));
+    
     const wf = window.DB && DB.workforce ? DB.workforce.list() : [];
 
     // 1. Calculations for micro-cards
@@ -238,10 +251,13 @@ window.Dashboard = (() => {
             <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 0 0; font-weight:600;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
           </div>
         </div>
-        <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid var(--border-card); color: var(--text-primary);" onclick="Router.navigate('dashboard',{force:true})">
-          <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Atualizar Dados
-        </button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="month" value="${selectedMonth}" onchange="window.Dashboard.setMonth(this.value)" style="border-radius:8px; border:1px solid var(--border-card); padding:8px 12px; font-weight:600; font-family:'Inter'; color:var(--text-primary); background:var(--bg-surface); cursor:pointer;" title="Filtrar por Mês e Ano">
+          <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid var(--border-card); color: var(--text-primary);" onclick="Router.navigate('dashboard',{force:true})">
+            <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <!-- SECTION 1: 5 KPIs Topo (Grid) -->
@@ -287,7 +303,7 @@ window.Dashboard = (() => {
   }
 
   function destroy() { destroyCharts(); }
-  return { render, destroy };
+  return { render, destroy, setMonth };
 })();
 
 // ================================================================
