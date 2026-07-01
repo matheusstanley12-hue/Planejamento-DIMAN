@@ -119,16 +119,16 @@ window.Dashboard = (() => {
             if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
           });
-          const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : 0);
+          const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
 
           charts.ano = new Chart(ctxAno, {
             type: 'bar',
             data: { labels: mStr, datasets: [
-              { type: 'line', label: 'Aderência (%)', data: aderenciaArr, borderColor: '#eab308', backgroundColor: '#fef08a', borderWidth: 3, tension: 0.4, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#ca8a04' },
               { type: 'bar', label: 'Liberações Realizadas', data: mR, backgroundColor: createGrad(ctxAno, '#f87171', '#dc2626'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' },
-              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: createGrad(ctxAno, '#60a5fa', '#2563eb'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' }
+              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: createGrad(ctxAno, '#60a5fa', '#2563eb'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' },
+              { type: 'line', label: 'Aderência (%)', data: aderenciaArr, borderColor: '#eab308', backgroundColor: '#fef08a', borderWidth: 3, tension: 0.4, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#ca8a04', spanGaps: true, datalabels: { align: 'end', anchor: 'end', offset: 4, backgroundColor: '#ca8a04', color: '#ffffff', borderRadius: 4, padding: { top: 2, bottom: 2, left: 4, right: 4 }, font: { size: 10, weight: 'bold' }, formatter: (v) => v ? v + '%' : '' } }
             ]},
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { weight: '500' } } }, y: { display: false, position: 'left' }, y1: { display: false, position: 'right', min: 0, max: 100 } } }
+            options: { layout: { padding: { top: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { weight: '500' } } }, y: { display: false, position: 'left', grace: '30%' }, y1: { display: false, position: 'right', min: 0, max: 120 } } }
           });
         }
 
