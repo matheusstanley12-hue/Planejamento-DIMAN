@@ -1208,15 +1208,73 @@ window.MeetingMode = (() => {
 // TIMELINE MODULE
 // ================================================================
 window.TimelineModule = (() => {
+  let selectedEq = '';
+  
+  function setEquipment(code) {
+    selectedEq = code;
+    if (window.Router) window.Router.navigate('timeline', { force: true });
+  }
+
   function render() {
     const eqs = DB.equipment.list();
-    const allEvents = eqs.flatMap(e => (e.timeline||[]).map(tl => ({ ...tl, equipCode: e.codigo })));
+    
+    // Sort and Group
+    eqs.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+    const groups = {};
+    eqs.forEach(e => {
+      const cod = e.codigo || '';
+      let prefix = cod.split(/[\-\d]/)[0].trim().toUpperCase();
+      if (!prefix) prefix = 'OUTROS';
+      if (!groups[prefix]) groups[prefix] = [];
+      groups[prefix].push(e);
+    });
+    const sortedGroups = Object.keys(groups).sort();
+    const options = sortedGroups.map(groupName => {
+      const groupOptions = groups[groupName].map(e => {
+        const cod = e.codigo || '';
+        const nom = e.nome || '';
+        const displayName = (cod.trim() === nom.trim()) ? cod : `${cod} - ${nom}`;
+        return `<option value="${cod}">${displayName}</option>`;
+      }).join('');
+      return `<optgroup label="${groupName}">${groupOptions}</optgroup>`;
+    }).join('');
+    
+    let allEvents = [];
+    if (selectedEq) {
+        const e = eqs.find(eq => eq.codigo === selectedEq);
+        if (e) {
+            allEvents = (e.timeline||[]).map(tl => ({ ...tl, equipCode: e.codigo }));
+        }
+    }
+    
     allEvents.sort((a,b) => b.timestamp.localeCompare(a.timestamp));
     const typeColor = { ENTRADA:'info', INICIO:'success', DEFEITO:'danger', PECA_SOLICITADA:'warning', REPLANEJAMENTO:'warning', LIBERACAO:'success' };
 
     return `<div class="page-container">
-      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>Timeline de Eventos</div></div>
+      <div class="section-header">
+        <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>Timeline de Eventos</div>
+      </div>
+      
+      <div style="padding: var(--space-4) var(--space-4) 0 var(--space-4);">
+        <div style="position: relative; max-width: 450px; background: white; border-radius: 8px;">
+          <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; z-index: 2;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </div>
+          <select class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 8px; cursor: pointer; appearance: none; background-color: white;" onchange="window.TimelineModule.setEquipment(this.value)">
+            <option value="">Pesquisar e selecionar equipamento...</option>
+            ${options}
+          </select>
+          <div style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--primary);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+          </div>
+        </div>
+      </div>
+
       <div class="timeline" style="padding:var(--space-4);">
+        ${selectedEq === '' ? '<div class="empty-state"><p>Por favor, pesquise e selecione um equipamento acima para ver a timeline.</p></div>' : ''}
+        ${selectedEq !== '' && allEvents.length === 0 ? '<div class="empty-state"><p>Nenhum evento registrado para este equipamento.</p></div>' : ''}
         ${allEvents.map(tl=>`<div class="timeline-item">
           <div class="timeline-icon ${typeColor[tl.tipo]||'primary'}"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
           <div class="timeline-content">
@@ -1228,11 +1286,10 @@ window.TimelineModule = (() => {
             <div class="timeline-time">${formatDateTime(tl.timestamp)}</div>
           </div>
         </div>`).join('')}
-        ${allEvents.length===0?'<div class="empty-state"><p>Nenhum evento registrado</p></div>':''}
       </div>
     </div>`;
   }
-  return { render };
+  return { render, setEquipment };
 })();
 
 // ================================================================

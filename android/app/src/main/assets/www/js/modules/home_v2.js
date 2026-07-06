@@ -260,12 +260,35 @@ window.HomeModule = (() => {
         </div>
 
         <!-- Search Bar & Actions -->
-        <div style="margin-bottom:var(--space-6); display:flex; gap:var(--space-4); align-items:center; max-width:100%; margin-left:auto; margin-right:auto;">
-          <div class="input-group" style="flex:1;">
-            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-            <input type="text" id="home-search" placeholder="Pesquisar equipamento (Ex: SSM-288)..." style="font-size:1.2rem;padding:var(--space-4) var(--space-4) var(--space-4) 40px;" oninput="window.HomeModule.filter(this.value)" />
+        ${(() => {
+          const eqsAll = DB.equipment.list();
+          eqsAll.sort((a, b) => a.codigo.localeCompare(b.codigo));
+          const groups = {};
+          eqsAll.forEach(e => {
+          eqsAll.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+          const options = eqsAll.map(e => {
+            const cod = e.codigo || '';
+            const nom = e.nome || '';
+            const displayName = (cod.trim() === nom.trim()) ? cod : `${cod} - ${nom}`;
+            return `<option value="${cod}">${displayName}</option>`;
+          }).join('');
+
+          return `
+          <div style="margin-bottom:var(--space-6); display:flex; gap:var(--space-4); align-items:center; max-width:450px; margin-left:auto; margin-right:auto;">
+            <div style="position: relative; width: 100%; background: white; border-radius: 8px;">
+              <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </div>
+              <select class="input" id="home-search" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 8px; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB0%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 1rem top 50%; background-size: 0.85rem auto;" onchange="window.HomeModule.filter(this.value)">
+                <option value="">Pesquisar e selecionar equipamento...</option>
+                ${options}
+              </select>
+            </div>
           </div>
-        </div>
+          `;
+        })()}
 
         <!-- Kanban Board Horizontal Container -->
         <div class="planner-board" style="display:flex; gap:var(--space-5); overflow-x:auto; overflow-y:hidden; padding-bottom:var(--space-4); align-items:flex-start; width:100%; flex: 1; min-height: 0;">

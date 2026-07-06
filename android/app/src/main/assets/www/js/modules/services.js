@@ -5,7 +5,44 @@
 window.ServicesModule = (() => {
   let activeTab = 'pendentes';
 
+  function getUnreadCount() {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session) return 0;
+    const p = (session.perfil || '').trim().toLowerCase();
+    const isPCM = ['desenvolvedor', 'administrador', 'planejador', 'gerente'].includes(p);
+    const isEncarregado = ['supervisor', 'encarregado'].includes(p);
+    
+    if (!isPCM && !isEncarregado) return 0;
+
+    let mySols = window.DB.solicitacoes ? window.DB.solicitacoes.list() : [];
+    
+    if (isPCM) {
+      mySols = mySols.filter(s => {
+        const dest = s.destino || s.setorDestino;
+        return dest === 'Usinagem';
+      });
+    } else if (isEncarregado) {
+      mySols = mySols.filter(s => {
+        const dest = s.destino || s.setorDestino;
+        if (dest !== session.disciplina) return false;
+        if (session.disciplina === 'Usinagem' && s.status === 'Aguardando Aprovação PCM') return false;
+        if (s.status === 'Rejeitada pelo Encarregado') return false;
+        return true;
+      });
+    }
+
+    const pendentes = mySols.filter(s => s.status === 'Aguardando Aprovação PCM' || s.status === 'Aguardando Encarregado' || s.status === 'Rejeitada pelo Encarregado' || s.status === 'Rejeitada (Retorno PCM)');
+    
+    const lastVisit = localStorage.getItem('diman_services_last_visit') || '1970-01-01T00:00:00.000Z';
+    return pendentes.filter(s => s.createdAt > lastVisit).length;
+  }
+
   function render() {
+    localStorage.setItem('diman_services_last_visit', new Date().toISOString());
+    if (window.updateSidebarBadges) {
+        setTimeout(window.updateSidebarBadges, 100);
+    }
+
     const session = Auth.getSession();
     const p = session ? (session.perfil || '').trim().toLowerCase() : '';
     const isPCM = ['desenvolvedor', 'administrador', 'planejador', 'gerente'].includes(p);
@@ -688,6 +725,7 @@ window.ServicesModule = (() => {
 
   return {
     render,
+    getUnreadCount,
     setTab,
     approvePCM,
     saveApprovePCM,

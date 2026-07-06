@@ -666,7 +666,13 @@ function renderShell(session) {
         html += `<div class="sidebar-section-label">${item.section}</div>`;
         lastSection = item.section;
       }
-      const badge = '';
+      let badge = '';
+      if (item.route === 'services' && window.ServicesModule && window.ServicesModule.getUnreadCount) {
+        const count = window.ServicesModule.getUnreadCount();
+        if (count > 0) {
+          badge = `<span class="nav-badge" style="background:var(--color-danger);color:white;border-radius:10px;padding:2px 6px;font-size:0.7rem;margin-left:auto;font-weight:bold;">${count}</span>`;
+        }
+      }
       html += `<div class="nav-item" data-route="${item.route}" onclick="window.Router.navigate('${item.route}')">
         <span class="nav-icon">${icon(item.icon)}</span>
         <span class="nav-label">${item.label}</span>
@@ -675,6 +681,25 @@ function renderShell(session) {
     });
     return html;
   }
+
+  window.updateSidebarBadges = function() {
+    const item = document.querySelector('.nav-item[data-route="services"]');
+    if (item && window.ServicesModule && window.ServicesModule.getUnreadCount) {
+       const count = window.ServicesModule.getUnreadCount();
+       let badgeEl = item.querySelector('.nav-badge');
+       if (count > 0) {
+           if (!badgeEl) {
+               badgeEl = document.createElement('span');
+               badgeEl.className = 'nav-badge';
+               badgeEl.style.cssText = 'background:var(--color-danger);color:white;border-radius:10px;padding:2px 6px;font-size:0.7rem;margin-left:auto;font-weight:bold;';
+               item.appendChild(badgeEl);
+           }
+           badgeEl.textContent = count;
+       } else if (badgeEl) {
+           badgeEl.remove();
+       }
+    }
+  };
 
   window.filterSidebar = function(query) {
     const normalize = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -785,15 +810,7 @@ function renderShell(session) {
               <span>Início</span>
             </button>
 
-            <!-- Global Equipment Filter -->
-            ${session.perfil !== 'Executante' ? `
-            <div style="margin-left:var(--space-4); display:flex; align-items:center; min-width:0; flex:1;" class="topbar-filter-wrap">
-              <select id="global-eq-select" class="form-control" style="width:250px; border-radius:var(--radius-full); background:var(--bg-base); border:1px solid var(--border-card); font-size:var(--text-sm);" onchange="window.setGlobalEqFilter(this.value)">
-                <option value="" ${window.GlobalEqFilter === "" ? 'selected' : ''}>Filtro Global: Todos Equipamentos</option>
-                ${DB.equipment.list().filter(e => e.status !== 'Liberado').map(e => `<option value="${e.id}" ${e.id === window.GlobalEqFilter ? 'selected' : ''}>${e.codigo} - ${(e.nome || 'Sem Nome').split(' ').slice(0,2).join(' ')}</option>`).join('')}
-              </select>
-            </div>
-            ` : ''}
+
           </div>
           
           <div class="topbar-actions" style="display:flex;align-items:center;gap:var(--space-3);flex-shrink:0;">

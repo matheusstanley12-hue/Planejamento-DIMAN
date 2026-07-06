@@ -1635,7 +1635,7 @@ window.EquipmentPanel = (() => {
     if (!(await window.confirmAsync('ATENÇÃO', `Tem certeza que deseja excluir completamente o equipamento ${eq.codigo} e TODAS as suas tarefas, peças e histórico? Esta ação não pode ser desfeita.`, true))) return;
     
     // Remover todas as tarefas atreladas
-    const eqTasks = window.DB.tasks.getByEquipment(currentEqId);
+    const eqTasks = window.DB.tasks.list(currentEqId);
     eqTasks.forEach(t => window.DB.tasks.delete(t.id));
     
     // Remover todas as pecas atreladas

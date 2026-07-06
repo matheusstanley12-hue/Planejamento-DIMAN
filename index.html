@@ -379,7 +379,7 @@
   <script src="js/modules/qr-view_v2.js?v=1782929853536"></script>
 
   <!-- 3. APP BOOTSTRAP -->
-  <script src="js/app_v2.js?v=1782929853536"></script>
+  <script src="js/app_v2.js?v=9999999999999"></script>
 
   <!-- Loading screen removal -->
   <script>
@@ -418,6 +418,34 @@
             window.Toast && window.Toast.success('Teste', 'Massa de dados de teste injetada para avaliação!');
             if (typeof Router !== 'undefined') Router.navigate('bonus', { force: true });
           }
+        }
+        // --- GERADOR DE MASSA DE EVENTOS DE TIMELINE ---
+        if (!localStorage.getItem('teste_mock_gerado_timeline_v2') && window.DB && window.DB.equipment) {
+          const eqs = DB.equipment.list();
+          const todayTime = new Date().getTime();
+          
+          eqs.forEach((eq, idx) => {
+            if (!eq.timeline) eq.timeline = [];
+            
+            const offset1 = 86400000 * (idx + 1); // Dias variados no passado
+            const offset2 = 43200000 * (idx + 1); // Meio dias
+            
+            eq.timeline.push({ id: 'tl-m1-' + idx, tipo: 'ENTRADA', titulo: 'Entrada na Oficina', descricao: 'Equipamento recebido para manutenção.', timestamp: new Date(todayTime - offset1).toISOString() });
+            
+            if (idx % 2 === 0) {
+              eq.timeline.push({ id: 'tl-m2-' + idx, tipo: 'INICIO', titulo: 'Início da Manutenção', descricao: 'Atividades iniciadas.', timestamp: new Date(todayTime - offset2).toISOString() });
+              if (idx % 3 === 0) {
+                eq.timeline.push({ id: 'tl-m3-' + idx, tipo: 'LIBERACAO', titulo: 'Liberado', descricao: 'Manutenção concluída.', timestamp: new Date(todayTime - (offset2 / 2)).toISOString() });
+              }
+            } else {
+              eq.timeline.push({ id: 'tl-m2-' + idx, tipo: 'DEFEITO', titulo: 'Falha Identificada', descricao: 'Anomalia encontrada durante inspeção.', timestamp: new Date(todayTime - offset2).toISOString() });
+              eq.timeline.push({ id: 'tl-m3-' + idx, tipo: 'PECA_SOLICITADA', titulo: 'Peça Solicitada', descricao: 'Aguardando suprimentos.', timestamp: new Date(todayTime - (offset2 / 2)).toISOString() });
+            }
+            
+            DB.equipment.update(eq.id, { timeline: eq.timeline });
+          });
+
+          localStorage.setItem('teste_mock_gerado_timeline_v2', '1');
         }
       }, 2000);
     });

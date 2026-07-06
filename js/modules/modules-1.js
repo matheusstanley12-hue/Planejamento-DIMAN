@@ -105,7 +105,7 @@ window.Dashboard = (() => {
            const counts = sts.map(s => eqs.filter(e => e.status === s).length);
            charts.status = new Chart(ctxStatus, {
              type: 'bar',
-             data: { labels: sts, datasets: [{ data: counts, backgroundColor: [createGrad(ctxStatus, '#34d399', '#059669'), createGrad(ctxStatus, '#fde047', '#ca8a04'), createGrad(ctxStatus, '#fb923c', '#ea580c'), createGrad(ctxStatus, '#f87171', '#dc2626'), createGrad(ctxStatus, '#c084fc', '#9333ea')], borderRadius: 6, maxBarThickness: 48 }] },
+             data: { labels: sts, datasets: [{ data: counts, backgroundColor: [createGrad(ctxStatus, '#34d399', '#059669'), createGrad(ctxStatus, '#fde047', '#ca8a04'), createGrad(ctxStatus, '#fb923c', '#ea580c'), createGrad(ctxStatus, '#f87171', '#dc2626'), createGrad(ctxStatus, '#c084fc', '#9333ea')], borderRadius: 6, maxBarThickness: 16 }] },
              options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, layout: { padding: 10 }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '600' } } }, y: { display: false } } }
            });
         }
@@ -124,8 +124,8 @@ window.Dashboard = (() => {
           charts.ano = new Chart(ctxAno, {
             type: 'bar',
             data: { labels: mStr, datasets: [
-              { type: 'bar', label: 'Liberações Realizadas', data: mR, backgroundColor: createGrad(ctxAno, '#f87171', '#dc2626'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' },
-              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: createGrad(ctxAno, '#60a5fa', '#2563eb'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' },
+              { type: 'bar', label: 'Liberações Realizadas', data: mR, backgroundColor: createGrad(ctxAno, '#f87171', '#dc2626'), borderRadius: 6, maxBarThickness: 16, yAxisID: 'y' },
+              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: createGrad(ctxAno, '#60a5fa', '#2563eb'), borderRadius: 6, maxBarThickness: 16, yAxisID: 'y' },
               { type: 'line', label: 'Aderência (%)', data: aderenciaArr, borderColor: '#eab308', backgroundColor: '#fef08a', borderWidth: 3, tension: 0.4, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#ca8a04', spanGaps: true, datalabels: { align: 'end', anchor: 'end', offset: 4, backgroundColor: '#ca8a04', color: '#ffffff', borderRadius: 4, padding: { top: 2, bottom: 2, left: 4, right: 4 }, font: { size: 10, weight: 'bold' }, formatter: (v) => v ? v + '%' : '' } }
             ]},
             options: { layout: { padding: { top: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { weight: '500' } } }, y: { display: false, position: 'left', grace: '30%' }, y1: { display: false, position: 'right', min: 0, max: 120 } } }
@@ -156,7 +156,7 @@ window.Dashboard = (() => {
           const eqAvVals = eqSort.map(e => e.pctAvanco||0);
           charts.avanco = new Chart(ctxAvanco, {
             type: 'bar',
-            data: { labels: eqAvNames, datasets: [{ label: 'Avanço (%)', data: eqAvVals, backgroundColor: createGrad(ctxAvanco, '#c084fc', '#9333ea', true), borderRadius: 6, maxBarThickness: 24 }] },
+            data: { labels: eqAvNames, datasets: [{ label: 'Avanço (%)', data: eqAvVals, backgroundColor: createGrad(ctxAvanco, '#c084fc', '#9333ea', true), borderRadius: 6, maxBarThickness: 16 }] },
             options: { indexAxis: 'y', layout: { padding: { right: 40 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } } } }
           });
         }
@@ -191,8 +191,8 @@ window.Dashboard = (() => {
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
             data: { labels: catsLabels, datasets: [
-              { label: 'Realizado', data: cR, backgroundColor: createGrad(ctxCat, '#34d399', '#059669'), borderRadius: 6, maxBarThickness: 24 },
-              { label: 'Planejado', data: cP, backgroundColor: createGrad(ctxCat, '#c084fc', '#9333ea'), borderRadius: 6, maxBarThickness: 24 }
+              { label: 'Realizado', data: cR, backgroundColor: createGrad(ctxCat, '#34d399', '#059669'), borderRadius: 6, maxBarThickness: 16 },
+              { label: 'Planejado', data: cP, backgroundColor: createGrad(ctxCat, '#c084fc', '#9333ea'), borderRadius: 6, maxBarThickness: 16 }
             ]},
             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
           });
@@ -213,7 +213,7 @@ window.Dashboard = (() => {
 
           charts.topAtendimentos = new Chart(ctxTop, {
             type: 'bar',
-            data: { labels: sortedCats, datasets: [{ label: 'Atendimentos Concluídos', data: sortedCounts, backgroundColor: createGrad(ctxTop, '#3b82f6', '#1d4ed8'), borderRadius: 6, maxBarThickness: 32 }] },
+            data: { labels: sortedCats, datasets: [{ label: 'Atendimentos Concluídos', data: sortedCounts, backgroundColor: createGrad(ctxTop, '#3b82f6', '#1d4ed8'), borderRadius: 6, maxBarThickness: 16 }] },
             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
           });
         }
@@ -230,7 +230,7 @@ window.Dashboard = (() => {
     `;
     
     const chartCard = (title, id) => `
-      <div style="background:var(--bg-surface); border:1px solid var(--border-card); border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 280px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+      <div style="background:var(--bg-surface); border:1px solid var(--border-card); border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 340px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
         <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; flex-shrink: 0;">${title}</div>
         <div style="flex:1; position:relative; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;">
            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
@@ -241,7 +241,7 @@ window.Dashboard = (() => {
     `;
 
     const html = `
-    <div style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: var(--bg-base);">
+    <div id="dashboard-container" style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: var(--bg-base);">
       
       <!-- HEADER -->
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
@@ -941,8 +941,8 @@ window.EquipmentModule = (() => {
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? O equipamento e suas tarefas serão movidos para a Lixeira.`, () => {
       try {
         const eq = DB.equipment.get(id);
-        const eqTasks = DB.tasks.getByEquipment(id);
-        const ts = DB.timesheets.getAll().filter(t => t.equipmentId === id);
+        const eqTasks = DB.tasks.list(id);
+        const ts = DB.timesheets.list().filter(t => t.equipmentId === id);
         const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
         const rest = DB.restrictions ? DB.restrictions.list(id) : [];
         

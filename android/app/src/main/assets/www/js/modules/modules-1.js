@@ -925,8 +925,8 @@ window.EquipmentModule = (() => {
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? O equipamento e suas tarefas serão movidos para a Lixeira.`, () => {
       try {
         const eq = DB.equipment.get(id);
-        const eqTasks = DB.tasks.getByEquipment(id);
-        const ts = DB.timesheets.getAll().filter(t => t.equipmentId === id);
+        const eqTasks = DB.tasks.list(id);
+        const ts = DB.timesheets.list().filter(t => t.equipmentId === id);
         const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
         const rest = DB.restrictions ? DB.restrictions.list(id) : [];
         
@@ -1325,7 +1325,7 @@ window.TasksModule = (() => {
 
   function renderTaskRow(t, equipMap) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+    const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
     const today = new Date().toISOString().slice(0,10);
     const isLate = t.dataPlanejadaTermino && t.dataPlanejadaTermino < today && t.status !== 'Concluída';
     
@@ -1676,7 +1676,7 @@ window.TasksModule = (() => {
     document.getElementById('task-modal-body').innerHTML = taskForm(t);
 
     const session = window.Auth.getSession();
-    const canEdit = session && ['Administrador', 'Planejamento', 'Gerente', 'Desenvolvedor', 'Encarregado'].includes(session.perfil);
+    const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
     const saveBtn = document.getElementById('modal-task-save-btn');
     if (!canEdit) {
       if (saveBtn) saveBtn.style.display = 'none';

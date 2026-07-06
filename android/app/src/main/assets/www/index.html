@@ -88,7 +88,7 @@
   <!-- Modules -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/layout.css?v=1782836360249" />
+  <link rel="stylesheet" href="css/layout.css?v=1782841295733" />
 
   <link rel="stylesheet" href="css/pro-dashboard.css" />
   <link rel="stylesheet" href="css/components.css" />
@@ -340,46 +340,46 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <script src="js/core/events.js"></script>
-  <script src="js/core/db_v2.js?v=1782836360249"></script>
-  <script src="js/core/auth.js?v=1782836360249"></script>
+  <script src="js/core/db_v2.js?v=1782841295733"></script>
+  <script src="js/core/auth.js?v=1782841295733"></script>
   <script src="js/core/notifications.js"></script>
 
   <!-- 2. MODULES -->
   <!-- Empty stubs (superseded) -->
-  <script src="js/modules/labor-analysis.js?v=1782836360249"></script>
-  <script src="js/modules/dashboard.js?v=1782836360249"></script>
-  <script src="js/modules/equipment.js?v=1782836360249"></script>
+  <script src="js/modules/labor-analysis.js?v=1782841295733"></script>
+  <script src="js/modules/dashboard.js?v=1782841295733"></script>
+  <script src="js/modules/equipment.js?v=1782841295733"></script>
 
 
   <!-- Feature modules batches -->
-  <script src="js/modules/home_v2.js?v=1782836360249"></script>
-  <script src="js/modules/released.js?v=1782836360249"></script>
-  <script src="js/modules/waiting.js?v=1782836360249"></script>
-  <script src="js/modules/equipment-panel.js?v=1782836360249"></script>
-  <script src="js/modules/checklists.js?v=1782836360249"></script>
-  <script src="js/modules/modules-1.js?v=1782836360249"></script>
-  <script src="js/modules/modules-2.js?v=1782836360249"></script>
-  <script src="js/modules/modules-3.js?v=1782836360249"></script>
-  <script src="js/modules/worker-panel.js?v=1782836360249"></script>
-  <script src="js/modules/workforce-time.js?v=1782836360249"></script>
-  <script src="js/modules/bonus.js?v=1782836360249"></script>
-  <script src="js/modules/attendance.js?v=1782836360249"></script>
-  <script src="js/modules/services.js?v=1782836360249"></script>
-  <script src="js/modules/manuals.js?v=1782836360249"></script>
-  <script src="js/modules/meetings.js?v=1782836360249"></script>
-  <script src="js/modules/followup.js?v=1782836360249"></script>
-  <script src="js/modules/vacations.js?v=1782836360249"></script>
-  <script src="js/modules/tasks-ongoing.js?v=1782836360249"></script>
+  <script src="js/modules/home_v2.js?v=1782841295733"></script>
+  <script src="js/modules/released.js?v=1782841295733"></script>
+  <script src="js/modules/waiting.js?v=1782841295733"></script>
+  <script src="js/modules/equipment-panel.js?v=1782841295733"></script>
+  <script src="js/modules/checklists.js?v=1782841295733"></script>
+  <script src="js/modules/modules-1.js?v=1782841295733"></script>
+  <script src="js/modules/modules-2.js?v=1782841295733"></script>
+  <script src="js/modules/modules-3.js?v=1782841295733"></script>
+  <script src="js/modules/worker-panel.js?v=1782841295733"></script>
+  <script src="js/modules/workforce-time.js?v=1782841295733"></script>
+  <script src="js/modules/bonus.js?v=1782841295733"></script>
+  <script src="js/modules/attendance.js?v=1782841295733"></script>
+  <script src="js/modules/services.js?v=1782841295733"></script>
+  <script src="js/modules/manuals.js?v=1782841295733"></script>
+  <script src="js/modules/meetings.js?v=1782841295733"></script>
+  <script src="js/modules/followup.js?v=1782841295733"></script>
+  <script src="js/modules/vacations.js?v=1782841295733"></script>
+  <script src="js/modules/tasks-ongoing.js?v=1782841295733"></script>
 
   <!-- D-1 | D | D+1 Panel -->
-  <script src="js/modules/d-panel.js?v=1782836360249"></script>
+  <script src="js/modules/d-panel.js?v=1782841295733"></script>
 
   <!-- QR Modules -->
-  <script src="js/modules/qr-generator.js?v=1782836360249"></script>
-  <script src="js/modules/qr-view_v2.js?v=1782836360249"></script>
+  <script src="js/modules/qr-generator.js?v=1782841295733"></script>
+  <script src="js/modules/qr-view_v2.js?v=1782841295733"></script>
 
   <!-- 3. APP BOOTSTRAP -->
-  <script src="js/app_v2.js?v=1782836360249"></script>
+  <script src="js/app_v2.js?v=9999999999999"></script>
 
   <!-- Loading screen removal -->
   <script>
@@ -418,6 +418,34 @@
             window.Toast && window.Toast.success('Teste', 'Massa de dados de teste injetada para avaliação!');
             if (typeof Router !== 'undefined') Router.navigate('bonus', { force: true });
           }
+        }
+        // --- GERADOR DE MASSA DE EVENTOS DE TIMELINE ---
+        if (!localStorage.getItem('teste_mock_gerado_timeline_v2') && window.DB && window.DB.equipment) {
+          const eqs = DB.equipment.list();
+          const todayTime = new Date().getTime();
+          
+          eqs.forEach((eq, idx) => {
+            if (!eq.timeline) eq.timeline = [];
+            
+            const offset1 = 86400000 * (idx + 1); // Dias variados no passado
+            const offset2 = 43200000 * (idx + 1); // Meio dias
+            
+            eq.timeline.push({ id: 'tl-m1-' + idx, tipo: 'ENTRADA', titulo: 'Entrada na Oficina', descricao: 'Equipamento recebido para manutenção.', timestamp: new Date(todayTime - offset1).toISOString() });
+            
+            if (idx % 2 === 0) {
+              eq.timeline.push({ id: 'tl-m2-' + idx, tipo: 'INICIO', titulo: 'Início da Manutenção', descricao: 'Atividades iniciadas.', timestamp: new Date(todayTime - offset2).toISOString() });
+              if (idx % 3 === 0) {
+                eq.timeline.push({ id: 'tl-m3-' + idx, tipo: 'LIBERACAO', titulo: 'Liberado', descricao: 'Manutenção concluída.', timestamp: new Date(todayTime - (offset2 / 2)).toISOString() });
+              }
+            } else {
+              eq.timeline.push({ id: 'tl-m2-' + idx, tipo: 'DEFEITO', titulo: 'Falha Identificada', descricao: 'Anomalia encontrada durante inspeção.', timestamp: new Date(todayTime - offset2).toISOString() });
+              eq.timeline.push({ id: 'tl-m3-' + idx, tipo: 'PECA_SOLICITADA', titulo: 'Peça Solicitada', descricao: 'Aguardando suprimentos.', timestamp: new Date(todayTime - (offset2 / 2)).toISOString() });
+            }
+            
+            DB.equipment.update(eq.id, { timeline: eq.timeline });
+          });
+
+          localStorage.setItem('teste_mock_gerado_timeline_v2', '1');
         }
       }, 2000);
     });

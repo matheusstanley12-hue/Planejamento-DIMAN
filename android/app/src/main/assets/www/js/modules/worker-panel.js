@@ -469,7 +469,8 @@ window.WorkerPanel = (() => {
     let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
     if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h to prevent runaway timers
 
-    const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
+    // ONLY target the specific worker if workerId is passed
+    const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
     
     targetWorkers.forEach(w => {
       // Save Timesheet (Work)
@@ -492,30 +493,48 @@ window.WorkerPanel = (() => {
         });
       }
 
-      // Update to Em Pausa
-      DB.workforce.update(w.id, {
-        currentState: 'Em Pausa',
-        currentPauseReason: reason,
-        currentActionStartTime: now.toISOString()
-      });
+      // We will update currentState in the freesWorker check below
     });
-
-    if (t) {
-      let updatePayload = {};
-      const freesWorker = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason.startsWith('Outros') || reason.startsWith('Dependência') || reason === 'Fim Expediente' || reason === '5S';
-      
-      if (freesWorker) {
-        // Because targetWorkers is now a subset of all workers, we can just check if any worker is NOT in targetWorkers
-        // Actually, if we are pausing everyone connected to this task, then no one is active anymore.
-        updatePayload.status = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') ? 'Aguardando Peça' : (reason.startsWith('Dependência') ? 'Aguardando Setor' : 'Pausada');
-        updatePayload.pauseReason = reason;
-        updatePayload.pauseStartTime = now.toISOString();
-      }
-      DB.tasks.update(t.id, updatePayload);
-    }
 
     const freesWorker = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') || reason.startsWith('Outros') || reason.startsWith('Dependência') || reason === 'Fim Expediente' || reason === '5S';
     
+    targetWorkers.forEach(w => {
+      if (freesWorker) {
+        DB.workforce.update(w.id, {
+          currentState: 'Ocioso',
+          currentTaskId: null,
+          currentPauseReason: '',
+          currentActionStartTime: null
+        });
+      } else {
+        DB.workforce.update(w.id, {
+          currentState: 'Em Pausa',
+          currentPauseReason: reason,
+          currentActionStartTime: now.toISOString()
+        });
+      }
+    });
+
+    if (t) {
+      // Check if ANYONE ELSE is still working or paused on this task
+      const othersWorking = DB.workforce.list().some(w => w.currentTaskId === t.id && String(w.id) !== String(myWorker.id) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+      
+      if (!othersWorking) {
+        let updatePayload = {};
+        if (freesWorker) {
+          updatePayload.status = reason.startsWith('Falta de Peças') || reason.startsWith('Falta de Peça') ? 'Aguardando Peça' : (reason.startsWith('Dependência') ? 'Aguardando Setor' : 'Pausada');
+          updatePayload.pauseReason = reason;
+          updatePayload.pauseStartTime = now.toISOString();
+        } else {
+          updatePayload.status = 'Pausada';
+          updatePayload.pauseReason = reason;
+          updatePayload.pauseStartTime = now.toISOString();
+        }
+        DB.tasks.update(t.id, updatePayload);
+      }
+    }
+
+    // The duplicate freesWorker declaration was here    
     if (freesWorker) {
       DB.workforce.update(myWorker.id, {
         currentState: 'Ocioso',
@@ -763,7 +782,7 @@ window.WorkerPanel = (() => {
       if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
       const tId = myWorker.currentTaskId;
-      const targetWorkers = DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+      const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
 
       targetWorkers.forEach(w => {
         DB.workforce.update(w.id, {
@@ -775,14 +794,34 @@ window.WorkerPanel = (() => {
       });
 
       if (tId) {
-        // Delete any open timesheets for this task
+        // Wipe timesheets for the targeted workers to reset their progress
         const timesheets = DB.timesheets.list() || [];
-        const openTs = timesheets.filter(ts => String(ts.taskId) === String(tId) && !ts.horaFim);
-        openTs.forEach(ts => DB.timesheets.delete(ts.id));
+        const targetWorkerIds = targetWorkers.map(w => String(w.id));
+        const taskTs = timesheets.filter(ts => String(ts.taskId) === String(tId) && targetWorkerIds.includes(String(ts.workerId)));
+        taskTs.forEach(ts => DB.timesheets.delete(ts.id));
 
         const t = DB.tasks.get(tId);
         if (t) {
-            DB.tasks.update(t.id, { status: 'Não Iniciada', pauseReason: '', pauseStartTime: null });
+            const othersWorking = DB.workforce.list().some(w => String(w.currentTaskId) === String(t.id) && !targetWorkerIds.includes(String(w.id)) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+            
+            if (!othersWorking) {
+              DB.tasks.update(t.id, { 
+                status: 'Não Iniciada', 
+                pauseReason: '', 
+                pauseStartTime: null,
+                horasRealizadas: 0,
+                pctExecutado: 0,
+                dataRealInicio: null,
+                dataRealTermino: null,
+                responsavel: ''
+              });
+            } else {
+              // Recalculate horasRealizadas based on remaining timesheets
+              const remainingTs = DB.timesheets.list().filter(ts => String(ts.taskId) === String(tId) && (ts.tipo === 'Trabalho' || ts.tipo === 'Trabalho (Espera)'));
+              let totalHrs = 0;
+              remainingTs.forEach(ts => totalHrs += (parseFloat(ts.horasTrabalhadas) || 0));
+              DB.tasks.update(t.id, { horasRealizadas: totalHrs });
+            }
         }
       }
 
@@ -861,16 +900,17 @@ window.WorkerPanel = (() => {
     const obsText = document.getElementById('task-complete-obs').value.trim();
     const t = DB.tasks.get(myWorker.currentTaskId);
     
-    const processSave = function(base64Img) {
-      const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id);
+    const processSave = (base64Img) => {
+      // ONLY target the specific worker that clicked 'Concluir'
+      const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => w.currentTaskId === t.id);
       
       targetWorkers.forEach(w => {
         if (w.currentState === 'Trabalhando') {
           const startTime = new Date(w.currentActionStartTime);
           const now = new Date();
           let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
-          if (elapsedHrs > 12) elapsedHrs = 12;
-
+          if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h
+          
           DB.timesheets.create({
             workerId: w.id,
             workerNome: w.nome,
@@ -881,7 +921,7 @@ window.WorkerPanel = (() => {
             horaFim: now.toISOString(),
             horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
             tipo: 'Trabalho',
-            observacao: 'Timer (Automático - Conclusão)'
+            observacao: 'Fim de Tarefa'
           });
 
           if (t) {
@@ -945,17 +985,30 @@ window.WorkerPanel = (() => {
           });
         }
 
-        DB.tasks.update(t.id, {
-          status: 'Concluída',
-          pctExecutado: 100,
-          dataRealTermino: new Date().toISOString().slice(0,10),
-          observacoes: newObs,
-          anexos: attachments,
-          fotoComprovacao: base64Img || t.fotoComprovacao
-        });
+        const othersWorking = DB.workforce.list().some(w => w.currentTaskId === t.id && w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+        
+        if (!othersWorking) {
+          DB.tasks.update(t.id, {
+            status: 'Concluída',
+            pctExecutado: 100,
+            dataRealTermino: new Date().toISOString().slice(0,10),
+            observacoes: newObs,
+            anexos: attachments,
+            fotoComprovacao: base64Img || t.fotoComprovacao || ''
+          });
+        } else {
+          const updatePayload = {};
+          if (newObs && newObs !== t.observacoes) updatePayload.observacoes = newObs;
+          if (attachments.length > 0) updatePayload.anexos = attachments;
+          if (base64Img) updatePayload.fotoComprovacao = base64Img;
+          
+          if (Object.keys(updatePayload).length > 0) {
+            DB.tasks.update(t.id, updatePayload);
+          }
+        }
       }
 
-      // Set all to Ocioso
+      // Set all target workers to Ocioso
       targetWorkers.forEach(w => {
         DB.workforce.update(w.id, {
           currentState: 'Ocioso',

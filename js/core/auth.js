@@ -114,9 +114,27 @@ window.Auth = (() => {
   }
 
   function saveUsers(users) {
-    // Garantir que todos os usuários tenham ID para não dar erro no UPSERT do Supabase
     users.forEach(u => { if (!u.id) u.id = window.DB && window.DB.uid ? window.DB.uid('u') : 'u-' + Date.now() + Math.random().toString(36).substring(2); });
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    
+    try {
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        console.warn('Quota exceeded. Cleaning up local logs to free space...');
+        localStorage.removeItem('diman_audit');
+        localStorage.removeItem('diman_solicitacoes');
+        localStorage.removeItem('diman_notifications');
+        try {
+          localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        } catch (retryErr) {
+          console.error('Storage still full after cleanup', retryErr);
+          throw new Error('Armazenamento do dispositivo cheio. Limpe o cache do navegador.');
+        }
+      } else {
+        throw e;
+      }
+    }
+    
     if (window.DB && window.DB.syncToSupabase) {
       window.DB.syncToSupabase(USERS_KEY, users);
     }
