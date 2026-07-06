@@ -436,25 +436,25 @@ window.HomeModule = (() => {
         }
       </style>
 
-      <div style="max-width:100%; padding:var(--space-6); display:flex; flex-direction:column; height: calc(100vh - var(--topbar-height)); overflow:hidden;">
+      <div style="max-width:100%; padding:var(--space-4); padding-bottom:0; display:flex; flex-direction:column; height: calc(100vh - var(--topbar-height)); overflow:hidden;">
         <!-- Top Indicators -->
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:var(--space-4);margin-bottom:var(--space-6);">
-          <div id="summary-card-manutencao" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('manutencao')" title="Clique para filtrar">
-            <div style="font-size:var(--text-3xl);font-weight:800;color:var(--brand-primary-light);">${emManutencao}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Em Manutenção</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+          <div id="summary-card-manutencao" class="card home-summary-card" style="padding:12px;text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('manutencao')" title="Clique para filtrar">
+            <div style="font-size:24px;font-weight:800;color:var(--brand-primary-light);">${emManutencao}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-top:2px;">Em Manutenção</div>
           </div>
-          <div id="summary-card-atrasado" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('atrasado')" title="Clique para filtrar">
-            <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-danger);">${atrasados}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Atrasados</div>
+          <div id="summary-card-atrasado" class="card home-summary-card" style="padding:12px;text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('atrasado')" title="Clique para filtrar">
+            <div style="font-size:24px;font-weight:800;color:var(--color-danger);">${atrasados}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-top:2px;">Atrasados</div>
           </div>
-          <div id="summary-card-lib7" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('lib7')" title="Clique para filtrar">
-            <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-success);">${libsThisWeek}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Liberações (7 dias)</div>
+          <div id="summary-card-lib7" class="card home-summary-card" style="padding:12px;text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('lib7')" title="Clique para filtrar">
+            <div style="font-size:24px;font-weight:800;color:var(--color-success);">${libsThisWeek}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-top:2px;">Liberações (7 dias)</div>
           </div>
 
-          <div id="summary-card-pecas" class="card home-summary-card" style="padding:var(--space-4);text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('pecas')" title="Clique para filtrar">
-            <div style="font-size:var(--text-3xl);font-weight:800;color:var(--color-orange);">${partsPendentes}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted);text-transform:uppercase;">Peças Pendentes</div>
+          <div id="summary-card-pecas" class="card home-summary-card" style="padding:12px;text-align:center;cursor:pointer;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="window.HomeModule.filterByCategory('pecas')" title="Clique para filtrar">
+            <div style="font-size:24px;font-weight:800;color:var(--color-orange);">${partsPendentes}</div>
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;margin-top:2px;">Peças Pendentes</div>
           </div>
         </div>
 
@@ -482,14 +482,14 @@ window.HomeModule = (() => {
           }).join('');
 
           return `
-          <div style="margin-bottom:var(--space-6); display:flex; gap:var(--space-4); align-items:center; max-width:450px;">
+          <div style="margin-bottom:16px; display:flex; gap:16px; align-items:center; max-width:450px;">
             <div style="position: relative; width: 100%; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
               <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
               </div>
-              <select id="home-search" class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.HomeModule.filter(this.value)">
+              <select id="home-search" class="input" style="width: 100%; padding-left: 40px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 0.95rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.HomeModule.filter(this.value)">
                 <option value="">Pesquisar e selecionar equipamento...</option>
                 ${options}
               </select>
