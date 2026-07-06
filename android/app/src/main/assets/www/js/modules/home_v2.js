@@ -116,7 +116,7 @@ window.HomeModule = (() => {
       else if (e.status === 'Liberado') { statusColor = '#1d4ed8'; statusBg = 'rgba(59, 130, 246, 0.1)'; statusIcon = '🔵'; }
       else { statusIcon = '⚪'; }
       
-      const badgeStyle = `background:${statusBg};color:${statusColor};border:1px solid rgba(0,0,0,0.03);border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:700;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:6px;`;
+      const badgeStyle = `background:${statusBg};color:${statusColor};border:1px solid rgba(0,0,0,0.03);border-radius:9999px;padding:4px 10px;font-size:12px;font-weight:700;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:4px;`;
 
       const cardHtml = `
       <div class="premium-kanban-card home-eq-card" 
@@ -135,13 +135,13 @@ window.HomeModule = (() => {
         <div class="card-inner">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
             <div style="flex: 1;">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <h4 style="font-size:26px; font-weight:800; color:var(--text-primary); margin:0; letter-spacing:-0.03em;">${e.codigo}</h4>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <h4 style="font-size:20px; font-weight:800; color:var(--text-primary); margin:0; letter-spacing:-0.02em;">${e.codigo}</h4>
                 ${prioDot}
               </div>
-              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:16px; margin-top:10px; color:var(--text-secondary); font-size:14px; font-weight:500;">
-                <span style="display:flex;align-items:center;gap:6px;">${iconClient} <strong style="color:var(--text-primary);">${e.cliente || '—'}</strong></span>
-                <span style="display:flex;align-items:center;gap:6px;color:var(--text-muted);">${iconOS} ${e.os || '—'}</span>
+              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:6px; color:var(--text-secondary); font-size:12px; font-weight:500;">
+                <span style="display:flex;align-items:center;gap:4px;">${iconClient} <strong style="color:var(--text-primary);">${e.cliente || '—'}</strong></span>
+                <span style="display:flex;align-items:center;gap:4px;color:var(--text-muted);">${iconOS} ${e.os || '—'}</span>
               </div>
             </div>
             
@@ -162,7 +162,7 @@ window.HomeModule = (() => {
             </div>
           </div>
           
-          <div style="margin-top:20px;">
+          <div style="margin-top:12px;">
             <span style="${badgeStyle}">${statusIcon} ${e.status}</span>
           </div>
           
@@ -230,7 +230,7 @@ window.HomeModule = (() => {
             </div>
             
             <div class="pch-stats">
-              <span class="pch-stat-item">Avanço Médio: <strong style="color:var(--text-primary);font-size:14px;margin-left:4px;">${avgPct}%</strong></span>
+              <span class="pch-stat-item">Avanço Médio: <strong style="color:var(--text-primary);font-size:12px;margin-left:4px;">${avgPct}%</strong></span>
               ${criticalCount > 0 ? `<span class="pch-stat-alert"><span style="color:var(--color-danger)">🔴</span> ${criticalCount} crítico${criticalCount>1?'s':''}</span>` : ''}
               ${delayedCount > 0 ? `<span class="pch-stat-alert"><span style="color:var(--color-warning)">🟡</span> ${delayedCount} atraso${delayedCount>1?'s':''}</span>` : ''}
             </div>
@@ -274,7 +274,7 @@ window.HomeModule = (() => {
         .planner-board::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
         .premium-column {
-           flex: 0 0 420px; width: 420px; display: flex; flex-direction: column; 
+           flex: 0 0 320px; width: 320px; display: flex; flex-direction: column; 
            background: transparent; border: none; padding: 0; max-height: calc(100vh - 220px);
            transition: all 0.2s;
         }
@@ -282,36 +282,36 @@ window.HomeModule = (() => {
         .premium-column-header {
            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px);
            position: sticky; top: 0; z-index: 10;
-           padding: 24px 24px 20px 24px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.06);
-           box-shadow: 0 8px 30px rgba(15,23,42,0.04); margin-bottom: 24px;
+           padding: 16px 16px 14px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06);
+           box-shadow: 0 4px 15px rgba(15,23,42,0.03); margin-bottom: 16px;
         }
         
-        .pch-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .pch-title-group { display: flex; align-items: center; gap: 12px; }
+        .pch-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .pch-title-group { display: flex; align-items: center; gap: 8px; }
         .pch-icon { display: flex; align-items: center; }
-        .pch-icon svg { width: 22px; height: 22px; }
-        .pch-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
-        .pch-count { font-size: 13px; font-weight: 700; color: var(--text-secondary); background: var(--bg-base); padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); }
+        .pch-icon svg { width: 18px; height: 18px; }
+        .pch-title { font-size: 14px; font-weight: 800; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+        .pch-count { font-size: 12px; font-weight: 700; color: var(--text-secondary); background: var(--bg-base); padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.05); }
         
-        .pch-stats { display: flex; gap: 16px; font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; align-items: center; }
+        .pch-stats { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; align-items: center; }
         .pch-stat-item { display: flex; align-items: center; gap: 4px; }
-        .pch-stat-alert { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .pch-stat-alert { display: flex; align-items: center; gap: 4px; font-weight: 600; }
         
         .pch-progress-track { width: 100%; height: 4px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; }
         .pch-progress-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.25, 1, 0.5, 1); }
         
         .premium-cards-container { 
-           display: flex; flex-direction: column; gap: 24px; overflow-y: auto; flex: 1; 
-           padding: 4px 12px 32px 12px; min-height: 100px; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+           display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1; 
+           padding: 4px 8px 24px 8px; min-height: 100px; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
         }
-        .premium-cards-container::-webkit-scrollbar { width: 8px; }
+        .premium-cards-container::-webkit-scrollbar { width: 6px; }
         .premium-cards-container::-webkit-scrollbar-track { background: transparent; }
         .premium-cards-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         
         .premium-kanban-card {
-           position: relative; background: #fff; border-radius: 20px; 
+           position: relative; background: #fff; border-radius: 12px; 
            border: 1px solid rgba(0,0,0,0.04);
-           box-shadow: 0 8px 30px rgba(15,23,42,0.04);
+           box-shadow: 0 4px 12px rgba(15,23,42,0.03);
            display: flex; flex-direction: row; overflow: hidden;
            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
            cursor: pointer; flex-shrink: 0; min-height: fit-content;
@@ -325,22 +325,22 @@ window.HomeModule = (() => {
         
         .card-prio-bar { width: 8px; flex-shrink: 0; background: transparent; }
         
-        .card-inner { flex: 1; padding: 28px 24px; display: flex; flex-direction: column; }
+        .card-inner { flex: 1; padding: 16px 16px; display: flex; flex-direction: column; }
         
         .btn-premium-edit {
-           background: transparent; border: none; color: var(--text-muted); width: 34px; height: 34px;
-           display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer;
+           background: transparent; border: none; color: var(--text-muted); width: 28px; height: 28px;
+           display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer;
            opacity: 0; transition: all 0.2s;
         }
         .premium-kanban-card:hover .btn-premium-edit { opacity: 1; background: var(--bg-base); border: 1px solid rgba(0,0,0,0.05); }
         .btn-premium-edit:hover { background: rgba(59,130,246,0.1) !important; color: var(--brand-primary) !important; border-color: rgba(59,130,246,0.2) !important; }
-        .btn-premium-edit svg { width: 18px; height: 18px; }
+        .btn-premium-edit svg { width: 16px; height: 16px; }
         
-        .premium-progress-container { margin-top: 28px; margin-bottom: 24px; }
-        .premium-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .premium-progress-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;}
-        .premium-progress-value { font-size: 15px; font-weight: 800; color: var(--text-primary); }
-        .premium-progress-track { height: 12px; background: #f1f5f9; border-radius: 99px; overflow: hidden; position: relative; }
+        .premium-progress-container { margin-top: 16px; margin-bottom: 14px; }
+        .premium-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .premium-progress-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;}
+        .premium-progress-value { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+        .premium-progress-track { height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden; position: relative; }
         .premium-progress-fill { 
            height: 100%; border-radius: 99px; 
            background: linear-gradient(90deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
@@ -360,8 +360,8 @@ window.HomeModule = (() => {
         
         .premium-footer {
            display: flex; justify-content: space-between; align-items: center;
-           padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.04);
-           font-size: 14px; color: var(--text-secondary); font-weight: 500;
+           padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.04);
+           font-size: 12px; color: var(--text-secondary); font-weight: 500;
         }
         
         .premium-empty-state {
