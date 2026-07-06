@@ -66,7 +66,7 @@ window.MeetingsModule = (() => {
               </svg>
               Baixar PDF
             </button>
-            ${(Auth.getSession() && ['Planejador', 'Administrador'].includes(Auth.getSession().perfil)) ? `<button class="btn btn-primary" onclick="MeetingsModule.openNewTaskModal()">+ Nova Tarefa</button>` : ''}
+            ${(Auth.getSession() && ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente', 'Coordenador', 'Encarregado'].includes(Auth.getSession().perfil)) ? `<button class="btn btn-primary" onclick="MeetingsModule.openNewTaskModal()">+ Nova Tarefa</button>` : ''}
           </div>
         </header>
 

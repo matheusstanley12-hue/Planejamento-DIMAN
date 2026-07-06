@@ -459,47 +459,16 @@ window.HomeModule = (() => {
         </div>
 
         <!-- Search Bar & Actions -->
-        ${(() => {
-          const eqsAll = DB.equipment.list().filter(e => e.status !== 'Liberado');
-          eqsAll.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
-          const groups = {};
-          eqsAll.forEach(e => {
-            const cod = e.codigo || '';
-            let prefix = cod.split(/[\-\d]/)[0].trim().toUpperCase();
-            if (!prefix) prefix = 'OUTROS';
-            if (!groups[prefix]) groups[prefix] = [];
-            groups[prefix].push(e);
-          });
-          const sortedGroups = Object.keys(groups).sort();
-          const options = sortedGroups.map(groupName => {
-            const groupOptions = groups[groupName].map(e => {
-              const cod = e.codigo || '';
-              const nom = e.nome || '';
-              const displayName = (cod.trim() === nom.trim()) ? cod : `${cod} - ${nom}`;
-              return `<option value="${cod}">${displayName}</option>`;
-            }).join('');
-            return `<optgroup label="${groupName}">${groupOptions}</optgroup>`;
-          }).join('');
-
-          return `
-          <div style="margin-bottom:16px; display:flex; gap:16px; align-items:center; max-width:450px;">
-            <div style="position: relative; width: 100%; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
-              <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                </svg>
-              </div>
-              <select id="home-search" class="input" style="width: 100%; padding-left: 40px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 0.95rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.HomeModule.filter(this.value)">
-                <option value="">Pesquisar e selecionar equipamento...</option>
-                ${options}
-              </select>
-              <div style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
-              </div>
+        <div style="margin-bottom:16px; display:flex; gap:16px; align-items:center; max-width:450px;">
+          <div style="position: relative; width: 100%; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
+            <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
             </div>
+            <input type="text" id="home-search" class="input" placeholder="Pesquisar equipamento ou cliente..." style="width: 100%; padding-left: 40px; padding-top: 10px; padding-bottom: 10px; font-weight: 500; font-size: 0.95rem; border: none; background-color: transparent; color: var(--text-primary); outline: none;" oninput="window.HomeModule.filter(this.value)" autocomplete="off">
           </div>
-          `;
-        })()}
+        </div>
 
         <!-- Kanban Board Horizontal Container -->
         <div class="planner-board" style="display:flex; gap:var(--space-5); overflow-x:auto; overflow-y:hidden; padding-bottom:var(--space-4); align-items:flex-start; width:100%; flex: 1; min-height: 0;">
