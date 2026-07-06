@@ -85,6 +85,16 @@ window.MeetingsModule = (() => {
             <button class="modal-close" onclick="MeetingsModule.closeModal()">&times;</button>
           </div>
           <div class="modal-body">
+            <div style="display:flex; gap:15px; margin-bottom:15px;">
+              <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label>Tag do Equipamento</label>
+                <input type="text" id="mt-tag" class="form-control" placeholder="Ex: BBA 303" />
+              </div>
+              <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label>Local de Manutenção</label>
+                <input type="text" id="mt-local" class="form-control" placeholder="Ex: Oficina" />
+              </div>
+            </div>
             <div class="form-group">
               <label>Descrição da Tarefa *</label>
               <textarea id="mt-desc" class="form-control" rows="3" required></textarea>
@@ -210,6 +220,12 @@ window.MeetingsModule = (() => {
                     </div>
                   </td>
                   <td style="padding:var(--space-3); vertical-align:top;">
+                    ${(t.tag || t.local) ? `
+                      <div style="display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
+                        ${t.tag ? `<span style="font-size:11px; font-weight:700; background:var(--bg-base); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.05); color:var(--text-secondary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px; height:12px; margin-right:2px; display:inline-block; vertical-align:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>${t.tag}</span>` : ''}
+                        ${t.local ? `<span style="font-size:11px; font-weight:700; background:var(--bg-base); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.05); color:var(--text-secondary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px; height:12px; margin-right:2px; display:inline-block; vertical-align:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>${t.local}</span>` : ''}
+                      </div>
+                    ` : ''}
                     <div style="font-weight:600;color:var(--text-primary);font-size:var(--text-base);line-height:1.4;${isDone ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${t.description}</div>
                     ${t.comments ? `
                       <div style="display:flex;align-items:flex-start;gap:var(--space-2);background:rgba(0,0,0,0.03);padding:var(--space-2);border-radius:var(--radius-sm);margin-top:var(--space-2); font-size:var(--text-sm); color:var(--text-secondary);">
@@ -255,6 +271,8 @@ window.MeetingsModule = (() => {
       const t = DB.meetingTasks.list().find(x => x.id === id);
       if (t) {
         document.getElementById('mt-desc').value = t.description || '';
+        document.getElementById('mt-tag').value = t.tag || '';
+        document.getElementById('mt-local').value = t.local || '';
         document.getElementById('mt-resp').value = t.responsible || '';
         document.getElementById('mt-due').value = t.dueDate || '';
         document.getElementById('mt-prio').value = t.priority || 'Média';
@@ -270,6 +288,8 @@ window.MeetingsModule = (() => {
     } else {
       editingTaskId = null;
       document.getElementById('mt-desc').value = '';
+      document.getElementById('mt-tag').value = '';
+      document.getElementById('mt-local').value = '';
       document.getElementById('mt-resp').value = '';
       document.getElementById('mt-due').value = '';
       document.getElementById('mt-prio').value = 'Média';
@@ -288,6 +308,8 @@ window.MeetingsModule = (() => {
 
   function saveTask() {
     const desc = document.getElementById('mt-desc').value.trim();
+    const tag = document.getElementById('mt-tag').value.trim();
+    const local = document.getElementById('mt-local').value.trim();
     const resp = document.getElementById('mt-resp').value;
     const due = document.getElementById('mt-due').value;
     const prio = document.getElementById('mt-prio').value;
@@ -310,6 +332,8 @@ window.MeetingsModule = (() => {
     if (editingTaskId) {
       DB.meetingTasks.update(editingTaskId, {
         description: desc,
+        tag: tag,
+        local: local,
         responsible: resp,
         dueDate: due,
         priority: prio,
@@ -323,6 +347,8 @@ window.MeetingsModule = (() => {
         id: 'mt-' + Date.now(),
         meetingDate: selectedMeetingDate,
         description: desc,
+        tag: tag,
+        local: local,
         responsible: resp,
         dueDate: due,
         priority: prio,
