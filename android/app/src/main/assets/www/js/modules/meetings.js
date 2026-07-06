@@ -92,7 +92,14 @@ window.MeetingsModule = (() => {
               </div>
               <div class="form-group" style="flex:1; margin-bottom:0;">
                 <label>Local de Manutenção</label>
-                <input type="text" id="mt-local" class="form-control" placeholder="Ex: Oficina" />
+                <select id="mt-local" class="form-control">
+                  <option value="">Selecione...</option>
+                  <option value="DIMAN-BHZ">DIMAN-BHZ</option>
+                  <option value="LAGOA SANTA">LAGOA SANTA</option>
+                  <option value="MARIANA">MARIANA</option>
+                  <option value="CKS">CKS</option>
+                  <option value="CAMPO">CAMPO</option>
+                </select>
               </div>
             </div>
             <div class="form-group">
