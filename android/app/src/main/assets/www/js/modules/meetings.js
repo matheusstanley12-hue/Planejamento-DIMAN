@@ -109,6 +109,18 @@ window.MeetingsModule = (() => {
                   <option value="Baixa">Baixa</option>
                 </select>
               </div>
+              <div class="form-group" style="flex:1;">
+                <label>Etapa</label>
+                <select id="mt-status" class="form-control">
+                  <option value="Não Iniciada" selected>Não Iniciada</option>
+                  <option value="Em Andamento">Em Andamento</option>
+                  <option value="Concluída">Concluída</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex:1;">
+                <label>Data Conclusão Real</label>
+                <input type="date" id="mt-real-date" class="form-control" />
+              </div>
             </div>
             <div class="form-group">
               <label>Comentários</label>
@@ -182,8 +194,8 @@ window.MeetingsModule = (() => {
                 actionsHtml += `<button class="btn btn-ghost" style="color:var(--color-danger); padding:4px 8px;" onclick="MeetingsModule.deleteTask('${t.id}')" title="Excluir">Excluir</button>`;
               }
               if (!isDone) {
-                if (t.status === 'Pendente') {
-                  actionsHtml += `<button class="btn btn-info" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.acceptTask('${t.id}')">Aceitar</button>`;
+                if (t.status === 'Não Iniciada' || t.status === 'Pendente') {
+                  actionsHtml += `<button class="btn btn-info" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.acceptTask('${t.id}')">Em Andamento</button>`;
                 }
                 actionsHtml += `<button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.changeDateTask('${t.id}')">Data</button>`;
                 actionsHtml += `<button class="btn btn-success" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.completeTask('${t.id}')">Concluir</button>`;
@@ -193,7 +205,7 @@ window.MeetingsModule = (() => {
                 <tr style="border-bottom:1px solid var(--border-card); ${isDone ? 'opacity:0.7; background:rgba(0,0,0,0.02);' : ''}">
                   <td style="padding:var(--space-3); vertical-align:top;">
                     <div style="display:flex; flex-direction:column; gap:var(--space-2); align-items:flex-start;">
-                      <span class="badge ${isDone ? 'badge-success' : (t.status === 'Aceita' ? 'badge-primary' : 'badge-warning')}">${t.status}</span>
+                      <span class="badge ${isDone ? 'badge-success' : (t.status === 'Em Andamento' ? 'badge-primary' : 'badge-warning')}">${t.status}</span>
                       <span class="badge" style="background:transparent;border:1px solid ${getPriorityColor(t.priority)};color:${getPriorityColor(t.priority)};">${t.priority}</span>
                     </div>
                   </td>
@@ -247,6 +259,12 @@ window.MeetingsModule = (() => {
         document.getElementById('mt-due').value = t.dueDate || '';
         document.getElementById('mt-prio').value = t.priority || 'Média';
         document.getElementById('mt-comments').value = t.comments || '';
+        
+        let st = t.status || 'Não Iniciada';
+        if (st === 'Pendente' || st === 'Aceita') st = 'Não Iniciada'; // mapping old status if needed
+        document.getElementById('mt-status').value = st;
+        document.getElementById('mt-real-date').value = t.completedAt ? t.completedAt.split('T')[0] : '';
+        
         document.querySelector('#meeting-task-modal .modal-title').innerText = 'Editar Tarefa de Reunião';
       }
     } else {
@@ -256,6 +274,8 @@ window.MeetingsModule = (() => {
       document.getElementById('mt-due').value = '';
       document.getElementById('mt-prio').value = 'Média';
       document.getElementById('mt-comments').value = '';
+      document.getElementById('mt-status').value = 'Não Iniciada';
+      document.getElementById('mt-real-date').value = '';
       document.querySelector('#meeting-task-modal .modal-title').innerText = 'Nova Tarefa de Reunião';
     }
     document.getElementById('meeting-task-modal').classList.add('open');
@@ -271,12 +291,19 @@ window.MeetingsModule = (() => {
     const resp = document.getElementById('mt-resp').value;
     const due = document.getElementById('mt-due').value;
     const prio = document.getElementById('mt-prio').value;
+    const statusVal = document.getElementById('mt-status').value;
+    const realDate = document.getElementById('mt-real-date').value;
     const comments = document.getElementById('mt-comments').value.trim();
 
     if (!desc) {
       if (window.Toast) window.Toast.error('Atenção', 'A Descrição da tarefa é obrigatória.');
       else alert('A Descrição da tarefa é obrigatória.');
       return;
+    }
+
+    let compAt = realDate ? (realDate + 'T12:00:00Z') : null;
+    if (statusVal === 'Concluída' && !compAt) {
+      compAt = DB.now(); // se marcou concluida sem data real, assume hoje
     }
 
     const session = Auth.getSession();
@@ -286,7 +313,9 @@ window.MeetingsModule = (() => {
         responsible: resp,
         dueDate: due,
         priority: prio,
-        comments: comments
+        comments: comments,
+        status: statusVal,
+        completedAt: compAt
       });
       if (window.Toast) window.Toast.success('Salvo', 'Tarefa editada com sucesso.');
     } else {
@@ -298,7 +327,8 @@ window.MeetingsModule = (() => {
         dueDate: due,
         priority: prio,
         comments: comments,
-        status: 'Pendente',
+        status: statusVal,
+        completedAt: compAt,
         createdBy: session ? session.nome : 'Desconhecido',
         createdAt: DB.now()
       });
@@ -310,8 +340,8 @@ window.MeetingsModule = (() => {
   }
 
   function acceptTask(id) {
-    DB.meetingTasks.update(id, { status: 'Aceita' });
-    if (window.Toast) window.Toast.success('Aceita', 'Tarefa aceita com sucesso.');
+    DB.meetingTasks.update(id, { status: 'Em Andamento' });
+    if (window.Toast) window.Toast.success('Em Andamento', 'Tarefa movida para em andamento.');
     renderTable();
   }
 
