@@ -101,6 +101,10 @@ window.MeetingsModule = (() => {
                   <option value="CAMPO">CAMPO</option>
                 </select>
               </div>
+              <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label>Cliente</label>
+                <input type="text" id="mt-client" class="form-control" placeholder="Ex: Vale" />
+              </div>
             </div>
             <div class="form-group">
               <label>Descrição da Tarefa *</label>
@@ -185,7 +189,7 @@ window.MeetingsModule = (() => {
     }
 
     const session = Auth.getSession();
-    const isManager = session && ['Planejador', 'Administrador'].includes(session.perfil);
+    const isManager = session && ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente', 'Coordenador', 'Encarregado'].includes(session.perfil);
 
     tbody.innerHTML = `
       <div class="table-responsive" style="background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-lg);overflow-x:auto;">
@@ -207,19 +211,19 @@ window.MeetingsModule = (() => {
               
               let actionsHtml = '';
               if (isManager) {
-                actionsHtml += `<button class="btn btn-ghost" style="padding:4px 8px;" onclick="MeetingsModule.openNewTaskModal('${t.id}')" title="Editar">Editar</button>`;
-                actionsHtml += `<button class="btn btn-ghost" style="color:var(--color-danger); padding:4px 8px;" onclick="MeetingsModule.deleteTask('${t.id}')" title="Excluir">Excluir</button>`;
+                actionsHtml += `<button class="btn btn-ghost" style="padding:4px 8px;" onclick="event.stopPropagation(); MeetingsModule.openNewTaskModal('${t.id}')" title="Editar">Editar</button>`;
+                actionsHtml += `<button class="btn btn-ghost" style="color:var(--color-danger); padding:4px 8px;" onclick="event.stopPropagation(); MeetingsModule.deleteTask('${t.id}')" title="Excluir">Excluir</button>`;
               }
               if (!isDone) {
                 if (t.status === 'Não Iniciada' || t.status === 'Pendente') {
-                  actionsHtml += `<button class="btn btn-info" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.acceptTask('${t.id}')">Em Andamento</button>`;
+                  actionsHtml += `<button class="btn btn-info" style="padding:4px 8px; font-size:12px;" onclick="event.stopPropagation(); MeetingsModule.acceptTask('${t.id}')">Em Andamento</button>`;
                 }
-                actionsHtml += `<button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.changeDateTask('${t.id}')">Data</button>`;
-                actionsHtml += `<button class="btn btn-success" style="padding:4px 8px; font-size:12px;" onclick="MeetingsModule.completeTask('${t.id}')">Concluir</button>`;
+                actionsHtml += `<button class="btn btn-outline" style="padding:4px 8px; font-size:12px;" onclick="event.stopPropagation(); MeetingsModule.changeDateTask('${t.id}')">Data</button>`;
+                actionsHtml += `<button class="btn btn-success" style="padding:4px 8px; font-size:12px;" onclick="event.stopPropagation(); MeetingsModule.completeTask('${t.id}')">Concluir</button>`;
               }
 
               return `
-                <tr style="border-bottom:1px solid var(--border-card); ${isDone ? 'opacity:0.7; background:rgba(0,0,0,0.02);' : ''}">
+                <tr class="task-row" style="border-bottom:1px solid var(--border-card); cursor:pointer; transition:background 0.2s; ${isDone ? 'opacity:0.7; background:rgba(0,0,0,0.02);' : ''}" onclick="MeetingsModule.openNewTaskModal('${t.id}')" onmouseover="this.style.background='var(--bg-hover, rgba(0,0,0,0.02))'" onmouseout="this.style.background='${isDone ? 'rgba(0,0,0,0.02)' : 'transparent'}'">
                   <td style="padding:var(--space-3); vertical-align:top;">
                     <div style="display:flex; flex-direction:column; gap:var(--space-2); align-items:flex-start;">
                       <span class="badge ${isDone ? 'badge-success' : (t.status === 'Em Andamento' ? 'badge-primary' : 'badge-warning')}">${t.status}</span>
@@ -227,9 +231,10 @@ window.MeetingsModule = (() => {
                     </div>
                   </td>
                   <td style="padding:var(--space-3); vertical-align:top;">
-                    ${(t.tag || t.local) ? `
+                    ${(t.tag || t.local || t.client) ? `
                       <div style="display:flex; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
                         ${t.tag ? `<span style="font-size:11px; font-weight:700; background:var(--bg-base); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.05); color:var(--text-secondary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px; height:12px; margin-right:2px; display:inline-block; vertical-align:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>${t.tag}</span>` : ''}
+                        ${t.client ? `<span style="font-size:11px; font-weight:700; background:var(--bg-base); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.05); color:var(--text-secondary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px; height:12px; margin-right:2px; display:inline-block; vertical-align:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>${t.client}</span>` : ''}
                         ${t.local ? `<span style="font-size:11px; font-weight:700; background:var(--bg-base); padding:2px 6px; border-radius:4px; border:1px solid rgba(0,0,0,0.05); color:var(--text-secondary);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:12px; height:12px; margin-right:2px; display:inline-block; vertical-align:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>${t.local}</span>` : ''}
                       </div>
                     ` : ''}
@@ -280,6 +285,7 @@ window.MeetingsModule = (() => {
         document.getElementById('mt-desc').value = t.description || '';
         document.getElementById('mt-tag').value = t.tag || '';
         document.getElementById('mt-local').value = t.local || '';
+        document.getElementById('mt-client').value = t.client || '';
         document.getElementById('mt-resp').value = t.responsible || '';
         document.getElementById('mt-due').value = t.dueDate || '';
         document.getElementById('mt-prio').value = t.priority || 'Média';
@@ -297,6 +303,7 @@ window.MeetingsModule = (() => {
       document.getElementById('mt-desc').value = '';
       document.getElementById('mt-tag').value = '';
       document.getElementById('mt-local').value = '';
+      document.getElementById('mt-client').value = '';
       document.getElementById('mt-resp').value = '';
       document.getElementById('mt-due').value = '';
       document.getElementById('mt-prio').value = 'Média';
@@ -317,6 +324,7 @@ window.MeetingsModule = (() => {
     const desc = document.getElementById('mt-desc').value.trim();
     const tag = document.getElementById('mt-tag').value.trim();
     const local = document.getElementById('mt-local').value.trim();
+    const client = document.getElementById('mt-client').value.trim();
     const resp = document.getElementById('mt-resp').value;
     const due = document.getElementById('mt-due').value;
     const prio = document.getElementById('mt-prio').value;
@@ -341,6 +349,7 @@ window.MeetingsModule = (() => {
         description: desc,
         tag: tag,
         local: local,
+        client: client,
         responsible: resp,
         dueDate: due,
         priority: prio,
@@ -356,6 +365,7 @@ window.MeetingsModule = (() => {
         description: desc,
         tag: tag,
         local: local,
+        client: client,
         responsible: resp,
         dueDate: due,
         priority: prio,
