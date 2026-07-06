@@ -155,6 +155,15 @@ window.PlanningModule = (() => {
       if (planChart) { try { planChart.destroy(); } catch(e){} }
       const canvas = document.getElementById('plan-chart');
       if (!canvas || !window.Chart) return;
+      const ctx = canvas.getContext('2d');
+      const gradPlan = ctx.createLinearGradient(0, 0, 0, 300);
+      gradPlan.addColorStop(0, 'rgba(30,136,229,0.3)');
+      gradPlan.addColorStop(1, 'rgba(30,136,229,0.0)');
+
+      const gradReal = ctx.createLinearGradient(0, 0, 0, 300);
+      gradReal.addColorStop(0, desvio >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)');
+      gradReal.addColorStop(1, desvio >= 0 ? 'rgba(16,185,129,0.0)' : 'rgba(239,68,68,0.0)');
+
       const labels = [];
       const plData = [];
       const rlData = [];
@@ -169,55 +178,126 @@ window.PlanningModule = (() => {
         type:'line', data: {
           labels,
           datasets: [
-            { label:'Planejado', data:plData, borderColor:'rgba(30,136,229,1)', backgroundColor:'rgba(30,136,229,.1)', fill:true, tension:.4, borderWidth:2 },
-            { label:'Realizado', data:rlData, borderColor: desvio >= 0 ? 'rgba(0,200,83,1)' : 'rgba(244,67,54,1)', backgroundColor: desvio >= 0 ? 'rgba(0,200,83,.1)' : 'rgba(244,67,54,.1)', fill:true, tension:.4, borderWidth:2 }
+            { label:'Planejado', data:plData, borderColor:'rgba(30,136,229,1)', backgroundColor:gradPlan, fill:true, tension:.4, borderWidth:3, pointRadius:2, pointHoverRadius:6 },
+            { label:'Realizado', data:rlData, borderColor: desvio >= 0 ? 'rgba(16,185,129,1)' : 'rgba(239,68,68,1)', backgroundColor:gradReal, fill:true, tension:.4, borderWidth:3, pointRadius:4, pointBackgroundColor: desvio >= 0 ? 'rgba(16,185,129,1)' : 'rgba(239,68,68,1)', pointBorderColor:'#fff', pointHoverRadius:7 }
           ]
         },
-        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8EACC8',font:{family:'Inter',size:11}}}}, scales:{x:{ticks:{color:'#8EACC8',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{min:0,max:100,ticks:{color:'#8EACC8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.04)'}}} }
+        options: { 
+          responsive:true, 
+          maintainAspectRatio:false, 
+          interaction: { mode: 'index', intersect: false },
+          plugins:{
+            tooltip: { backgroundColor: 'rgba(15,23,42,0.9)', titleFont: { family: 'Inter', size: 13 }, bodyFont: { family: 'Inter', size: 13 }, padding: 12, cornerRadius: 8 },
+            legend:{labels:{color:'var(--text-secondary)',font:{family:'Inter',size:12, weight:'600'}, usePointStyle: true, boxWidth: 8}}
+          }, 
+          scales:{
+            x:{ticks:{color:'var(--text-muted)',font:{size:11, family:'Inter'}},grid:{color:'var(--border-default)', drawBorder: false}},
+            y:{min:0,max:100,ticks:{color:'var(--text-muted)',font:{size:11, family:'Inter'},callback:v=>v+'%'},grid:{color:'var(--border-default)', drawBorder: false, borderDash: [5, 5]}}
+          } 
+        }
       });
     }, 100);
 
     return `<div class="page-container">
-      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25"/></svg></div>Planejamento & Replanejamento</div></div>
+      <div class="section-header" style="margin-bottom: 24px;"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25"/></svg></div>Planejamento & Replanejamento</div></div>
 
-      <!-- Curva de Avanço Real -->
-      <div class="card" style="margin-bottom:var(--space-5);">
-        <div class="card-header"><div class="card-title">📊 Curva de Avanço Real</div></div>
-        <div style="display:flex;gap:var(--space-6);align-items:center;margin-bottom:var(--space-5);flex-wrap:wrap;">
-          <div style="text-align:center;"><div style="font-size:2.5rem;font-weight:900;color:var(--brand-primary-light);line-height:1">${planejado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-top:4px;">PLANEJADO</div></div>
-          <div style="text-align:center;"><div style="font-size:2.5rem;font-weight:900;color:var(--color-${devCls});line-height:1">${realizado}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-top:4px;">REALIZADO</div></div>
-          <div style="text-align:center;"><div style="font-size:2.5rem;font-weight:900;color:var(--color-${devCls});line-height:1">${desvio > 0 ? '+' : ''}${desvio}%</div><div style="font-size:var(--text-xs);color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-top:4px;">DESVIO</div></div>
-          <div style="display:flex;flex-direction:column;gap:6px;margin-left:auto;">
-            <div style="opacity:${desvio<-15?1:0.3};font-size:0.95rem;display:flex;align-items:center;gap:8px;">🔴 <span style="color:var(--text-primary);font-weight:600;">Crítico (&lt;-15%)</span></div>
-            <div style="opacity:${desvio>=-15&&desvio<-5?1:0.3};font-size:0.95rem;display:flex;align-items:center;gap:8px;">🟡 <span style="color:var(--text-primary);font-weight:600;">Atenção (-5% a -15%)</span></div>
-            <div style="opacity:${desvio>=-5?1:0.3};font-size:0.95rem;display:flex;align-items:center;gap:8px;">🟢 <span style="color:var(--text-primary);font-weight:600;">OK (&gt;-5%)</span></div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <!-- Planejado -->
+        <div style="background: var(--bg-card, #fff); border: 1px solid var(--border-card, #e2e8f0); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
+          <div style="position: relative; z-index: 2;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Planejado</div>
+            <div style="font-size: 2.75rem; font-weight: 900; color: var(--brand-primary, #3b82f6); line-height: 1; letter-spacing: -0.03em;">${planejado}%</div>
+          </div>
+          <div style="width: 56px; height: 56px; border-radius: 14px; background: rgba(59, 130, 246, 0.1); color: var(--brand-primary, #3b82f6); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 28px; height: 28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
           </div>
         </div>
-        <div style="position:relative;height:260px;width:100%;margin-top:var(--space-4);">
+        
+        <!-- Realizado -->
+        <div style="background: var(--bg-card, #fff); border: 1px solid var(--border-card, #e2e8f0); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
+          <div style="position: relative; z-index: 2;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Realizado</div>
+            <div style="font-size: 2.75rem; font-weight: 900; color: var(--color-${devCls}); line-height: 1; letter-spacing: -0.03em;">${realizado}%</div>
+          </div>
+          <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--color-${devCls}); opacity: 0.1; position: absolute; right: 24px; z-index: 1;"></div>
+          <div style="width: 56px; height: 56px; color: var(--color-${devCls}); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 28px; height: 28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+        </div>
+
+        <!-- Desvio -->
+        <div style="background: var(--bg-card, #fff); border: 1px solid var(--border-card, #e2e8f0); border-radius: 16px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
+          <div style="position: relative; z-index: 2;">
+            <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">Desvio</div>
+            <div style="font-size: 2.75rem; font-weight: 900; color: var(--color-${devCls}); line-height: 1; letter-spacing: -0.03em;">${desvio > 0 ? '+' : ''}${desvio}%</div>
+          </div>
+          <div style="width: 56px; height: 56px; border-radius: 14px; background: var(--color-${devCls}); opacity: 0.1; position: absolute; right: 24px; z-index: 1;"></div>
+          <div style="width: 56px; height: 56px; color: var(--color-${devCls}); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 28px; height: 28px;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
+          </div>
+        </div>
+
+        <!-- Legenda Status -->
+        <div style="background: var(--bg-card, #fff); border: 1px solid var(--border-card, #e2e8f0); border-radius: 16px; padding: 20px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; gap: 10px;">
+          <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Status da Curva</div>
+          <div style="opacity:${desvio<-15?1:0.4};font-size:0.9rem;display:flex;align-items:center;gap:10px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--color-danger);box-shadow:0 0 10px var(--color-danger);"></div>
+            <span style="color:var(--text-primary);font-weight:${desvio<-15?700:500};">Crítico (&lt;-15%)</span>
+          </div>
+          <div style="opacity:${desvio>=-15&&desvio<-5?1:0.4};font-size:0.9rem;display:flex;align-items:center;gap:10px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--color-warning);box-shadow:0 0 10px var(--color-warning);"></div>
+            <span style="color:var(--text-primary);font-weight:${desvio>=-15&&desvio<-5?700:500};">Atenção (-5% a -15%)</span>
+          </div>
+          <div style="opacity:${desvio>=-5?1:0.4};font-size:0.9rem;display:flex;align-items:center;gap:10px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--color-success);box-shadow:0 0 10px var(--color-success);"></div>
+            <span style="color:var(--text-primary);font-weight:${desvio>=-5?700:500};">OK (&gt;-5%)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Curva de Avanço Real -->
+      <div class="card" style="margin-bottom: 32px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-card, #e2e8f0); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.02), 0 4px 6px -4px rgba(0,0,0,0.02);">
+        <div class="card-header" style="border-bottom: 1px solid var(--border-default); background: var(--bg-panel, #f8fafc); padding: 20px 24px;"><div class="card-title" style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;">📊 Curva de Avanço Real</div></div>
+        <div style="position:relative;height:320px;width:100%;padding: 24px;">
           <canvas id="plan-chart"></canvas>
         </div>
       </div>
 
       <!-- Replanning by equipment -->
-      <div class="card">
-        <div class="card-header"><div class="card-title">Histórico de Replanejamentos</div></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Equipamento</th><th>Cliente</th><th>Data Original 🔒</th><th>Replanejamentos</th><th>Dias Acumulados</th><th>Última Causa</th></tr></thead>
-          <tbody>
-            ${eqs.map(e => {
-              const repls = e.replanning || [];
-              const totalDays = repls.reduce((s,r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
-              return `<tr>
-                <td><strong>${e.codigo}</strong></td>
-                <td>${e.cliente}</td>
-                <td style="font-family:var(--font-mono);font-size:var(--text-xs)">${formatDate(e.dataLiberacaoPlanejada)} <span style="color:var(--color-warning)">🔒</span></td>
-                <td>${repls.length > 0 ? `<span class="badge badge-warning">${repls.length}× replanejado</span>` : '<span class="badge badge-success">Sem reprogramação</span>'}</td>
-                <td>${totalDays > 0 ? `<span style="color:var(--color-danger);font-weight:700">+${totalDays} dias</span>` : '—'}</td>
-                <td style="font-size:var(--text-xs);color:var(--text-muted)">${repls.length>0?repls[repls.length-1].motivo?.slice(0,60)+'...':'—'}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table></div>
+      <div class="card" style="border-radius: 16px; overflow: hidden; border: 1px solid var(--border-card, #e2e8f0); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.02), 0 4px 6px -4px rgba(0,0,0,0.02);">
+        <div class="card-header" style="border-bottom: 1px solid var(--border-default); background: var(--bg-panel, #f8fafc); padding: 20px 24px;"><div class="card-title" style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;">Histórico de Replanejamentos</div></div>
+        <div class="table-wrap" style="padding: 0;">
+          <table style="margin: 0; width: 100%; border-collapse: collapse;">
+            <thead style="background: transparent;">
+              <tr>
+                <th style="padding: 16px 24px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-default);">Equipamento</th>
+                <th style="padding: 16px 24px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-default);">Cliente</th>
+                <th style="padding: 16px 24px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-default);">Data Original</th>
+                <th style="padding: 16px 24px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-default);">Status Replan.</th>
+                <th style="padding: 16px 24px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-default);">Dias Acumulados</th>
+                <th style="padding: 16px 24px; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border-default);">Última Causa</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${eqs.map((e, idx) => {
+                const repls = e.replanning || [];
+                const totalDays = repls.reduce((s,r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
+                const isLast = idx === eqs.length - 1;
+                return `<tr style="${!isLast ? 'border-bottom: 1px solid var(--border-default, #e2e8f0);' : ''} transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover, #f1f5f9)'" onmouseout="this.style.background='transparent'">
+                  <td style="padding: 16px 24px;"><strong>${e.codigo}</strong></td>
+                  <td style="padding: 16px 24px; color: var(--text-secondary); font-weight: 500;">${e.cliente || '—'}</td>
+                  <td style="padding: 16px 24px; font-family: var(--font-mono); font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                    ${formatDate(e.dataLiberacaoPlanejada)} 
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px; color: var(--text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                  </td>
+                  <td style="padding: 16px 24px;">${repls.length > 0 ? `<span style="background: rgba(245, 158, 11, 0.15); color: #b45309; padding: 6px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">${repls.length}× Replanejado</span>` : '<span style="background: rgba(16, 185, 129, 0.15); color: #047857; padding: 6px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">No Prazo</span>'}</td>
+                  <td style="padding: 16px 24px;">${totalDays > 0 ? `<span style="color: var(--color-danger); font-weight: 800; display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> +${totalDays} dias</span>` : '<span style="color: var(--text-muted); font-weight: 500;">—</span>'}</td>
+                  <td style="padding: 16px 24px; font-size: 0.85rem; color: var(--text-secondary); max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500;">${repls.length>0?repls[repls.length-1].motivo:'—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>`;
   }
@@ -226,73 +306,6 @@ window.PlanningModule = (() => {
   return { render, destroy };
 })();
 
-// ================================================================
-// KPI MODULE
-// ================================================================
-window.KPIModule = (() => {
-  function render() {
-    const stats = DB.kpi.getEquipmentStats();
-    const eqs = DB.equipment.list();
-    const allTasks = DB.tasks.getAll();
-    const ts = DB.timesheets.list();
-    const hPlan = allTasks.reduce((s,t)=>s+(t.horasPlanejadas||0),0);
-    const hReal = allTasks.reduce((s,t)=>s+(t.horasRealizadas||0),0);
-    const eficiencia = hPlan > 0 ? Math.min(100, Math.round(hPlan/hReal*100)) : 100;
-
-    const mtbf = DB.kpi.getMTBF();
-    const mttr = DB.kpi.getMTTR();
-    const disp = (mtbf && mttr) ? Math.round(parseFloat(mtbf)/(parseFloat(mtbf)+parseFloat(mttr))*100) : 0;
-
-    const kpis = [
-      {label:'Aderência ao Planejamento', value:`${stats.aderencia}%`, cls:stats.aderencia>=90?'success':stats.aderencia>=70?'warning':'danger'},
-      {label:'MTBF (Médio)', value:mtbf ? `${mtbf}d` : 'N/D', cls:'info'},
-      {label:'MTTR (Médio)', value:mttr ? `${mttr}d` : 'N/D', cls:'info'},
-      {label:'Disponibilidade', value:`${disp}%`, cls:disp>=90?'success':'warning'},
-      {label:'Produtividade', value:`${eficiencia}%`, cls:eficiencia>=80?'success':eficiencia>=60?'warning':'danger'},
-      {label:'Eficiência', value:`${eficiencia}%`, cls:eficiencia>=80?'success':'warning'},
-      {label:'Backlog de Tarefas', value:allTasks.filter(t=>t.status!=='Concluída').length, cls:'warning'},
-      {label:'% Conclusão', value:`${stats.pctAvancoGeral}%`, cls:'primary'},
-      {label:'Horas Planejadas', value:`${hPlan.toFixed(0)}h`, cls:'primary'},
-      {label:'Horas Realizadas', value:`${hReal.toFixed(0)}h`, cls:'info'},
-      {label:'Tarefas Críticas', value:stats.criticas, cls:'danger'},
-      {label:'Equipamentos no Prazo', value:`${eqs.filter(e=>e.status==='Em Manutenção'&&e.dataLiberacaoPlanejada&&e.dataLiberacaoPlanejada>=new Date().toISOString().slice(0,10)).length}/${eqs.filter(e=>e.status==='Em Manutenção').length}`, cls:'success'},
-    ];
-
-    return `<div class="page-container">
-      <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z"/></svg></div>Indicadores de Performance (KPI)</div></div>
-      <div class="kpi-grid stagger">
-        ${kpis.map(k=>`<div class="kpi-card ${k.cls}">
-          <div class="kpi-value">${k.value}</div>
-          <div class="kpi-label">${k.label}</div>
-        </div>`).join('')}
-      </div>
-
-      <!-- MTBF/MTTR per equipment -->
-      <div class="card" style="margin-top:var(--space-5);">
-        <div class="card-header"><div class="card-title">MTBF / MTTR por Equipamento</div></div>
-        <div class="table-wrap"><table>
-          <thead><tr><th>Equipamento</th><th>Cliente</th><th>MTBF</th><th>MTTR</th><th>Disponibilidade</th><th>Status</th></tr></thead>
-          <tbody>
-            ${eqs.map(e=>{
-              const mtbf = DB.kpi.getMTBF(e.id);
-              const mttr = DB.kpi.getMTTR(e.id);
-              const disp = (mtbf && mttr) ? Math.round(parseFloat(mtbf)/(parseFloat(mtbf)+parseFloat(mttr))*100) : 0;
-              return `<tr>
-                <td><strong>${e.codigo}</strong></td>
-                <td>${e.cliente}</td>
-                <td><span class="badge badge-info">${mtbf}d</span></td>
-                <td><span class="badge badge-warning">${mttr}d</span></td>
-                <td><span class="badge badge-${disp>=90?'success':disp>=70?'warning':'danger'}">${disp}%</span></td>
-                <td>${statusBadge(e.status)}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table></div>
-      </div>
-    </div>`;
-  }
-  return { render };
-})();
 
 // ================================================================
 // SIMULATOR MODULE
@@ -352,11 +365,43 @@ window.SimulatorModule = (() => {
         <div class="card">
           <div class="card-header"><div class="card-title">⚙️ Parâmetros da Simulação</div></div>
           <div style="display:flex;flex-direction:column;gap:var(--space-5);">
-            <div class="form-group"><label>Equipamento *</label>
-              <select onchange="SimulatorModule.setEq(this.value)">
-                <option value="">Selecione um equipamento...</option>
-                ${eqs.map(e=>`<option value="${e.id}" ${eqId===e.id?'selected':''}>${e.codigo} — ${e.cliente}</option>`).join('')}
-              </select>
+            <div class="form-group"><label style="margin-bottom: 8px; display: block; font-weight: 600; color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Equipamento *</label>
+              ${(() => {
+                let groups = {};
+                eqs.forEach(e => {
+                  let cod = e.codigo || '';
+                  let prefix = cod.split(/[\-\d]/)[0].trim().toUpperCase();
+                  if (!prefix) prefix = 'OUTROS';
+                  if (!groups[prefix]) groups[prefix] = [];
+                  groups[prefix].push(e);
+                });
+                const sortedGroups = Object.keys(groups).sort();
+                const options = sortedGroups.map(groupName => {
+                  const groupOptions = groups[groupName].map(e => {
+                    const cod = e.codigo || '';
+                    const nom = e.cliente || '';
+                    const displayName = (cod.trim() === nom.trim() || nom === '') ? cod : `${cod} - ${nom}`;
+                    return `<option value="${e.id}" ${eqId===e.id?'selected':''}>${displayName}</option>`;
+                  }).join('');
+                  return `<optgroup label="${groupName}">${groupOptions}</optgroup>`;
+                }).join('');
+
+                return `
+                <div style="position: relative; width: 100%; background: white; border-radius: 8px;">
+                  <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--brand-primary); pointer-events: none; z-index: 2;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                    </svg>
+                  </div>
+                  <select class="input" style="width: 100%; padding-left: 42px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 0.95rem; border: 2px solid var(--brand-primary, #3b82f6); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px; cursor: pointer; appearance: none; background-color: white; color: var(--text-primary);" onchange="SimulatorModule.setEq(this.value)">
+                    <option value="">Pesquisar e selecionar equipamento...</option>
+                    ${options}
+                  </select>
+                  <div style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--brand-primary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+                  </div>
+                </div>`;
+              })()}
             </div>
             ${eqId ? `
             <div>
@@ -1042,6 +1087,7 @@ window.MeetingMode = (() => {
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
@@ -1064,6 +1110,7 @@ window.MeetingMode = (() => {
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
                     <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
@@ -1118,30 +1165,6 @@ window.MeetingMode = (() => {
           </div>
         </div>
       </div>
-
-      <!-- Ticker -->
-      ${allPerformers.length > 0 ? `
-      <div style="background:rgba(10,25,41,0.9);border-top:1px solid rgba(30,136,229,.3);padding:8px 0;overflow:hidden;display:flex;align-items:center;position:relative;">
-        <div style="background:#1E88E5;color:white;font-weight:800;padding:4px 12px;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;position:absolute;left:0;z-index:2;border-radius:0 20px 20px 0;box-shadow:2px 0 10px rgba(0,0,0,0.5);">
-          RANKING DO MÊS
-        </div>
-        <div style="white-space:nowrap;animation: marqueeTV 30s linear infinite;padding-left:140px;display:flex;gap:30px;">
-          ${allPerformers.map((t, idx) => `
-            <div style="display:inline-flex;align-items:center;gap:6px;">
-              <span style="color:#BA68C8;font-weight:900;font-size:0.9rem;">${idx+1}º</span>
-              <span style="color:white;font-weight:700;font-size:0.9rem;">${t.nome}</span>
-              <span style="background:rgba(186,104,200,.2);color:#E1BEE7;padding:1px 6px;border-radius:10px;font-weight:800;font-size:0.8rem;">${t.count}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      <style>
-        @keyframes marqueeTV {
-          0% { transform: translateX(100vw); }
-          100% { transform: translateX(-100%); }
-        }
-      </style>
-      ` : ''}
 
       <!-- Bottom bar -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 24px;background:#0A1929;border-top:1px solid rgba(30,136,229,.2);font-size:.65rem;color:#546E7A;">

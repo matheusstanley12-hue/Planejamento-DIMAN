@@ -410,70 +410,92 @@ window.EquipmentModule = (() => {
             </tr>
           </thead>
           <tbody>
-            ${eqs.length === 0 ? `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>` : ''}
-            ${eqs.map(e => {
-              const pct = e.pctAvanco || 0;
-              const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
-              const days = e.dataLiberacaoPlanejada ? daysBetween(refDate, e.dataLiberacaoPlanejada) : null;
-              const isLiberated = e.status === 'Liberado';
-              const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
-              const pendParts = parts.filter(p=>p.equipmentId===e.id&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
-              const openRestr = restrictions.filter(r=>r.equipmentId===e.id&&r.status==='Aberta').length;
-              const repls = e.replanning || [];
-              const prioridade = e.prioridade || 'Normal';
-              let prioBadge = '';
-              if (prioridade === 'Urgente') {
-                prioBadge = `<span class="badge badge-danger">Urgente</span>`;
-              } else if (prioridade === 'Alta') {
-                prioBadge = `<span class="badge badge-orange">Alta</span>`;
-              }
+            ${(() => {
+              if (eqs.length === 0) return `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>`;
+              
+              const groups = {};
+              eqs.forEach(e => {
+                 const code = e.codigo || '';
+                 let prefix = 'OUTROS';
+                 const match = code.match(/^([A-Za-zÀ-ÖØ-öø-ÿ]+)/);
+                 if (match && match[1]) prefix = match[1].toUpperCase();
+                 if (!groups[prefix]) groups[prefix] = [];
+                 groups[prefix].push(e);
+              });
 
-              return `
-                <tr class="hover-bg card-clickable eq-row" data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()} ${(e.cliente||'').toLowerCase()}" style="border-bottom:1px solid var(--border-card); transition:background 0.2s;" onclick="EquipmentModule.openDetail('${e.id}')">
-                  <td style="padding:var(--space-3);">
-                    <div style="font-weight:700; color:var(--text-primary); font-size:14px;">${e.codigo}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">${e.nome}</div>
-                  </td>
-                  <td style="padding:var(--space-3);"><span class="badge badge-ghost">${e.cliente || '—'}</span></td>
-                  <td style="padding:var(--space-3);">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <div style="width:100px; height:6px; background:var(--bg-base); border-radius:3px; overflow:hidden;">
-                        <div style="height:100%; width:${pct}%; background:var(--color-${pct>=80?'success':pct>=50?'primary':'warning'});"></div>
-                      </div>
-                      <span style="font-size:12px; font-weight:700;">${pct}%</span>
-                    </div>
-                  </td>
-                  <td style="padding:var(--space-3);">
-                    ${e.dataLiberacaoPlanejada ? `
-                      <div style="font-size:13px; font-weight:600; color:var(--color-${daysClass})">${formatDate(e.dataLiberacaoPlanejada)}</div>
-                      <div style="font-size:11px; color:var(--text-muted);">${isLiberated ? '<span style="color:var(--color-success)">Concluído</span>' : (days!==null?`${days<0?Math.abs(days)+' atrasado':days===0?'Hoje':days+'d'}`:'')}</div>
-                    ` : '<span style="color:var(--text-muted); font-size:12px;">Não definida</span>'}
-                  </td>
-                  <td style="padding:var(--space-3);">
-                    <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
-                      ${statusBadge(e.status)}
-                      ${prioBadge}
-                    </div>
-                  </td>
-                  <td style="padding:var(--space-3);">
-                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                      ${pendParts > 0 ? `<span class="badge badge-warning" title="${pendParts} peça(s) pendente(s)">${pendParts} peças</span>` : ''}
-                      ${openRestr > 0 ? `<span class="badge badge-danger" title="${openRestr} restrição(ões) aberta(s)">${openRestr} restr.</span>` : ''}
-                      ${repls.length > 0 ? `<span class="badge badge-orange" title="Reprogramado ${repls.length} vez(es)">R${repls.length}</span>` : ''}
-                      ${pendParts === 0 && openRestr === 0 && repls.length === 0 ? '<span style="color:var(--text-muted); font-size:12px;">Nenhum</span>' : ''}
-                    </div>
-                  </td>
-                  <td style="padding:var(--space-3); text-align:right;">
-                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();EquipmentModule.openEdit('${e.id}')" title="Editar">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
-                    </button>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="event.stopPropagation();EquipmentModule.confirmDelete('${e.id}','${e.nome}')" title="Excluir">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
-                    </button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
+              const sortedPrefixes = Object.keys(groups).sort();
+              let html = '';
+
+              sortedPrefixes.forEach(prefix => {
+                html += `<tr style="background:var(--bg-base); border-bottom: 2px solid var(--border-card);"><td colspan="7" style="padding:10px 16px; font-weight:800; color:var(--brand-primary); font-size:14px; text-transform:uppercase; letter-spacing: 1px;">${prefix}</td></tr>`;
+                
+                groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
+                  const pct = e.pctAvanco || 0;
+                  const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
+                  const days = e.dataLiberacaoPlanejada ? daysBetween(refDate, e.dataLiberacaoPlanejada) : null;
+                  const isLiberated = e.status === 'Liberado';
+                  const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
+                  const pendParts = parts.filter(p=>p.equipmentId===e.id&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
+                  const openRestr = restrictions.filter(r=>r.equipmentId===e.id&&r.status==='Aberta').length;
+                  const repls = e.replanning || [];
+                  const prioridade = e.prioridade || 'Normal';
+                  let prioBadge = '';
+                  if (prioridade === 'Urgente') {
+                    prioBadge = `<span class="badge badge-danger">Urgente</span>`;
+                  } else if (prioridade === 'Alta') {
+                    prioBadge = `<span class="badge badge-orange">Alta</span>`;
+                  }
+
+                  html += `
+                    <tr class="hover-bg card-clickable eq-row" data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()} ${(e.cliente||'').toLowerCase()}" style="border-bottom:1px solid var(--border-card); transition:background 0.2s;" onclick="EquipmentModule.openDetail('${e.id}')">
+                      <td style="padding:var(--space-3);">
+                        <div style="font-weight:700; color:var(--text-primary); font-size:14px;">${e.codigo}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${e.nome}</div>
+                      </td>
+                      <td style="padding:var(--space-3);"><span class="badge badge-ghost">${e.cliente || '—'}</span></td>
+                      <td style="padding:var(--space-3);">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <div style="width:100px; height:6px; background:var(--bg-base); border-radius:3px; overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:var(--color-${pct>=80?'success':pct>=50?'primary':'warning'});"></div>
+                          </div>
+                          <span style="font-size:12px; font-weight:700;">${pct}%</span>
+                        </div>
+                      </td>
+                      <td style="padding:var(--space-3);">
+                        ${e.dataLiberacaoPlanejada ? `
+                          <div style="font-size:13px; font-weight:600; color:var(--color-${daysClass})">${formatDate(e.dataLiberacaoPlanejada)}</div>
+                          <div style="font-size:11px; color:var(--text-muted);">${isLiberated ? '<span style="color:var(--color-success)">Concluído</span>' : (days!==null?`${days<0?Math.abs(days)+' atrasado':days===0?'Hoje':days+'d'}`:'')}</div>
+                        ` : '<span style="color:var(--text-muted); font-size:12px;">Não definida</span>'}
+                      </td>
+                      <td style="padding:var(--space-3);">
+                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+                          ${statusBadge(e.status)}
+                          ${prioBadge}
+                        </div>
+                      </td>
+                      <td style="padding:var(--space-3);">
+                        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                          ${pendParts > 0 ? `<span class="badge badge-warning" title="${pendParts} peça(s) pendente(s)">${pendParts} peças</span>` : ''}
+                          ${openRestr > 0 ? `<span class="badge badge-danger" title="${openRestr} restrição(ões) aberta(s)">${openRestr} restr.</span>` : ''}
+                          ${repls.length > 0 ? `<span class="badge badge-orange" title="Reprogramado ${repls.length} vez(es)">R${repls.length}</span>` : ''}
+                          ${pendParts === 0 && openRestr === 0 && repls.length === 0 ? '<span style="color:var(--text-muted); font-size:12px;">Nenhum</span>' : ''}
+                        </div>
+                      </td>
+                      <td style="padding:var(--space-3); text-align:right;">
+                        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();EquipmentModule.openEdit('${e.id}')" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="event.stopPropagation();EquipmentModule.confirmDelete('${e.id}','${e.nome}')" title="Excluir">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                });
+              });
+              
+              return html;
+            })()}
           </tbody>
         </table>
       </div>
@@ -524,9 +546,12 @@ window.EquipmentModule = (() => {
             <button class="modal-close" onclick="closeModal('modal-equipment')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
           </div>
           <div class="modal-body" id="eq-modal-body"></div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
-            <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+          <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+            <div id="eq-modal-footer-left"></div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
+              <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+            </div>
           </div>
         </div>
       </div>`;
@@ -545,6 +570,7 @@ window.EquipmentModule = (() => {
     ensureModalExists();
     document.getElementById('eq-modal-title').textContent = 'Novo Equipamento';
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(null);
+    document.getElementById('eq-modal-footer-left').innerHTML = ''; // Limpa para não ter botão de excluir na criação
     openModal('modal-equipment');
   }
 
@@ -553,6 +579,17 @@ window.EquipmentModule = (() => {
     const eq = DB.equipment.get(id);
     document.getElementById('eq-modal-title').textContent = `Editar — ${eq.codigo}`;
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(eq);
+    
+    // Adiciona botão Excluir se for admin
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (session && (session.perfil === 'Administrador' || session.perfil === 'Desenvolvedor')) {
+      document.getElementById('eq-modal-footer-left').innerHTML = `<button class="btn btn-icon" style="background:var(--color-danger); color:#fff; border:none; padding:8px 16px; width:auto; border-radius:6px; font-weight:600;" onclick="EquipmentModule.confirmDelete('${id}', '${eq.codigo}')">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px; height:16px; margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg> Excluir
+      </button>`;
+    } else {
+      document.getElementById('eq-modal-footer-left').innerHTML = '';
+    }
+    
     openModal('modal-equipment');
   }
 
@@ -704,13 +741,13 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
-            ${['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma','Lavador','Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto','Teste','Retrabalho'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Check-list de recebimento', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -961,13 +998,14 @@ window.EquipmentModule = (() => {
         localStorage.setItem('diman_lixeira', JSON.stringify(trash));
 
         window.DB.equipment.delete(id);
-        
         eqTasks.forEach(t => DB.tasks.delete(t.id));
         ts.forEach(t => DB.timesheets.delete(t.id));
         if (DB.replannings) re.forEach(r => DB.replannings.delete(r.id));
         if (DB.restrictions) rest.forEach(r => DB.restrictions.delete(r.id));
         
-        window.Router.navigate('equipment', { force: true });
+        if (typeof closeModal === 'function') closeModal('modal-equipment');
+        const route = (window.Router && window.Router.currentRoute) ? window.Router.currentRoute : 'home';
+        window.Router.navigate(route, { force: true });
         window.Toast.success('Movido para a Lixeira', nome);
       } catch(e) {
         alert('Erro ao excluir: ' + e.message);

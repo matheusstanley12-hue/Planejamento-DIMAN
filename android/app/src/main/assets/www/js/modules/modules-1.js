@@ -11,8 +11,14 @@
 // ================================================================
 window.Dashboard = (() => {
   let charts = {};
+  let selectedMonth = new Date().toISOString().slice(0, 7);
 
   function destroyCharts() { Object.values(charts).forEach(c => { try { c.destroy(); } catch(e){} }); charts = {}; }
+
+  function setMonth(val) {
+    if (val) selectedMonth = val;
+    Router.navigate('dashboard', { force: true });
+  }
 
   function chartDefaults() {
     return {
@@ -44,15 +50,22 @@ window.Dashboard = (() => {
 
   function render() {
     destroyCharts();
-    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+    const currentMonthPrefix = selectedMonth;
+    const isCurrentMonth = currentMonthPrefix === new Date().toISOString().slice(0, 7);
     const todayStr = new Date().toISOString().slice(0, 10);
     const stats = DB.kpi.getEquipmentStats(currentMonthPrefix);
     
     const eqs = DB.equipment.list();
     const parts = DB.parts.getAll();
     const restrictions = DB.restrictions.getAll();
-    const tasks = DB.tasks.getAll();
-    const timesheets = window.DB && DB.timesheets ? DB.timesheets.list() : [];
+    
+    // Filter tasks and timesheets by selected month
+    const tasks = DB.tasks.getAll().filter(t => {
+      const dt = t.dataRealInicio || t.dataPlanejadaInicio || t.dataRealTermino || '';
+      return dt.startsWith(currentMonthPrefix);
+    });
+    const timesheets = (window.DB && DB.timesheets ? DB.timesheets.list() : []).filter(ts => ts.data && ts.data.startsWith(currentMonthPrefix));
+    
     const wf = window.DB && DB.workforce ? DB.workforce.list() : [];
 
     // 1. Calculations for micro-cards
@@ -92,7 +105,7 @@ window.Dashboard = (() => {
            const counts = sts.map(s => eqs.filter(e => e.status === s).length);
            charts.status = new Chart(ctxStatus, {
              type: 'bar',
-             data: { labels: sts, datasets: [{ data: counts, backgroundColor: [createGrad(ctxStatus, '#34d399', '#059669'), createGrad(ctxStatus, '#fde047', '#ca8a04'), createGrad(ctxStatus, '#fb923c', '#ea580c'), createGrad(ctxStatus, '#f87171', '#dc2626'), createGrad(ctxStatus, '#c084fc', '#9333ea')], borderRadius: 6, maxBarThickness: 48 }] },
+             data: { labels: sts, datasets: [{ data: counts, backgroundColor: [createGrad(ctxStatus, '#34d399', '#059669'), createGrad(ctxStatus, '#fde047', '#ca8a04'), createGrad(ctxStatus, '#fb923c', '#ea580c'), createGrad(ctxStatus, '#f87171', '#dc2626'), createGrad(ctxStatus, '#c084fc', '#9333ea')], borderRadius: 6, maxBarThickness: 16 }] },
              options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, layout: { padding: 10 }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '600' } } }, y: { display: false } } }
            });
         }
@@ -106,16 +119,16 @@ window.Dashboard = (() => {
             if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
           });
-          const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : 0);
+          const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
 
           charts.ano = new Chart(ctxAno, {
             type: 'bar',
             data: { labels: mStr, datasets: [
-              { type: 'line', label: 'Aderência (%)', data: aderenciaArr, borderColor: '#eab308', backgroundColor: '#fef08a', borderWidth: 3, tension: 0.4, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#ca8a04' },
-              { type: 'bar', label: 'Liberações Realizadas', data: mR, backgroundColor: createGrad(ctxAno, '#f87171', '#dc2626'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' },
-              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: createGrad(ctxAno, '#60a5fa', '#2563eb'), borderRadius: 6, maxBarThickness: 32, yAxisID: 'y' }
+              { type: 'bar', label: 'Liberações Realizadas', data: mR, backgroundColor: createGrad(ctxAno, '#f87171', '#dc2626'), borderRadius: 6, maxBarThickness: 16, yAxisID: 'y' },
+              { type: 'bar', label: 'Liberações Planejadas', data: mP, backgroundColor: createGrad(ctxAno, '#60a5fa', '#2563eb'), borderRadius: 6, maxBarThickness: 16, yAxisID: 'y' },
+              { type: 'line', label: 'Aderência (%)', data: aderenciaArr, borderColor: '#eab308', backgroundColor: '#fef08a', borderWidth: 3, tension: 0.4, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#ca8a04', spanGaps: true, datalabels: { align: 'end', anchor: 'end', offset: 4, backgroundColor: '#ca8a04', color: '#ffffff', borderRadius: 4, padding: { top: 2, bottom: 2, left: 4, right: 4 }, font: { size: 10, weight: 'bold' }, formatter: (v) => v ? v + '%' : '' } }
             ]},
-            options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { weight: '500' } } }, y: { display: false, position: 'left' }, y1: { display: false, position: 'right', min: 0, max: 100 } } }
+            options: { layout: { padding: { top: 30 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { weight: '500' } } }, y: { display: false, position: 'left', grace: '30%' }, y1: { display: false, position: 'right', min: 0, max: 120 } } }
           });
         }
 
@@ -143,7 +156,7 @@ window.Dashboard = (() => {
           const eqAvVals = eqSort.map(e => e.pctAvanco||0);
           charts.avanco = new Chart(ctxAvanco, {
             type: 'bar',
-            data: { labels: eqAvNames, datasets: [{ label: 'Avanço (%)', data: eqAvVals, backgroundColor: createGrad(ctxAvanco, '#c084fc', '#9333ea', true), borderRadius: 6, maxBarThickness: 24 }] },
+            data: { labels: eqAvNames, datasets: [{ label: 'Avanço (%)', data: eqAvVals, backgroundColor: createGrad(ctxAvanco, '#c084fc', '#9333ea', true), borderRadius: 6, maxBarThickness: 16 }] },
             options: { indexAxis: 'y', layout: { padding: { right: 40 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } } } }
           });
         }
@@ -178,8 +191,8 @@ window.Dashboard = (() => {
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
             data: { labels: catsLabels, datasets: [
-              { label: 'Realizado', data: cR, backgroundColor: createGrad(ctxCat, '#34d399', '#059669'), borderRadius: 6, maxBarThickness: 24 },
-              { label: 'Planejado', data: cP, backgroundColor: createGrad(ctxCat, '#c084fc', '#9333ea'), borderRadius: 6, maxBarThickness: 24 }
+              { label: 'Realizado', data: cR, backgroundColor: createGrad(ctxCat, '#34d399', '#059669'), borderRadius: 6, maxBarThickness: 16 },
+              { label: 'Planejado', data: cP, backgroundColor: createGrad(ctxCat, '#c084fc', '#9333ea'), borderRadius: 6, maxBarThickness: 16 }
             ]},
             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { boxWidth: 12, color: titleColor, font: { weight: '600' } } } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
           });
@@ -200,7 +213,7 @@ window.Dashboard = (() => {
 
           charts.topAtendimentos = new Chart(ctxTop, {
             type: 'bar',
-            data: { labels: sortedCats, datasets: [{ label: 'Atendimentos Concluídos', data: sortedCounts, backgroundColor: createGrad(ctxTop, '#3b82f6', '#1d4ed8'), borderRadius: 6, maxBarThickness: 32 }] },
+            data: { labels: sortedCats, datasets: [{ label: 'Atendimentos Concluídos', data: sortedCounts, backgroundColor: createGrad(ctxTop, '#3b82f6', '#1d4ed8'), borderRadius: 6, maxBarThickness: 16 }] },
             options: { layout: { padding: { top: 20 } }, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, border: { display: false }, ticks: { color: textColor, font: { size: 11, weight: '500' } } }, y: { display: false } } }
           });
         }
@@ -217,7 +230,7 @@ window.Dashboard = (() => {
     `;
     
     const chartCard = (title, id) => `
-      <div style="background:var(--bg-surface); border:1px solid var(--border-card); border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 280px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+      <div style="background:var(--bg-surface); border:1px solid var(--border-card); border-radius:8px; padding:16px; display:flex; flex-direction:column; min-height: 340px; height: 100%; overflow:hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
         <div style="font-size:14px; font-weight:700; color:var(--text-primary); margin-bottom:12px; flex-shrink: 0;">${title}</div>
         <div style="flex:1; position:relative; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;">
            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;">
@@ -228,7 +241,7 @@ window.Dashboard = (() => {
     `;
 
     const html = `
-    <div style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: var(--bg-base);">
+    <div id="dashboard-container" style="width:100%; max-width:100%; min-height:100vh; padding:var(--space-6); display:flex; flex-direction:column; gap:20px; background: var(--bg-base);">
       
       <!-- HEADER -->
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
@@ -238,10 +251,13 @@ window.Dashboard = (() => {
             <p style="font-size:12px; color:var(--text-secondary); margin:4px 0 0 0; font-weight:600;">Visão geral em tempo real · ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}</p>
           </div>
         </div>
-        <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid var(--border-card); color: var(--text-primary);" onclick="Router.navigate('dashboard',{force:true})">
-          <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Atualizar Dados
-        </button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="month" value="${selectedMonth}" onchange="window.Dashboard.setMonth(this.value)" style="border-radius:8px; border:1px solid var(--border-card); padding:8px 12px; font-weight:600; font-family:'Inter'; color:var(--text-primary); background:var(--bg-surface); cursor:pointer;" title="Filtrar por Mês e Ano">
+          <button class="btn" style="display:flex; align-items:center; gap:8px; border-radius: 8px; padding: 10px 20px; font-weight: 700; background: transparent; border: 1px solid var(--border-card); color: var(--text-primary);" onclick="Router.navigate('dashboard',{force:true})">
+            <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <!-- SECTION 1: 5 KPIs Topo (Grid) -->
@@ -287,7 +303,7 @@ window.Dashboard = (() => {
   }
 
   function destroy() { destroyCharts(); }
-  return { render, destroy };
+  return { render, destroy, setMonth };
 })();
 
 // ================================================================
@@ -394,70 +410,92 @@ window.EquipmentModule = (() => {
             </tr>
           </thead>
           <tbody>
-            ${eqs.length === 0 ? `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>` : ''}
-            ${eqs.map(e => {
-              const pct = e.pctAvanco || 0;
-              const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
-              const days = e.dataLiberacaoPlanejada ? daysBetween(refDate, e.dataLiberacaoPlanejada) : null;
-              const isLiberated = e.status === 'Liberado';
-              const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
-              const pendParts = parts.filter(p=>p.equipmentId===e.id&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
-              const openRestr = restrictions.filter(r=>r.equipmentId===e.id&&r.status==='Aberta').length;
-              const repls = e.replanning || [];
-              const prioridade = e.prioridade || 'Normal';
-              let prioBadge = '';
-              if (prioridade === 'Urgente') {
-                prioBadge = `<span class="badge badge-danger">Urgente</span>`;
-              } else if (prioridade === 'Alta') {
-                prioBadge = `<span class="badge badge-orange">Alta</span>`;
-              }
+            ${(() => {
+              if (eqs.length === 0) return `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>`;
+              
+              const groups = {};
+              eqs.forEach(e => {
+                 const code = e.codigo || '';
+                 let prefix = 'OUTROS';
+                 const match = code.match(/^([A-Za-zÀ-ÖØ-öø-ÿ]+)/);
+                 if (match && match[1]) prefix = match[1].toUpperCase();
+                 if (!groups[prefix]) groups[prefix] = [];
+                 groups[prefix].push(e);
+              });
 
-              return `
-                <tr class="hover-bg card-clickable eq-row" data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()} ${(e.cliente||'').toLowerCase()}" style="border-bottom:1px solid var(--border-card); transition:background 0.2s;" onclick="EquipmentModule.openDetail('${e.id}')">
-                  <td style="padding:var(--space-3);">
-                    <div style="font-weight:700; color:var(--text-primary); font-size:14px;">${e.codigo}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">${e.nome}</div>
-                  </td>
-                  <td style="padding:var(--space-3);"><span class="badge badge-ghost">${e.cliente || '—'}</span></td>
-                  <td style="padding:var(--space-3);">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <div style="width:100px; height:6px; background:var(--bg-base); border-radius:3px; overflow:hidden;">
-                        <div style="height:100%; width:${pct}%; background:var(--color-${pct>=80?'success':pct>=50?'primary':'warning'});"></div>
-                      </div>
-                      <span style="font-size:12px; font-weight:700;">${pct}%</span>
-                    </div>
-                  </td>
-                  <td style="padding:var(--space-3);">
-                    ${e.dataLiberacaoPlanejada ? `
-                      <div style="font-size:13px; font-weight:600; color:var(--color-${daysClass})">${formatDate(e.dataLiberacaoPlanejada)}</div>
-                      <div style="font-size:11px; color:var(--text-muted);">${isLiberated ? '<span style="color:var(--color-success)">Concluído</span>' : (days!==null?`${days<0?Math.abs(days)+' atrasado':days===0?'Hoje':days+'d'}`:'')}</div>
-                    ` : '<span style="color:var(--text-muted); font-size:12px;">Não definida</span>'}
-                  </td>
-                  <td style="padding:var(--space-3);">
-                    <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
-                      ${statusBadge(e.status)}
-                      ${prioBadge}
-                    </div>
-                  </td>
-                  <td style="padding:var(--space-3);">
-                    <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                      ${pendParts > 0 ? `<span class="badge badge-warning" title="${pendParts} peça(s) pendente(s)">${pendParts} peças</span>` : ''}
-                      ${openRestr > 0 ? `<span class="badge badge-danger" title="${openRestr} restrição(ões) aberta(s)">${openRestr} restr.</span>` : ''}
-                      ${repls.length > 0 ? `<span class="badge badge-orange" title="Reprogramado ${repls.length} vez(es)">R${repls.length}</span>` : ''}
-                      ${pendParts === 0 && openRestr === 0 && repls.length === 0 ? '<span style="color:var(--text-muted); font-size:12px;">Nenhum</span>' : ''}
-                    </div>
-                  </td>
-                  <td style="padding:var(--space-3); text-align:right;">
-                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();EquipmentModule.openEdit('${e.id}')" title="Editar">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
-                    </button>
-                    <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="event.stopPropagation();EquipmentModule.confirmDelete('${e.id}','${e.nome}')" title="Excluir">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
-                    </button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
+              const sortedPrefixes = Object.keys(groups).sort();
+              let html = '';
+
+              sortedPrefixes.forEach(prefix => {
+                html += `<tr style="background:var(--bg-base); border-bottom: 2px solid var(--border-card);"><td colspan="7" style="padding:10px 16px; font-weight:800; color:var(--brand-primary); font-size:14px; text-transform:uppercase; letter-spacing: 1px;">${prefix}</td></tr>`;
+                
+                groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
+                  const pct = e.pctAvanco || 0;
+                  const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
+                  const days = e.dataLiberacaoPlanejada ? daysBetween(refDate, e.dataLiberacaoPlanejada) : null;
+                  const isLiberated = e.status === 'Liberado';
+                  const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
+                  const pendParts = parts.filter(p=>p.equipmentId===e.id&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
+                  const openRestr = restrictions.filter(r=>r.equipmentId===e.id&&r.status==='Aberta').length;
+                  const repls = e.replanning || [];
+                  const prioridade = e.prioridade || 'Normal';
+                  let prioBadge = '';
+                  if (prioridade === 'Urgente') {
+                    prioBadge = `<span class="badge badge-danger">Urgente</span>`;
+                  } else if (prioridade === 'Alta') {
+                    prioBadge = `<span class="badge badge-orange">Alta</span>`;
+                  }
+
+                  html += `
+                    <tr class="hover-bg card-clickable eq-row" data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()} ${(e.cliente||'').toLowerCase()}" style="border-bottom:1px solid var(--border-card); transition:background 0.2s;" onclick="EquipmentModule.openDetail('${e.id}')">
+                      <td style="padding:var(--space-3);">
+                        <div style="font-weight:700; color:var(--text-primary); font-size:14px;">${e.codigo}</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${e.nome}</div>
+                      </td>
+                      <td style="padding:var(--space-3);"><span class="badge badge-ghost">${e.cliente || '—'}</span></td>
+                      <td style="padding:var(--space-3);">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <div style="width:100px; height:6px; background:var(--bg-base); border-radius:3px; overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:var(--color-${pct>=80?'success':pct>=50?'primary':'warning'});"></div>
+                          </div>
+                          <span style="font-size:12px; font-weight:700;">${pct}%</span>
+                        </div>
+                      </td>
+                      <td style="padding:var(--space-3);">
+                        ${e.dataLiberacaoPlanejada ? `
+                          <div style="font-size:13px; font-weight:600; color:var(--color-${daysClass})">${formatDate(e.dataLiberacaoPlanejada)}</div>
+                          <div style="font-size:11px; color:var(--text-muted);">${isLiberated ? '<span style="color:var(--color-success)">Concluído</span>' : (days!==null?`${days<0?Math.abs(days)+' atrasado':days===0?'Hoje':days+'d'}`:'')}</div>
+                        ` : '<span style="color:var(--text-muted); font-size:12px;">Não definida</span>'}
+                      </td>
+                      <td style="padding:var(--space-3);">
+                        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+                          ${statusBadge(e.status)}
+                          ${prioBadge}
+                        </div>
+                      </td>
+                      <td style="padding:var(--space-3);">
+                        <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                          ${pendParts > 0 ? `<span class="badge badge-warning" title="${pendParts} peça(s) pendente(s)">${pendParts} peças</span>` : ''}
+                          ${openRestr > 0 ? `<span class="badge badge-danger" title="${openRestr} restrição(ões) aberta(s)">${openRestr} restr.</span>` : ''}
+                          ${repls.length > 0 ? `<span class="badge badge-orange" title="Reprogramado ${repls.length} vez(es)">R${repls.length}</span>` : ''}
+                          ${pendParts === 0 && openRestr === 0 && repls.length === 0 ? '<span style="color:var(--text-muted); font-size:12px;">Nenhum</span>' : ''}
+                        </div>
+                      </td>
+                      <td style="padding:var(--space-3); text-align:right;">
+                        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();EquipmentModule.openEdit('${e.id}')" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
+                        </button>
+                        <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="event.stopPropagation();EquipmentModule.confirmDelete('${e.id}','${e.nome}')" title="Excluir">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                });
+              });
+              
+              return html;
+            })()}
           </tbody>
         </table>
       </div>
@@ -508,9 +546,12 @@ window.EquipmentModule = (() => {
             <button class="modal-close" onclick="closeModal('modal-equipment')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
           </div>
           <div class="modal-body" id="eq-modal-body"></div>
-          <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
-            <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+          <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+            <div id="eq-modal-footer-left"></div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
+              <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+            </div>
           </div>
         </div>
       </div>`;
@@ -529,6 +570,7 @@ window.EquipmentModule = (() => {
     ensureModalExists();
     document.getElementById('eq-modal-title').textContent = 'Novo Equipamento';
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(null);
+    document.getElementById('eq-modal-footer-left').innerHTML = ''; // Limpa para não ter botão de excluir na criação
     openModal('modal-equipment');
   }
 
@@ -537,6 +579,17 @@ window.EquipmentModule = (() => {
     const eq = DB.equipment.get(id);
     document.getElementById('eq-modal-title').textContent = `Editar — ${eq.codigo}`;
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(eq);
+    
+    // Adiciona botão Excluir se for admin
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (session && (session.perfil === 'Administrador' || session.perfil === 'Desenvolvedor')) {
+      document.getElementById('eq-modal-footer-left').innerHTML = `<button class="btn btn-icon" style="background:var(--color-danger); color:#fff; border:none; padding:8px 16px; width:auto; border-radius:6px; font-weight:600;" onclick="EquipmentModule.confirmDelete('${id}', '${eq.codigo}')">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px; height:16px; margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg> Excluir
+      </button>`;
+    } else {
+      document.getElementById('eq-modal-footer-left').innerHTML = '';
+    }
+    
     openModal('modal-equipment');
   }
 
@@ -688,13 +741,13 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
-            ${['Em Manutenção','Liberado','Paralisado','Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma','Lavador','Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Montagem','Subconjunto','Teste','Retrabalho'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Check-list de recebimento', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -945,13 +998,14 @@ window.EquipmentModule = (() => {
         localStorage.setItem('diman_lixeira', JSON.stringify(trash));
 
         window.DB.equipment.delete(id);
-        
         eqTasks.forEach(t => DB.tasks.delete(t.id));
         ts.forEach(t => DB.timesheets.delete(t.id));
         if (DB.replannings) re.forEach(r => DB.replannings.delete(r.id));
         if (DB.restrictions) rest.forEach(r => DB.restrictions.delete(r.id));
         
-        window.Router.navigate('equipment', { force: true });
+        if (typeof closeModal === 'function') closeModal('modal-equipment');
+        const route = (window.Router && window.Router.currentRoute) ? window.Router.currentRoute : 'home';
+        window.Router.navigate(route, { force: true });
         window.Toast.success('Movido para a Lixeira', nome);
       } catch(e) {
         alert('Erro ao excluir: ' + e.message);

@@ -10,6 +10,7 @@ const Auth = window.Auth || {};
 const events = window.events || {};
 const Toast = window.Toast || {};
 
+
 window.Router = (() => {
   const routes = {};
   let current = null;
@@ -573,16 +574,16 @@ function renderShell(session) {
 
   const navItems = [
     { route:'home',       label:'Início',                icon:'home',           perm:'dashboard',   section:'MENU PRINCIPAL' },
-    { route:'worker-panel', label:'Meu Painel',          icon:'wrench-screwdriver', perm:'workerPanel', section:'' },
+    { route:'worker-panel', label:'Meu Painel',          icon:'wrench-screwdriver', perm:'workerPanel', section:'EXECUTANTE' },
     { route:'worker-parts', label:'Solicitar Peças',     icon:'cube',           perm:'workerPanel', section:'' },
     { route:'worker-services', label:'Solicitar Serviços', icon:'clipboard-document-check', perm:'workerPanel', section:'' },
     { route:'worker-manuals', label:'Meus Manuais',      icon:'document-report', perm:'workerPanel', section:'' },
 
-    { route:'dashboard',  label:'Dashboard',             icon:'squares-2x2',    perm:'dashboard',   section:'OPERACIONAL' },
+    { route:'dashboard',  label:'Dashboard',             icon:'chart-bar',      perm:'dashboard',   section:'OPERACIONAL' },
     { route:'d-panel',    label:'D-1 | D | D+1',         icon:'calendar-days',  perm:'dashboard',   section:'' },
     { route:'workshop',   label:'Controle de Oficina',   icon:'building-office', perm:'workshop',   section:'' },
     { route:'waiting',    label:'Aguardando Manutenção', icon:'clock',          perm:'dashboard',   section:'' },
-    { route:'labor-analysis', label:'Análise por Mão de Obra', icon:'chart-pie', perm:'dashboard', section:'' },
+
     { route:'presentation', label:'Apresentação (TV)',   icon:'chart-bar',      perm:'dashboard', section:'' },
 
     { route:'tasks',      label:'Tarefas',               icon:'clipboard-list', perm:'tasks',       section:'PLANEJAMENTO' },
@@ -597,7 +598,7 @@ function renderShell(session) {
     { route:'vacations',  label:'Gestão de Férias',      icon:'calendar-days',  perm:'workforce',   section:'' },
     { route:'attendance', label:'Controle de Frequência',icon:'clipboard-list', perm:'workforce',   section:'' },
 
-    { route:'kpi',        label:'Indicadores KPI',       icon:'chart-pie',      perm:'kpi',         section:'ANÁLISE & RESULTADOS' },
+
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
     { route:'impacts',    label:'Relatório de Impactos', icon:'document-report', perm:'impacts',    section:'' },
     { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'' },
@@ -615,6 +616,7 @@ function renderShell(session) {
     { route:'bonus',      label:'Prêmio Produção',       icon:'currency-dollar', perm:'reports',    section:'ADMINISTRAÇÃO' },
     { route:'qr-generator', label:'Gerador QR Code',     icon:'qr-code',        perm:'dashboard',   section:'' },
     { route:'users',      label:'Usuários',              icon:'user-group',     perm:'users',       section:'' },
+    { route:'admin-worker-panel', label:'Central do Executante', icon:'wrench-screwdriver', perm:'managerDashboard', section:'' },
   ];
 
   const svgIcons = {
@@ -859,11 +861,19 @@ function renderShell(session) {
   }
 
   // Register all routes
-  Router.register('dashboard', (p) => Dashboard.render());
-  Router.register('labor-analysis', (p) => LaborAnalysisModule.render());
+  Router.register('dashboard', () => {
+    if (window.ExecutiveDashboard) {
+      setTimeout(() => window.ExecutiveDashboard.render(), 50);
+      return window.ExecutiveDashboard.render();
+    }
+    return `<div>Dashboard Loading...</div>`;
+  });
+
+  Router.register('presentation', () => PresentationTV.render());
   Router.register('workshop', (p) => WorkshopModule.render());
   Router.register('home', () => HomeModule.render());
-  Router.register('worker-panel', () => WorkerPanel.render());
+  Router.register('worker-panel', () => WorkerPanel.render(false));
+  Router.register('admin-worker-panel', () => WorkerPanel.render(true));
   Router.register('worker-parts', () => typeof WorkerParts !== 'undefined' ? WorkerParts.render() : '<div class="page-container">Erro ao carregar módulo de Peças</div>');
   Router.register('worker-services', () => typeof WorkerServices !== 'undefined' ? WorkerServices.render() : '<div class="page-container">Erro ao carregar módulo de Serviços</div>');
   Router.register('worker-manuals', () => typeof WorkerManuals !== 'undefined' ? WorkerManuals.render() : '<div class="page-container">Erro ao carregar módulo de Manuais</div>');
@@ -883,7 +893,7 @@ function renderShell(session) {
     Router.register('d-panel', () => DPanel.render());
     Router.register('presentation', () => DPanel.render());
   }
-  if (typeof Dashboard !== 'undefined') Router.register('dashboard', () => Dashboard.render());
+  // Removido fallback antigo do dashboard
   if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
   if (typeof ReleasedModule !== 'undefined') Router.register('equipment-released', () => ReleasedModule.render());
   if (typeof TasksModule !== 'undefined') Router.register('tasks', () => TasksModule.render());
@@ -899,7 +909,7 @@ function renderShell(session) {
   if (typeof WorkforceTimeModule !== 'undefined') Router.register('workforce-time', () => WorkforceTimeModule.render());
   if (typeof VacationsModule !== 'undefined') Router.register('vacations', () => VacationsModule.render());
   if (typeof CostsModule !== 'undefined') Router.register('costs', () => CostsModule.render());
-  if (typeof KPIModule !== 'undefined') Router.register('kpi', () => KPIModule.render());
+
   if (typeof TimelineModule !== 'undefined') Router.register('timeline', () => TimelineModule.render());
   if (typeof ImpactsModule !== 'undefined') Router.register('impacts', () => ImpactsModule.render());
   if (typeof SimulatorModule !== 'undefined') Router.register('simulator', () => SimulatorModule.render());

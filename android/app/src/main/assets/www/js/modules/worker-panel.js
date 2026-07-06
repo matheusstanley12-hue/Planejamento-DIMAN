@@ -6,6 +6,7 @@ window.WorkerPanel = (() => {
   let activeTab = 'hoje'; // 'atrasadas' | 'hoje' | 'futuras' | 'concluidas'
   let eqFilter = '';
   let discFilter = '';
+  let isAdminMode = false;
 
   function compressImage(file, callback) {
     const reader = new FileReader();
@@ -31,11 +32,13 @@ window.WorkerPanel = (() => {
   }
   
   function getMyWorker(session) {
+    if (isAdminMode) return { id: 'admin-mode', nome: session.nome, funcao: 'Admin', currentState: 'Ocioso' };
     const workers = window.DB.workforce.list();
     return workers.find(w => (w.matricula && session.matricula && w.matricula === session.matricula) || w.nome === session.nome);
   }
 
   function getMyEquipments(session) {
+    if (isAdminMode) return window.DB.equipment.list();
     const eqs = window.DB.equipment.list();
     const allTasks = window.DB.tasks.getAll();
     const myWorker = getMyWorker(session);
@@ -52,6 +55,7 @@ window.WorkerPanel = (() => {
   }
 
   function canExecuteTask(session, task) {
+    if (isAdminMode) return true;
     if (!session || session.perfil !== 'Executante') return true;
     if (!task.disciplina) return true;
 
@@ -223,7 +227,7 @@ window.WorkerPanel = (() => {
 
     Toast.success('Iniciado!', `A tarefa "${t.descricao}" foi iniciada para os executantes selecionados.`);
     if (document.getElementById('modal-worker-start-task')) closeModal('modal-worker-start-task');
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   function startTask(taskId) {
@@ -279,7 +283,7 @@ window.WorkerPanel = (() => {
     }
 
     // Check allocation blocking
-    let divergingWorkers = targetWorkers.filter(w => w.equipmentId && w.equipmentId !== t.equipmentId);
+    let divergingWorkers = targetWorkers.filter(w => w.equipmentId && w.equipmentId !== t.equipmentId && (!myWorker || w.id !== myWorker.id));
     if (divergingWorkers.length > 0) {
       const names = divergingWorkers.map(w => w.nome).join(', ');
       const jModalHtml = `
@@ -469,8 +473,8 @@ window.WorkerPanel = (() => {
     let elapsedHrs = (now - startTime) / (1000 * 60 * 60);
     if (elapsedHrs > 12) elapsedHrs = 12; // Capping to 12h to prevent runaway timers
 
-    // ONLY target the specific worker if workerId is passed
-    const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
+    // Target ALL workers on this task
+    const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id && w.currentState === 'Trabalhando');
     
     targetWorkers.forEach(w => {
       // Save Timesheet (Work)
@@ -552,7 +556,7 @@ window.WorkerPanel = (() => {
       Toast.info('Pausado', `Motivo: ${reason}`);
     }
 
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   function addResumeExecutorInput() {
@@ -733,7 +737,7 @@ window.WorkerPanel = (() => {
     });
 
     Toast.success('Retomado!', `Executantes alocados na tarefa: "${t.descricao}"`);
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   function resumeWork(workerId) {
@@ -771,7 +775,7 @@ window.WorkerPanel = (() => {
       }
 
       Toast.success('Retomado!', 'O cronômetro de trabalho voltou a rodar.');
-      Router.navigate('worker-panel', { force: true });
+      Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   function cancelWork(workerId) {
@@ -782,7 +786,8 @@ window.WorkerPanel = (() => {
       if (!myWorker || (myWorker.currentState !== 'Trabalhando' && myWorker.currentState !== 'Em Pausa')) return;
 
       const tId = myWorker.currentTaskId;
-      const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
+      // Target ALL workers on this task
+      const targetWorkers = DB.workforce.list().filter(w => String(w.currentTaskId) === String(tId) && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
 
       targetWorkers.forEach(w => {
         DB.workforce.update(w.id, {
@@ -826,7 +831,7 @@ window.WorkerPanel = (() => {
       }
 
       Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
-      Router.navigate('worker-panel', { force: true });
+      Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
     });
   }
 
@@ -901,8 +906,8 @@ window.WorkerPanel = (() => {
     const t = DB.tasks.get(myWorker.currentTaskId);
     
     const processSave = (base64Img) => {
-      // ONLY target the specific worker that clicked 'Concluir'
-      const targetWorkers = workerId ? [myWorker] : DB.workforce.list().filter(w => w.currentTaskId === t.id);
+      // Target ALL workers on this task
+      const targetWorkers = DB.workforce.list().filter(w => w.currentTaskId === t.id);
       
       targetWorkers.forEach(w => {
         if (w.currentState === 'Trabalhando') {
@@ -1020,7 +1025,7 @@ window.WorkerPanel = (() => {
 
       closeModal('modal-worker-complete');
       Toast.success('Sucesso', 'Tarefa concluída com sucesso!');
-      Router.navigate('worker-panel', { force: true });
+      Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
     };
 
     if (hasFile) {
@@ -1106,7 +1111,8 @@ window.WorkerPanel = (() => {
     }
   }
 
-  function render() {
+  function render(adminModeParam = false) {
+    isAdminMode = adminModeParam;
     const session = Auth.getSession();
     if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
@@ -1299,13 +1305,31 @@ window.WorkerPanel = (() => {
       `;
     }
 
+    const groups = {};
+    myEqs.forEach(e => {
+       const code = e.codigo || '';
+       let prefix = 'OUTROS';
+       const match = code.match(/^([A-Za-zÀ-ÖØ-öø-ÿ]+)/);
+       if (match && match[1]) prefix = match[1].toUpperCase();
+       if (!groups[prefix]) groups[prefix] = [];
+       groups[prefix].push(e);
+    });
+    const sortedPrefixes = Object.keys(groups).sort();
+    let eqOptionsHtml = '<option value="">Todas as Máquinas</option>';
+    sortedPrefixes.forEach(prefix => {
+       eqOptionsHtml += `<optgroup label="${prefix}">`;
+       groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
+           eqOptionsHtml += `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)</option>`;
+       });
+       eqOptionsHtml += `</optgroup>`;
+    });
+
     const machinesHtml = `
       <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
         <div style="flex:1; min-width:140px;">
           <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:block; margin-bottom:6px;">Equipamento</label>
           <select onchange="WorkerPanel.setEqFilter(this.value)" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border-card); background:var(--bg-card); color:var(--text-primary); font-weight:700; font-size:14px; outline:none; cursor:pointer;">
-            <option value="">Todas as Máquinas</option>
-            ${myEqs.map(e => `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)</option>`).join('')}
+            ${eqOptionsHtml}
           </select>
         </div>
         <div style="flex:1; min-width:140px;">
@@ -1580,14 +1604,14 @@ window.WorkerPanel = (() => {
 
   function setEqFilter(id) {
     eqFilter = id;
-    render();
-    Router.navigate('worker-panel', { force: true });
+    const currentRoute = window.location.hash.replace('#', '');
+    Router.navigate(currentRoute.includes('worker-panel') ? currentRoute : 'worker-panel', { force: true });
   }
 
   function setDiscFilter(disc) {
     discFilter = disc;
-    render();
-    Router.navigate('worker-panel', { force: true });
+    const currentRoute = window.location.hash.replace('#', '');
+    Router.navigate(currentRoute.includes('worker-panel') ? currentRoute : 'worker-panel', { force: true });
   }
 
   // --- TASK MODALS (CREATE & EDIT) ---
@@ -1777,7 +1801,7 @@ window.WorkerPanel = (() => {
 
     Toast.success('Sucesso', 'Nova tarefa criada.');
     closeModal('modal-worker-new-task');
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   function openEditTask(id) {
@@ -2039,7 +2063,7 @@ window.WorkerPanel = (() => {
     DB.tasks.update(id, data);
     Toast.success('Tarefa Atualizada!', 'As alterações foram registradas com sucesso.');
     closeModal('modal-worker-task');
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   // --- PARTS REQUESTS ---
@@ -2138,7 +2162,7 @@ window.WorkerPanel = (() => {
     DB.parts.create(data);
     Toast.success('Solicitação Enviada!', `Peça "${desc}" cadastrada com status Solicitada.`);
     closeModal('modal-worker-part');
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   // --- SERVICE REQUESTS ---
@@ -2244,7 +2268,7 @@ window.WorkerPanel = (() => {
 
     Toast.success('Serviço Solicitado!', 'A solicitação foi enviada com sucesso para o setor.');
     closeModal('modal-worker-service');
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   // --- IMPEDIMENT RESTRICTIONS ---
@@ -2356,7 +2380,7 @@ window.WorkerPanel = (() => {
     DB.restrictions.create(data);
     Toast.success('Impedimento Registrado!', 'O PCM e Supervisão foram alertados sobre a restrição.');
     closeModal('modal-worker-restriction');
-    Router.navigate('worker-panel', { force: true });
+    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
   }
 
   function openTaskDetail(taskId) {

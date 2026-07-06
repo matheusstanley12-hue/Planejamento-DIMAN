@@ -459,12 +459,16 @@ window.DB = (() => {
                  localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
                  row.data.forEach(item => {
                     if (item && item.id) {
-                       const existing = mergedMap.get(item.id);
-                       const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                       const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
-                       
-                       if (!existing || newTime > existTime) {
-                          mergedMap.set(item.id, item);
+                       if (item._deleted) {
+                          mergedMap.delete(item.id);
+                       } else {
+                          const existing = mergedMap.get(item.id);
+                          const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                          const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                          
+                          if (!existing || newTime > existTime) {
+                             mergedMap.set(item.id, item);
+                          }
                        }
                     }
                  });
@@ -501,21 +505,27 @@ window.DB = (() => {
               }
 
               if (idx !== -1) {
-                 const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
-                 const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
-                 
-                 // Enforce: once finalized, never reverts
-                 if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
-                    itemToSave.status = 'Concluída';
-                    itemToSave.pctExecutado = 100;
-                    if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
-                 }
+                 if (itemToSave._deleted) {
+                    localArr.splice(idx, 1);
+                 } else {
+                    const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
+                    const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
+                    
+                    // Enforce: once finalized, never reverts
+                    if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
+                       itemToSave.status = 'Concluída';
+                       itemToSave.pctExecutado = 100;
+                       if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
+                    }
 
-                 if (newTime >= existTime) {
-                    localArr[idx] = itemToSave;
+                    if (newTime >= existTime) {
+                       localArr[idx] = itemToSave;
+                    }
                  }
               } else {
-                 localArr.push(itemToSave);
+                 if (!itemToSave._deleted) {
+                    localArr.push(itemToSave);
+                 }
               }
               try { localStorage.setItem(row.collection, JSON.stringify(localArr)); } catch(e) {}
             }

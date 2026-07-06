@@ -404,13 +404,6 @@ window.DB = (() => {
                 const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                 const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
                 
-                // Enforce: once finalized, never reverts
-                if (existing && existing.status === 'Concluída' && item.status !== 'Concluída') {
-                   item.status = 'Concluída';
-                   item.pctExecutado = 100;
-                   if (existing.dataRealTermino && !item.dataRealTermino) item.dataRealTermino = existing.dataRealTermino;
-                }
-
                 // If it's from individual row, we prefer it unless base is strictly newer
                 if (!existing || newTime >= existTime) {
                   mergedMap.set(item.id, item);
@@ -466,19 +459,16 @@ window.DB = (() => {
                  localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
                  row.data.forEach(item => {
                     if (item && item.id) {
-                       const existing = mergedMap.get(item.id);
-                       const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                       const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
-                       
-                       // Enforce: once finalized, never reverts
-                       if (existing && existing.status === 'Concluída' && item.status !== 'Concluída') {
-                          item.status = 'Concluída';
-                          item.pctExecutado = 100;
-                          if (existing.dataRealTermino && !item.dataRealTermino) item.dataRealTermino = existing.dataRealTermino;
-                       }
-
-                       if (!existing || newTime > existTime) {
-                          mergedMap.set(item.id, item);
+                       if (item._deleted) {
+                          mergedMap.delete(item.id);
+                       } else {
+                          const existing = mergedMap.get(item.id);
+                          const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                          const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                          
+                          if (!existing || newTime > existTime) {
+                             mergedMap.set(item.id, item);
+                          }
                        }
                     }
                  });
@@ -515,21 +505,27 @@ window.DB = (() => {
               }
 
               if (idx !== -1) {
-                 const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
-                 const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
-                 
-                 // Enforce: once finalized, never reverts
-                 if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
-                    itemToSave.status = 'Concluída';
-                    itemToSave.pctExecutado = 100;
-                    if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
-                 }
+                 if (itemToSave._deleted) {
+                    localArr.splice(idx, 1);
+                 } else {
+                    const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
+                    const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
+                    
+                    // Enforce: once finalized, never reverts
+                    if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
+                       itemToSave.status = 'Concluída';
+                       itemToSave.pctExecutado = 100;
+                       if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
+                    }
 
-                 if (newTime >= existTime) {
-                    localArr[idx] = itemToSave;
+                    if (newTime >= existTime) {
+                       localArr[idx] = itemToSave;
+                    }
                  }
               } else {
-                 localArr.push(itemToSave);
+                 if (!itemToSave._deleted) {
+                    localArr.push(itemToSave);
+                 }
               }
               try { localStorage.setItem(row.collection, JSON.stringify(localArr)); } catch(e) {}
             }
@@ -673,7 +669,8 @@ window.DB = (() => {
       set(KEYS.equipment, items.filter(e => String(e.id) !== String(id)));
       if (eq) { 
         if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('DELETE_EQUIPMENT', `Equipamento ${eq.nome} removido`, null); 
-        if (window.events && window.events.emit) window.events.emit('equipment:deleted', id); 
+        if (window.events && window.events.emit) window.events.emit('equipment:deleted', id);
+        deleteFromSupabase(KEYS.equipment, id);
       }
       return true;
     },
@@ -726,12 +723,6 @@ window.DB = (() => {
       if (idx === -1) return null;
       const before = { ...items[idx] };
       
-      // Enforce: once finalized, never reverts
-      if (before.status === 'Concluída' && data.status && data.status !== 'Concluída') {
-          data.status = 'Concluída';
-          data.pctExecutado = 100;
-      }
-      
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.tasks, items);
       Auth.addAuditLog('UPDATE_TASK', `Tarefa ${items[idx].descricao} atualizada`, { before, after: items[idx] });
@@ -748,8 +739,9 @@ window.DB = (() => {
       set(KEYS.tasks, items.filter(x => x.id !== id));
       if (t) { 
         Auth.addAuditLog('DELETE_TASK', `Tarefa ${t.descricao} removida`, null); 
-        events.emit('task:deleted', id); 
+        events.emit('task:deleted', t);
         recalculateEquipmentProgress(t.equipmentId);
+        deleteFromSupabase(KEYS.tasks, id);
       }
     },
     getByEquipment: (eqId) => get(KEYS.tasks).filter(t => t.equipmentId === eqId),
@@ -790,7 +782,10 @@ window.DB = (() => {
       const items = get(KEYS.parts);
       const p = items.find(x => x.id === id);
       set(KEYS.parts, items.filter(x => x.id !== id));
-      if (p) Auth.addAuditLog('DELETE_PART', `Peça ${p.descricao} removida`, null);
+      if (p) {
+        Auth.addAuditLog('DELETE_PART', `Peça ${p.descricao} removida`, null);
+        deleteFromSupabase(KEYS.parts, id);
+      }
     },
     getAll: () => {
       const eqFilter = window.GlobalEqFilter;
@@ -825,6 +820,7 @@ window.DB = (() => {
       const w = items.find(x => String(x.id) === String(id));
       set(KEYS.workforce, items.filter(x => x.id !== id));
       if (w) Auth.addAuditLog('DELETE_WORKER', `Trabalhador ${w.nome} removido`, null);
+      deleteFromSupabase(KEYS.workforce, id);
     }
   };
 
@@ -852,7 +848,10 @@ window.DB = (() => {
       events.emit('timesheet:created', item);
       return item;
     },
-    delete(id) { set(KEYS.timesheets, get(KEYS.timesheets).filter(t => t.id !== id)); }
+    delete(id) { 
+      set(KEYS.timesheets, get(KEYS.timesheets).filter(t => t.id !== id)); 
+      deleteFromSupabase(KEYS.timesheets, id);
+    }
   };
 
   // ==================== REPLANNINGS ====================
@@ -865,7 +864,10 @@ window.DB = (() => {
       set(KEYS.replannings, items);
       return item;
     },
-    delete(id) { set(KEYS.replannings, get(KEYS.replannings).filter(r => r.id !== id)); }
+    delete(id) { 
+      set(KEYS.replannings, get(KEYS.replannings).filter(r => r.id !== id)); 
+      deleteFromSupabase(KEYS.replannings, id);
+    }
   };
 
   // ==================== RESTRICTIONS ====================
@@ -900,7 +902,10 @@ window.DB = (() => {
     close(id, resolution) {
       return this.update(id, { status: 'Fechada', resolution, closedAt: now() });
     },
-    delete(id) { set(KEYS.restrictions, get(KEYS.restrictions).filter(r => r.id !== id)); }
+    delete(id) { 
+      set(KEYS.restrictions, get(KEYS.restrictions).filter(r => r.id !== id)); 
+      deleteFromSupabase(KEYS.restrictions, id);
+    }
   };
 
   // ==================== COSTS ====================
@@ -930,7 +935,10 @@ window.DB = (() => {
       set(KEYS.costs, items);
       return items[idx];
     },
-    delete(id) { set(KEYS.costs, get(KEYS.costs).filter(c => c.id !== id)); }
+    delete(id) { 
+      set(KEYS.costs, get(KEYS.costs).filter(c => c.id !== id)); 
+      deleteFromSupabase(KEYS.costs, id);
+    }
   };
 
   // ==================== LESSONS LEARNED ====================
@@ -956,7 +964,10 @@ window.DB = (() => {
       set(KEYS.lessons, items);
       return items[idx];
     },
-    delete(id) { set(KEYS.lessons, get(KEYS.lessons).filter(l => String(l.id) !== String(id))); },
+    delete(id) { 
+      set(KEYS.lessons, get(KEYS.lessons).filter(l => String(l.id) !== String(id))); 
+      deleteFromSupabase(KEYS.lessons, id);
+    },
     search(query) {
       const q = query.toLowerCase();
       return get(KEYS.lessons).filter(l =>
@@ -991,7 +1002,10 @@ window.DB = (() => {
       set(KEYS.notifications, items);
       events.emit('notification:allRead', null);
     },
-    delete(id) { set(KEYS.notifications, get(KEYS.notifications).filter(n => n.id !== id)); }
+    delete(id) { 
+      set(KEYS.notifications, get(KEYS.notifications).filter(n => n.id !== id)); 
+      deleteFromSupabase(KEYS.notifications, id);
+    }
   };
 
   // ==================== SETTINGS ====================

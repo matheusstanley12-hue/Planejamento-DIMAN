@@ -1,13 +1,13 @@
 window.HomeModule = (() => {
   const BUCKETS = [
-    { id: 'sondas-pesquisas', name: 'Sondas de Pesquisas', color: 'var(--brand-primary)' },
-    { id: 'bomba-pesquisa', name: 'Bomba de pesquisa', color: 'var(--color-orange)' },
-    { id: 'sondas-pocos', name: 'Sondas Poços', color: 'var(--color-success)' },
-    { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)' },
-    { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)' },
-    { id: 'prog-almoxarifado', name: 'Programação de almoxarifado', color: 'var(--color-info)' },
-    { id: 'aguardando-manutencao', name: 'Aguardando Manut.', color: 'var(--color-danger)' },
-    { id: 'outros', name: 'Outros Equipamentos', color: 'var(--text-muted)' }
+    { id: 'sondas-pesquisas', name: 'Sondas de Pesquisas', color: 'var(--brand-primary)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` },
+    { id: 'bomba-pesquisa', name: 'Bomba de pesquisa', color: 'var(--color-orange)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>` },
+    { id: 'sondas-pocos', name: 'Sondas Poços', color: 'var(--color-success)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20m-6-10h12m-6-10V2m0 20v2M5.636 5.636l14.142 14.142M18.364 5.636L4.222 19.778" /></svg>` },
+    { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>` },
+    { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" /></svg>` },
+    { id: 'prog-almoxarifado', name: 'Programação de almoxarifado', color: 'var(--color-info)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>` },
+    { id: 'aguardando-manutencao', name: 'Aguardando Manut.', color: 'var(--color-danger)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>` },
+    { id: 'outros', name: 'Outros Equipamentos', color: 'var(--text-muted)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>` }
   ];
 
   function getBucketId(eq) {
@@ -86,15 +86,40 @@ window.HomeModule = (() => {
       const hasPecas = parts.some(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status)) ? '1' : '0';
       
       const prioridade = e.prioridade || 'Normal';
-      let prioBadge = '';
-      if (prioridade === 'Urgente') {
-        prioBadge = `<span class="badge badge-danger" style="margin-left: 6px;">Urgente</span>`;
-      } else if (prioridade === 'Alta') {
-        prioBadge = `<span class="badge badge-orange" style="margin-left: 6px;">Alta</span>`;
+      let prioColor = 'transparent';
+      let prioDot = '';
+      if (prioridade === 'Urgente') { prioColor = 'var(--color-danger)'; prioDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-danger);box-shadow:0 0 0 3px rgba(239,68,68,0.2);"></span>`; }
+      else if (prioridade === 'Alta') { prioColor = 'var(--color-orange)'; prioDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--color-orange);box-shadow:0 0 0 3px rgba(249,115,22,0.2);"></span>`; }
+
+      const iconClient = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:15px;height:15px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>`;
+      const iconOS = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:15px;height:15px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>`;
+      const iconDate = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:15px;height:15px;flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>`;
+      const iconAlert = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+      const iconBox = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px;"><path stroke-linecap="round" stroke-linejoin="round" d="M21 16.811c0 .864-.471 1.623-1.211 2.02l-6.75 3.606a2.25 2.25 0 01-2.078 0l-6.75-3.606A2.25 2.25 0 013 16.811V7.189c0-.864.471-1.623 1.211-2.02l6.75-3.606a2.25 2.25 0 012.078 0l6.75 3.606a2.25 2.25 0 011.211 2.02v9.622z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 22.5V12M12 12l-9.5-5M12 12l9.5-5" /></svg>`;
+
+      let desvioStr = '';
+      if (dtPrev && e.status !== 'Liberado') {
+        const d = daysBetween(today, dtPrev);
+        if (d > 0) desvioStr = `<span style="color:var(--color-success);font-weight:700;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-success);"></span>+${d} dias</span>`;
+        else if (d === 0) desvioStr = `<span style="color:var(--color-warning);font-weight:700;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-warning);"></span>Hoje</span>`;
+        else desvioStr = `<span style="color:var(--color-danger);font-weight:700;display:flex;align-items:center;gap:4px;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--color-danger);"></span>${d} dias</span>`;
+      } else if (e.status === 'Liberado') {
+        desvioStr = `<span style="color:var(--color-info);font-weight:700;">Finalizado</span>`;
       }
 
+      let statusColor = 'var(--text-secondary)';
+      let statusBg = 'var(--bg-base)';
+      let statusIcon = '';
+      if (e.status === 'Em Manutenção') { statusColor = '#047857'; statusBg = 'rgba(16, 185, 129, 0.1)'; statusIcon = '🟢'; }
+      else if (e.status === 'Falta de Peças') { statusColor = '#b45309'; statusBg = 'rgba(245, 158, 11, 0.1)'; statusIcon = '🟡'; }
+      else if (e.status === 'Atrasado' || e.status === 'Paralisado' || e.status === 'Falta de Mão de Obra') { statusColor = '#be123c'; statusBg = 'rgba(225, 29, 72, 0.1)'; statusIcon = '🔴'; }
+      else if (e.status === 'Liberado') { statusColor = '#1d4ed8'; statusBg = 'rgba(59, 130, 246, 0.1)'; statusIcon = '🔵'; }
+      else { statusIcon = '⚪'; }
+      
+      const badgeStyle = `background:${statusBg};color:${statusColor};border:1px solid rgba(0,0,0,0.03);border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:700;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:6px;`;
+
       const cardHtml = `
-      <div class="card hover-lift home-eq-card" 
+      <div class="premium-kanban-card home-eq-card" 
            draggable="true"
            ondragstart="window.HomeModule.drag(event, '${e.id}')"
            ondragend="window.HomeModule.dragEnd(event)"
@@ -104,64 +129,61 @@ window.HomeModule = (() => {
            data-lib7="${isLib7}" 
            data-restr="${hasRestr}" 
            data-pecas="${hasPecas}" 
-           onclick="window.Router.navigate('equipment-panel', {id: '${e.id}'})" 
-           style="cursor:grab;display:flex;flex-direction:column;padding:var(--space-4);border-top:4px solid ${pct>=100?'var(--color-success)':pct>0?'var(--brand-primary-light)':'var(--text-muted)'}; margin-bottom: 2px; flex-shrink: 0; min-height: fit-content; height: auto;">
-        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:var(--space-2);">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
-              <div style="font-size:1.15rem;font-weight:900;color:var(--text-primary);letter-spacing:-0.02em;white-space:nowrap;">${e.codigo}</div>
-              ${prioBadge.replace('margin-left: 6px;', 'margin-left: 0;')}
+           onclick="window.Router.navigate('equipment-panel', {id: '${e.id}'})">
+        <div class="card-prio-bar" style="background:${prioColor}"></div>
+        
+        <div class="card-inner">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="flex: 1;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <h4 style="font-size:26px; font-weight:800; color:var(--text-primary); margin:0; letter-spacing:-0.03em;">${e.codigo}</h4>
+                ${prioDot}
+              </div>
+              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:16px; margin-top:10px; color:var(--text-secondary); font-size:14px; font-weight:500;">
+                <span style="display:flex;align-items:center;gap:6px;">${iconClient} <strong style="color:var(--text-primary);">${e.cliente || '—'}</strong></span>
+                <span style="display:flex;align-items:center;gap:6px;color:var(--text-muted);">${iconOS} ${e.os || '—'}</span>
+              </div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+            
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+              <div style="display:flex; gap:6px; color:var(--color-danger);">
+                ${hasPecas === '1' ? `<span title="Aguardando Peças">${iconBox}</span>` : ''}
+                ${hasRestr === '1' || isAtrasado === '1' ? `<span title="${isAtrasado==='1'?'Atrasado':'Restrição Aberta'}">${iconAlert}</span>` : ''}
+              </div>
               ${isAdmin ? `
-                <button class="btn btn-secondary btn-icon" 
-                        style="padding: 2px; border-radius: 4px; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-card); cursor: pointer;" 
+                <button class="btn-premium-edit" 
                         title="Editar Equipamento"
                         onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 14px; height: 14px; color: var(--text-secondary);">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                   </svg>
                 </button>
               ` : ''}
-              ${isAdmin ? `
-                <select onchange="event.stopPropagation(); window.HomeModule.updateEquipmentStatus('${e.id}', this.value)" 
-                        onclick="event.stopPropagation();" 
-                        class="badge ${e.status === 'Liberado' ? 'badge-success' : e.status === 'Em Manutenção' ? 'badge-primary' : e.status === 'Paralisado' ? 'badge-danger' : e.status === 'Falta de Peças' ? 'badge-warning' : e.status === 'Falta de Mão de Obra' ? 'badge-danger' : 'badge-ghost'}" 
-                        style="border:none; cursor:pointer; font-weight:700; padding:2px 8px; outline:none; font-family:var(--font-sans); text-align:center; -webkit-appearance:none; -moz-appearance:none; appearance:none; white-space:nowrap;">
-                  ${['Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s => `
-                    <option value="${s}" ${e.status === s ? 'selected' : ''} style="background:var(--bg-modal); color:var(--text-primary); font-weight:normal;">${s}</option>
-                  `).join('')}
-                </select>
-              ` : statusBadge(e.status)}
             </div>
           </div>
-          <div style="font-size:10px;font-weight:600;color:var(--text-secondary); line-height:1.4;">
-            O.S.: ${e.os || '—'} <br> Cliente: ${e.cliente || '—'}
+          
+          <div style="margin-top:20px;">
+            <span style="${badgeStyle}">${statusIcon} ${e.status}</span>
           </div>
-        </div>
-        
-        <div style="margin-bottom:var(--space-3);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;">Avanço</span>
-            <span style="font-size:var(--text-xs);font-weight:800;color:var(--text-primary);">${pct}%</span>
+          
+          <div class="premium-progress-container">
+            <div class="premium-progress-header">
+              <span class="premium-progress-label">Progresso</span>
+              <span class="premium-progress-value">${pct}%</span>
+            </div>
+            <div class="premium-progress-track">
+              <div class="premium-progress-fill" style="width:0%; --target-width:${pct}%;" data-pct="${pct}"></div>
+            </div>
           </div>
-          <div class="progress-track" style="height:6px;"><div class="progress-fill ${pct>=80?'success':pct>=50?'':'warning'}" style="width:${pct}%"></div></div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-3);background:var(--bg-base);padding:var(--space-2);border-radius:var(--radius-md);">
-          <div>
-            <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">Plan.</div>
-            <div style="font-size:11px;font-weight:600;color:var(--text-secondary);">${dtPlan ? formatDate(dtPlan) : '—'}</div>
+          
+          <div class="premium-footer">
+            <div style="display:flex;align-items:center;gap:6px;">
+              ${iconDate} Prev. ${dtPrev ? formatDate(dtPrev).substring(0,5) : '—'}
+            </div>
+            <div>
+              ${desvioStr}
+            </div>
           </div>
-          <div>
-            <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;">Prev.</div>
-            <div style="font-size:11px;font-weight:700;color:var(--brand-primary-light);">${dtPrev ? formatDate(dtPrev) : '—'}</div>
-          </div>
-        </div>
-
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--space-3);padding-top:var(--space-2);border-top:1px solid var(--border-card);">
-          <div style="font-size:10px;color:var(--text-muted);">Desvio no Prazo:</div>
-          <div style="font-size:var(--text-xs);font-weight:800;color:var(--color-${desvio>0?'danger':desvio<0?'success':'text-secondary'});">${desvio>0?'+':''}${desvio} dias</div>
         </div>
       </div>
       `;
@@ -170,20 +192,59 @@ window.HomeModule = (() => {
 
     const boardHtml = BUCKETS.map(b => {
       const cardsHtml = bucketsData[b.id].join('');
+      
+      const eqIdsInBucket = eqs.filter(e => getBucketId(e) === b.id).map(e => e.id);
+      let sumPct = 0;
+      let delayedCount = 0;
+      let criticalCount = 0;
+      
+      eqIdsInBucket.forEach(id => {
+         const eq = eqs.find(e => e.id === id);
+         sumPct += eq.pctAvanco || 0;
+         const dtPlan = eq.dataLiberacaoPlanejada;
+         if (eq.status !== 'Liberado' && dtPlan && daysBetween(today, dtPlan) < 0) {
+            delayedCount++;
+         }
+         const prioridade = eq.prioridade || 'Normal';
+         if (prioridade === 'Urgente' || prioridade === 'Alta') {
+            criticalCount++;
+         }
+      });
+      
+      const avgPct = eqIdsInBucket.length > 0 ? Math.round(sumPct / eqIdsInBucket.length) : 0;
+
       return `
-        <div class="planner-column" 
-             data-bucket="${b.id}" 
+        <div class="premium-column planner-column" data-bucket="${b.id}" 
              ondragover="window.HomeModule.allowDrop(event)"
              ondragenter="window.HomeModule.dragEnter(event)"
              ondragleave="window.HomeModule.dragLeave(event)"
-             ondrop="window.HomeModule.drop(event, '${b.id}')"
-             style="flex: 0 0 310px; width: 310px; display: flex; flex-direction: column; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-card); padding: var(--space-4); max-height: calc(100vh - 280px); transition: all 0.2s;">
-          <div class="planner-column-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); border-bottom: 2px solid ${b.color}; padding-bottom: var(--space-2);">
-            <h3 style="font-size: var(--text-sm); font-weight: 700; color: var(--text-primary); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${b.name}">${b.name}</h3>
-            <span class="column-count badge" style="background: ${b.color}; color: var(--bg-surface); font-size: var(--text-xs); font-weight: 800; border-radius: 12px; padding: 2px 8px; margin-left: 6px;">0</span>
+             ondrop="window.HomeModule.drop(event, '${b.id}')">
+          
+          <div class="premium-column-header">
+            <div class="pch-top">
+              <div class="pch-title-group">
+                <span class="pch-icon" style="color:${b.color};">${b.icon || ''}</span>
+                <h3 class="pch-title">${b.name}</h3>
+              </div>
+              <span class="pch-count">${eqIdsInBucket.length} Equipamento${eqIdsInBucket.length!==1?'s':''}</span>
+            </div>
+            
+            <div class="pch-stats">
+              <span class="pch-stat-item">Avanço Médio: <strong style="color:var(--text-primary);font-size:14px;margin-left:4px;">${avgPct}%</strong></span>
+              ${criticalCount > 0 ? `<span class="pch-stat-alert"><span style="color:var(--color-danger)">🔴</span> ${criticalCount} crítico${criticalCount>1?'s':''}</span>` : ''}
+              ${delayedCount > 0 ? `<span class="pch-stat-alert"><span style="color:var(--color-warning)">🟡</span> ${delayedCount} atraso${delayedCount>1?'s':''}</span>` : ''}
+            </div>
+            
+            <div class="pch-progress-track">
+              <div class="pch-progress-fill" style="width:0%; --target-width:${avgPct}%; background:${b.color};" data-pct="${avgPct}"></div>
+            </div>
           </div>
-          <div class="planner-cards-container" style="display: flex; flex-direction: column; gap: var(--space-3); overflow-y: auto; flex: 1; padding: 2px; min-height: 100px;">
-            <div class="no-cards-placeholder" style="text-align: center; color: var(--text-muted); padding: var(--space-6); font-size: var(--text-xs); font-style: italic; border: 1px dashed var(--border-card); border-radius: var(--radius-md); display: none;">Nenhum equipamento</div>
+          
+          <div class="premium-cards-container planner-cards-container">
+            <div class="premium-empty-state no-cards-placeholder" style="${eqIdsInBucket.length===0?'display:flex;':'display:none;'}">
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+               <span>Nenhum equipamento neste setor</span>
+            </div>
             ${cardsHtml}
           </div>
         </div>
@@ -197,36 +258,136 @@ window.HomeModule = (() => {
       } else {
         updateColumnCounts();
       }
+      // Animate progress bars
+      document.querySelectorAll('.premium-progress-fill, .pch-progress-fill').forEach(el => {
+        setTimeout(() => {
+          el.style.width = el.getAttribute('data-pct') + '%';
+        }, 100);
+      });
     }, 50);
 
     return `
       <style>
-        .planner-board::-webkit-scrollbar {
-          height: 8px;
+        .planner-board::-webkit-scrollbar { height: 12px; }
+        .planner-board::-webkit-scrollbar-track { background: transparent; }
+        .planner-board::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 3px solid var(--bg-base); }
+        .planner-board::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .premium-column {
+           flex: 0 0 420px; width: 420px; display: flex; flex-direction: column; 
+           background: transparent; border: none; padding: 0; max-height: calc(100vh - 220px);
+           transition: all 0.2s;
         }
-        .planner-board::-webkit-scrollbar-track {
-          background: transparent;
+        
+        .premium-column-header {
+           background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px);
+           position: sticky; top: 0; z-index: 10;
+           padding: 24px 24px 20px 24px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.06);
+           box-shadow: 0 8px 30px rgba(15,23,42,0.04); margin-bottom: 24px;
         }
-        .planner-board::-webkit-scrollbar-thumb {
-          background: var(--border-card);
-          border-radius: 4px;
+        
+        .pch-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .pch-title-group { display: flex; align-items: center; gap: 12px; }
+        .pch-icon { display: flex; align-items: center; }
+        .pch-icon svg { width: 22px; height: 22px; }
+        .pch-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+        .pch-count { font-size: 13px; font-weight: 700; color: var(--text-secondary); background: var(--bg-base); padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); }
+        
+        .pch-stats { display: flex; gap: 16px; font-size: 13px; color: var(--text-secondary); margin-bottom: 18px; align-items: center; }
+        .pch-stat-item { display: flex; align-items: center; gap: 4px; }
+        .pch-stat-alert { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        
+        .pch-progress-track { width: 100%; height: 4px; background: rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; }
+        .pch-progress-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.25, 1, 0.5, 1); }
+        
+        .premium-cards-container { 
+           display: flex; flex-direction: column; gap: 24px; overflow-y: auto; flex: 1; 
+           padding: 4px 12px 32px 12px; min-height: 100px; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
         }
-        .planner-board::-webkit-scrollbar-thumb:hover {
-          background: var(--text-muted);
+        .premium-cards-container::-webkit-scrollbar { width: 8px; }
+        .premium-cards-container::-webkit-scrollbar-track { background: transparent; }
+        .premium-cards-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        
+        .premium-kanban-card {
+           position: relative; background: #fff; border-radius: 20px; 
+           border: 1px solid rgba(0,0,0,0.04);
+           box-shadow: 0 8px 30px rgba(15,23,42,0.04);
+           display: flex; flex-direction: row; overflow: hidden;
+           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+           cursor: pointer; flex-shrink: 0; min-height: fit-content;
         }
-        .planner-cards-container::-webkit-scrollbar {
-          width: 6px;
+        
+        .premium-kanban-card:hover {
+           transform: translateY(-4px);
+           box-shadow: 0 16px 40px rgba(15,23,42,0.08);
+           border-color: rgba(59,130,246,0.2);
         }
-        .planner-cards-container::-webkit-scrollbar-track {
-          background: transparent;
+        
+        .card-prio-bar { width: 8px; flex-shrink: 0; background: transparent; }
+        
+        .card-inner { flex: 1; padding: 28px 24px; display: flex; flex-direction: column; }
+        
+        .btn-premium-edit {
+           background: transparent; border: none; color: var(--text-muted); width: 34px; height: 34px;
+           display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer;
+           opacity: 0; transition: all 0.2s;
         }
-        .planner-cards-container::-webkit-scrollbar-thumb {
-          background: var(--border-card);
-          border-radius: 3px;
+        .premium-kanban-card:hover .btn-premium-edit { opacity: 1; background: var(--bg-base); border: 1px solid rgba(0,0,0,0.05); }
+        .btn-premium-edit:hover { background: rgba(59,130,246,0.1) !important; color: var(--brand-primary) !important; border-color: rgba(59,130,246,0.2) !important; }
+        .btn-premium-edit svg { width: 18px; height: 18px; }
+        
+        .premium-progress-container { margin-top: 28px; margin-bottom: 24px; }
+        .premium-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .premium-progress-label { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;}
+        .premium-progress-value { font-size: 15px; font-weight: 800; color: var(--text-primary); }
+        .premium-progress-track { height: 12px; background: #f1f5f9; border-radius: 99px; overflow: hidden; position: relative; }
+        .premium-progress-fill { 
+           height: 100%; border-radius: 99px; 
+           background: linear-gradient(90deg, var(--brand-primary-light) 0%, var(--brand-primary) 100%);
+           transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+           position: relative;
         }
-        .planner-cards-container::-webkit-scrollbar-thumb:hover {
-          background: var(--text-muted);
+        .premium-progress-fill::after {
+           content: ''; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+           background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+           transform: translateX(-100%);
+           animation: shimmer 2.5s infinite;
         }
+        
+        .premium-kanban-card:hover .premium-progress-fill {
+           box-shadow: 0 0 12px rgba(59,130,246,0.4);
+        }
+        
+        .premium-footer {
+           display: flex; justify-content: space-between; align-items: center;
+           padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.04);
+           font-size: 14px; color: var(--text-secondary); font-weight: 500;
+        }
+        
+        .premium-empty-state {
+           display: flex; flex-direction: column; align-items: center; justify-content: center;
+           padding: 40px 20px; color: var(--text-muted); font-size: 14px; font-weight: 500;
+           text-align: center; gap: 16px; background: rgba(0,0,0,0.015); border: 2px dashed rgba(0,0,0,0.06);
+           border-radius: 20px; height: 180px;
+        }
+        .premium-empty-state svg { width: 36px; height: 36px; color: #cbd5e1; }
+        
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        
+        .skeleton-card {
+           background: #fff; border-radius: 20px; border: 1px solid rgba(0,0,0,0.04);
+           height: 250px; display: flex; flex-direction: column; padding: 28px 24px;
+           gap: 20px; position: relative; overflow: hidden;
+        }
+        .skeleton-card::after {
+           content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+           transform: translateX(-100%);
+           background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
+           animation: shimmer 1.5s infinite;
+        }
+        .skel-line { background: #f1f5f9; border-radius: 4px; height: 20px; }
+
+
         .planner-column.drag-over {
           border: 1px dashed var(--brand-primary) !important;
           background: rgba(255, 255, 255, 0.05) !important;
@@ -261,7 +422,7 @@ window.HomeModule = (() => {
 
         <!-- Search Bar & Actions -->
         ${(() => {
-          const eqsAll = DB.equipment.list();
+          const eqsAll = DB.equipment.list().filter(e => e.status !== 'Liberado');
           eqsAll.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
           const groups = {};
           eqsAll.forEach(e => {
@@ -321,13 +482,13 @@ window.HomeModule = (() => {
       });
       const countEl = column.querySelector('.column-count');
       if (countEl) {
-        countEl.textContent = visibleCount;
+        countEl.textContent = visibleCount + ' Equipamento' + (visibleCount !== 1 ? 's' : '');
       }
       
       // Toggle visibility of empty columns placeholder
       const placeholder = column.querySelector('.no-cards-placeholder');
       if (placeholder) {
-        placeholder.style.display = (visibleCount === 0) ? 'block' : 'none';
+        placeholder.style.display = (visibleCount === 0) ? 'flex' : 'none';
       }
     });
   }
