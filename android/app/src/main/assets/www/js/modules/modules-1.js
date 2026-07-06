@@ -508,9 +508,12 @@ window.EquipmentModule = (() => {
           <button class="modal-close" onclick="closeModal('modal-equipment')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
         <div class="modal-body" id="eq-modal-body"></div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
-          <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+        <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
+          <div id="eq-modal-footer-left"></div>
+          <div style="display:flex; gap:12px;">
+            <button class="btn btn-secondary" onclick="closeModal('modal-equipment')">Cancelar</button>
+            <button class="btn btn-primary" onclick="EquipmentModule.save()">Salvar</button>
+          </div>
         </div>
       </div>
     </div>

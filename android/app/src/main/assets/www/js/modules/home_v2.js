@@ -387,6 +387,44 @@ window.HomeModule = (() => {
         }
         .skel-line { background: #f1f5f9; border-radius: 4px; height: 20px; }
 
+        /* --- Dark Mode Enhancements --- */
+        [data-theme="dark"] .premium-column-header {
+           background: rgba(13, 27, 42, 0.95);
+           border-color: rgba(255, 255, 255, 0.05);
+           box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        [data-theme="dark"] .pch-progress-track { background: rgba(255, 255, 255, 0.05); }
+        [data-theme="dark"] .pch-count { background: var(--bg-card); border-color: rgba(255, 255, 255, 0.05); }
+        
+        [data-theme="dark"] .premium-kanban-card, 
+        [data-theme="dark"] .skeleton-card {
+           background: var(--bg-card);
+           border-color: rgba(255, 255, 255, 0.05);
+           box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+        [data-theme="dark"] .premium-kanban-card:hover {
+           border-color: rgba(59,130,246,0.3);
+           box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+        }
+        [data-theme="dark"] .premium-progress-track { background: rgba(255, 255, 255, 0.05); }
+        [data-theme="dark"] .btn-premium-edit { color: var(--text-secondary); }
+        [data-theme="dark"] .premium-kanban-card:hover .btn-premium-edit { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.05); }
+        [data-theme="dark"] .premium-footer { border-color: rgba(255, 255, 255, 0.05); }
+        
+        [data-theme="dark"] .premium-empty-state {
+           background: rgba(255,255,255,0.02);
+           border-color: rgba(255,255,255,0.05);
+        }
+        [data-theme="dark"] .skel-line { background: rgba(255, 255, 255, 0.05); }
+        [data-theme="dark"] .skeleton-card::after {
+           background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(255,255,255,0.05) 50%, rgba(0,0,0,0) 100%);
+        }
+        
+        [data-theme="dark"] #home-search optgroup,
+        [data-theme="dark"] #home-search option {
+           background: var(--bg-card);
+           color: var(--text-primary);
+        }
 
         .planner-column.drag-over {
           border: 1px dashed var(--brand-primary) !important;
@@ -445,13 +483,13 @@ window.HomeModule = (() => {
 
           return `
           <div style="margin-bottom:var(--space-6); display:flex; gap:var(--space-4); align-items:center; max-width:450px;">
-            <div style="position: relative; width: 100%; background: white; border-radius: 8px;">
-              <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; z-index: 2;">
+            <div style="position: relative; width: 100%; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
+              <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                 </svg>
               </div>
-              <select id="home-search" class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 8px; cursor: pointer; appearance: none; background-color: white;" onchange="window.HomeModule.filter(this.value)">
+              <select id="home-search" class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.HomeModule.filter(this.value)">
                 <option value="">Pesquisar e selecionar equipamento...</option>
                 ${options}
               </select>

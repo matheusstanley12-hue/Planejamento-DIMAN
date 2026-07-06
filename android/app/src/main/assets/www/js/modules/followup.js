@@ -9,14 +9,11 @@ window.FollowupModule = (() => {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30); // Up to ~4 weeks ahead
     const dates = [];
-    let curr = new Date(2026, 5, 9); // 09/06/2026
-    const cutoff = new Date(2026, 5, 24); // 24/06/2026
+    let curr = new Date(2026, 5, 30); // 30/06/2026
     
     while (curr <= endDate) {
-      if (curr < cutoff) {
-        if (curr.getDay() === 2) dates.push(new Date(curr)); // Terças antes de 24/06
-      } else {
-        if (curr.getDay() === 1 || curr.getDay() === 3) dates.push(new Date(curr)); // Seg e Qua a partir de 24/06
+      if (curr.getDay() === 2) {
+        dates.push(new Date(curr)); // Terças-feiras
       }
       curr.setDate(curr.getDate() + 1);
     }

@@ -48,12 +48,12 @@ window.ReleasedModule = (() => {
           </div>
           
           <div style="display:flex; align-items:center; gap:var(--space-2);">
-            <div style="position: relative; width: 220px;">
-              <select class="input" style="width:100%; padding-left: 36px; padding-top: 8px; padding-bottom: 8px; font-weight: 600; font-size: 0.9rem; border: 2px solid var(--primary); border-radius: 8px; cursor: pointer; appearance: none; background-color: white;" onchange="window.ReleasedModule.filter(this.value)">
+            <div style="position: relative; width: 220px; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
+              <select class="input" style="width:100%; padding-left: 36px; padding-top: 8px; padding-bottom: 8px; font-weight: 600; font-size: 0.9rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.ReleasedModule.filter(this.value)">
                   <option value="all">Todos os meses</option>
                   ${monthOptions}
               </select>
-              <div style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none;">
+              <div style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                 </svg>

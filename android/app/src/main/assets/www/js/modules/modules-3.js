@@ -257,7 +257,7 @@ window.PlanningModule = (() => {
 
       <!-- Curva de Avanço Real -->
       <div class="card" style="margin-bottom: 32px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-card, #e2e8f0); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.02), 0 4px 6px -4px rgba(0,0,0,0.02);">
-        <div class="card-header" style="border-bottom: 1px solid var(--border-default); background: var(--bg-panel, #f8fafc); padding: 20px 24px;"><div class="card-title" style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;">📊 Curva de Avanço Real</div></div>
+        <div class="card-header" style="border-bottom: 1px solid var(--border-default); background: transparent; padding: 20px 24px;"><div class="card-title" style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;">📊 Curva de Avanço Real</div></div>
         <div style="position:relative;height:320px;width:100%;padding: 24px;">
           <canvas id="plan-chart"></canvas>
         </div>
@@ -265,7 +265,7 @@ window.PlanningModule = (() => {
 
       <!-- Replanning by equipment -->
       <div class="card" style="border-radius: 16px; overflow: hidden; border: 1px solid var(--border-card, #e2e8f0); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.02), 0 4px 6px -4px rgba(0,0,0,0.02);">
-        <div class="card-header" style="border-bottom: 1px solid var(--border-default); background: var(--bg-panel, #f8fafc); padding: 20px 24px;"><div class="card-title" style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;">Histórico de Replanejamentos</div></div>
+        <div class="card-header" style="border-bottom: 1px solid var(--border-default); background: transparent; padding: 20px 24px;"><div class="card-title" style="font-size: 1.1rem; font-weight: 800; letter-spacing: -0.02em;">Histórico de Replanejamentos</div></div>
         <div class="table-wrap" style="padding: 0;">
           <table style="margin: 0; width: 100%; border-collapse: collapse;">
             <thead style="background: transparent;">
