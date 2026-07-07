@@ -133,14 +133,18 @@ window.WorkerPanel = (() => {
           <div class="modal-body" style="padding-top:10px;">
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai executar essa tarefa?</p>
             
+            ${myWorker ? `
             <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border-card);">
                  <input type="checkbox" id="include-myself" checked style="width:18px;height:18px;accent-color:var(--brand-primary);flex-shrink:0;" />
                  <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Incluir a mim mesmo nesta tarefa</span>
             </label>
+            ` : `
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:15px;padding:8px;background:#f3f4f6;border-radius:6px;border:1px dashed #d1d5db;">Como perfil de gestão, você precisa informar a matrícula do executante clicando no botão abaixo.</div>
+            `}
             
             <div id="start-task-executors-list"></div>
             
-            <button class="btn btn-ghost" style="width:100%;margin-bottom:15px;border:1px dashed var(--border-card);color:var(--brand-primary);" onclick="WorkerPanel.addExecutorInput()">+ Adicionar outro executante</button>
+            <button class="btn btn-ghost" style="width:100%;margin-bottom:15px;border:1px dashed var(--border-card);color:var(--brand-primary);" onclick="WorkerPanel.addExecutorInput()">+ Adicionar executante</button>
             <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.startTask('${taskId}')">Iniciar Tarefa</button>
           </div>
         </div>
@@ -599,14 +603,18 @@ window.WorkerPanel = (() => {
             
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai retomar essa tarefa?</p>
             
+            ${myWorker ? `
             <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border-card);">
                  <input type="checkbox" id="resume-include-myself" checked style="width:18px;height:18px;accent-color:var(--brand-primary);flex-shrink:0;" />
                  <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Incluir a mim mesmo nesta tarefa</span>
             </label>
+            ` : `
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:15px;padding:8px;background:#f3f4f6;border-radius:6px;border:1px dashed #d1d5db;">Como perfil de gestão, você precisa informar a matrícula do executante clicando no botão abaixo.</div>
+            `}
             
             <div id="resume-task-executors-list"></div>
             
-            <button class="btn btn-ghost" style="width:100%;margin-bottom:15px;border:1px dashed var(--border-card);color:var(--brand-primary);" onclick="WorkerPanel.addResumeExecutorInput()">+ Adicionar outro executante</button>
+            <button class="btn btn-ghost" style="width:100%;margin-bottom:15px;border:1px dashed var(--border-card);color:var(--brand-primary);" onclick="WorkerPanel.addResumeExecutorInput()">+ Adicionar executante</button>
 
             <button class="btn btn-primary" style="width:100%;height:45px;" onclick="WorkerPanel.submitResumeTask('${taskId}')">Confirmar Retomada</button>
           </div>
