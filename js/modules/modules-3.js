@@ -1938,7 +1938,8 @@ window.AuditModule = (() => {
 window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
-    const users = window.Auth ? window.Auth.listUsers() : [];
+    let users = window.Auth ? window.Auth.listUsers() : [];
+    users.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {

@@ -387,13 +387,13 @@ window.SimulatorModule = (() => {
                 }).join('');
 
                 return `
-                <div style="position: relative; width: 100%; background: white; border-radius: 8px;">
-                  <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--brand-primary); pointer-events: none; z-index: 2;">
+                <div style="position: relative; width: 100%; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
+                  <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
                     </svg>
                   </div>
-                  <select class="input" style="width: 100%; padding-left: 42px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 0.95rem; border: 2px solid var(--brand-primary, #3b82f6); box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 8px; cursor: pointer; appearance: none; background-color: white; color: var(--text-primary);" onchange="SimulatorModule.setEq(this.value)">
+                  <select class="input" style="width: 100%; padding-left: 42px; padding-top: 10px; padding-bottom: 10px; font-weight: 600; font-size: 0.95rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="SimulatorModule.setEq(this.value)">
                     <option value="">Pesquisar e selecionar equipamento...</option>
                     ${options}
                   </select>
@@ -1279,13 +1279,13 @@ window.TimelineModule = (() => {
       </div>
       
       <div style="padding: var(--space-4) var(--space-4) 0 var(--space-4);">
-        <div style="position: relative; max-width: 450px; background: white; border-radius: 8px;">
-          <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--primary); pointer-events: none; z-index: 2;">
+        <div style="position: relative; max-width: 450px; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
+          <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
           </div>
-          <select class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: 2px solid var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 8px; cursor: pointer; appearance: none; background-color: white;" onchange="window.TimelineModule.setEquipment(this.value)">
+          <select class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.TimelineModule.setEquipment(this.value)">
             <option value="">Pesquisar e selecionar equipamento...</option>
             ${options}
           </select>
@@ -1938,7 +1938,8 @@ window.AuditModule = (() => {
 window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
-    const users = window.Auth ? window.Auth.listUsers() : [];
+    let users = window.Auth ? window.Auth.listUsers() : [];
+    users.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
