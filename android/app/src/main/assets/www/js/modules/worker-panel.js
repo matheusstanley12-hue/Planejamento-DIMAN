@@ -1117,6 +1117,7 @@ window.WorkerPanel = (() => {
     if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     window.GlobalEqFilter = '';
+    const isManager = ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
     const myWorker = getMyWorker(session);
     if (!myWorker) {
       if (session.perfil !== 'Executante') {
@@ -1211,7 +1212,7 @@ window.WorkerPanel = (() => {
             <div class="active-task-card working" style="margin-bottom: 15px;">
               <div class="pulse-indicator"></div>
               <div class="task-state">EM EXECUÇÃO - ${w.nome}</div>
-              ${currentT && !canExecuteTask(session, currentT) && w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) ? 
+              ${currentT && !canExecuteTask(session, currentT) && w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) && !isManager ? 
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tempo Restrito (Outro Setor)</div>` : 
                 `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}" data-accumulated="${accSecs}">${formatTimeDiff(w.currentActionStartTime, accSecs)}</div>`
               }
@@ -1224,7 +1225,7 @@ window.WorkerPanel = (() => {
                 </div>
               ` : ''}
               
-              ${w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) ? `
+              ${w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) && !isManager ? `
                 <div class="action-buttons">
                   <div style="color:var(--text-muted);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -1253,7 +1254,7 @@ window.WorkerPanel = (() => {
           return `
             <div class="active-task-card paused" style="margin-bottom: 15px;">
               <div class="task-state">EM PAUSA: ${w.currentPauseReason} - ${w.nome}</div>
-              ${currentT && !canExecuteTask(session, currentT) && w.id !== (myWorker ? myWorker.id : null) ? 
+              ${currentT && !canExecuteTask(session, currentT) && w.id !== (myWorker ? myWorker.id : null) && !isManager ? 
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tempo Restrito (Outro Setor)</div>` : 
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tarefa Pausada</div>`
               }
@@ -1266,7 +1267,7 @@ window.WorkerPanel = (() => {
                 </div>
               ` : ''}
               
-              ${w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) ? `
+              ${w.id !== (myWorker ? myWorker.id : null) && !(w.funcao && w.funcao.toLowerCase().includes('ajudante')) && !isManager ? `
                 <div class="action-buttons">
                   <div style="color:var(--text-muted);font-size:14px;font-weight:600;display:flex;align-items:center;gap:4px;">
                     <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" /></svg>
