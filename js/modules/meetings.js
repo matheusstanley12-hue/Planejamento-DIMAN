@@ -227,8 +227,14 @@ window.MeetingsModule = (() => {
                   <td style="padding:var(--space-3); vertical-align:top;">
                     <div style="display:flex; flex-direction:column; gap:var(--space-2); align-items:flex-start;">
                       <span class="badge ${isDone ? 'badge-success' : (t.status === 'Em Andamento' ? 'badge-primary' : 'badge-warning')}">${t.status}</span>
-                      ${t.tag ? `<span style="font-size:11px; font-weight:600; background:var(--color-info-bg, rgba(41, 182, 246, 0.12)); color:var(--color-info, #29B6F6); padding:4px 8px; border-radius:var(--radius-full); display:inline-flex; align-items:center;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px; height:14px; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" /><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" /></svg>${t.tag}</span>` : ''}
-                      <span class="badge" style="background:transparent;border:1px solid ${getPriorityColor(t.priority)};color:${getPriorityColor(t.priority)};">${t.priority}</span>
+                      ${t.tag ? `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <strong style="color:var(--text-primary); font-size:13px;">${t.tag}</strong>
+                          <span class="badge" style="background:transparent;border:1px solid ${getPriorityColor(t.priority)};color:${getPriorityColor(t.priority)};">${t.priority}</span>
+                        </div>
+                      ` : `
+                        <span class="badge" style="background:transparent;border:1px solid ${getPriorityColor(t.priority)};color:${getPriorityColor(t.priority)};">${t.priority}</span>
+                      `}
                     </div>
                   </td>
                   <td style="padding:var(--space-3); vertical-align:top;">
