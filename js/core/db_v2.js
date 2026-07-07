@@ -533,14 +533,14 @@ window.DB = (() => {
 
           if (window.Router) {
             const current = window.Router.getCurrent();
-            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home', 'equipment', 'services', 'planning'];
+            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home', 'equipment', 'services', 'planning', 'meetings'];
             if (current && liveViews.includes(current)) {
               const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
               if (!hasOpenModal) {
                 if (window._syncRenderTimeout) clearTimeout(window._syncRenderTimeout);
                 window._syncRenderTimeout = setTimeout(() => {
                   window.Router.navigate(current, { force: true });
-                }, 800);
+                }, 3000);
               }
             }
           }

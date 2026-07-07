@@ -76,7 +76,26 @@ window.Router = (() => {
     try {
       const result = await mod(params);
       if (typeof result === 'string') {
+        const activeId = document.activeElement ? document.activeElement.id : null;
+        const h = container.offsetHeight;
+        if (isSameRoute && h > 0) container.style.minHeight = h + 'px';
         container.innerHTML = result;
+        if (isSameRoute) {
+          setTimeout(() => {
+            container.style.minHeight = '';
+            if (activeId) {
+              const el = document.getElementById(activeId);
+              if (el && typeof el.focus === 'function') {
+                el.focus();
+                try {
+                  if (el.setSelectionRange && el.value) {
+                    el.setSelectionRange(el.value.length, el.value.length);
+                  }
+                } catch(e) {}
+              }
+            }
+          }, 50);
+        }
       }
       if (result && result.destroy) destroyFn = result.destroy;
       container.querySelector('.page-container, .gantt-container, .meeting-panel')?.classList.add('page-enter');
