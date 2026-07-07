@@ -2007,7 +2007,7 @@ window.UsersModule = (() => {
       <div class="table-wrap"><table>
         <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
-          ${users.map(u=>`<tr>
+          ${users.map(u=>`<tr onclick="document.querySelectorAll('.selected-row').forEach(el=>el.classList.remove('selected-row')); this.classList.add('selected-row');">
             <td style="font-family:var(--font-mono)">${u.matricula}</td>
             <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
             <td><span class="badge badge-primary">${u.perfil}</span></td>

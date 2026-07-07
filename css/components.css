@@ -255,9 +255,14 @@ thead th {
 tbody tr {
   border-bottom: 1px solid var(--border-card);
   transition: background var(--transition-fast);
+  cursor: pointer;
 }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: var(--bg-card-hover); }
+tbody tr.selected-row { 
+  background: var(--color-primary-bg, rgba(21, 101, 192, 0.08)); 
+  border-left: 3px solid var(--brand-primary); 
+}
 tbody td {
   padding: var(--space-4);
   font-size: var(--text-sm);
