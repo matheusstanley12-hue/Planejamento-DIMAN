@@ -39,6 +39,9 @@ window.WorkerPanel = (() => {
 
   function getMyEquipments(session) {
     if (isAdminMode) return window.DB.equipment.list();
+    const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+    if (isManager) return window.DB.equipment.list();
+    
     const eqs = window.DB.equipment.list();
     const allTasks = window.DB.tasks.getAll();
     const myWorker = getMyWorker(session);
