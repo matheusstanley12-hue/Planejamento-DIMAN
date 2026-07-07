@@ -987,23 +987,6 @@ window.MeetingMode = (() => {
       return true; // Aguardando/Backlog não precisa ser filtrado por mês
     });
 
-    const eqMaintenance = eqs.filter(e => {
-      if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
-      if (e.tipo === 'Subconjuntos') return false;
-      const dataPrazo = e.dataLiberacaoPlanejada || '';
-      return dataPrazo.startsWith(currentMonth);
-    });
-
-    const eqReleased = eqs.filter(e => {
-      if (e.status !== 'Liberado') return false;
-      if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
-      const dataPrazo = e.dataLiberacaoPlanejada || '';
-      return dataPrazo.startsWith(currentMonth);
-    });
-
-    // Helper para Top Executantes (Total geral, sem filtro de mês conforme pedido)
-    const perfMap = {};
-    
     function matchesMonth(dStr, yyyy_mm) {
       if (!dStr) return false;
       if (dStr.startsWith(yyyy_mm)) return true;
@@ -1017,6 +1000,23 @@ window.MeetingMode = (() => {
       }
       return false;
     }
+
+    const eqMaintenance = eqs.filter(e => {
+      if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
+      if (e.tipo === 'Subconjuntos') return false;
+      const dataPrazo = e.dataLiberacaoPlanejada || '';
+      return matchesMonth(dataPrazo, currentMonth);
+    });
+
+    const eqReleased = eqs.filter(e => {
+      if (e.status !== 'Liberado') return false;
+      if (e.tipo === 'Subconjuntos') return false; // RETIRA SUBCONJUNTO
+      const dataReal = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || '';
+      return matchesMonth(dataReal, currentMonth);
+    });
+
+    // Helper para Top Executantes (Total geral, sem filtro de mês conforme pedido)
+    const perfMap = {};
     
     const timesheets = window.DB.timesheets ? window.DB.timesheets.list() : [];
     const completedTasks = tasks.filter(t => t.status === 'Concluída' && t.disciplina !== 'Subconjunto');
@@ -1104,8 +1104,9 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => (b.dataLiberacaoPlanejada||'').localeCompare(a.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => ((b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
+              const d = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+              const dataStr = d ? formatDate(d) : '—';
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
