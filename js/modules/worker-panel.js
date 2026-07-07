@@ -1118,7 +1118,12 @@ window.WorkerPanel = (() => {
 
     window.GlobalEqFilter = '';
     const isManager = ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
-    const myWorker = getMyWorker(session);
+    let myWorker = getMyWorker(session);
+    
+    if (!myWorker && isManager) {
+        myWorker = { id: 'admin-mode', nome: session.nome, funcao: 'Admin', currentState: 'Ocioso' };
+    }
+
     if (!myWorker) {
       if (session.perfil !== 'Executante') {
         setTimeout(() => { if (window.Router) window.Router.navigate('home', {force:true}); }, 50);
