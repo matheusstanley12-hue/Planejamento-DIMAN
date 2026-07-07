@@ -2017,9 +2017,9 @@ window.UsersModule = (() => {
             <td>
               <div class="table-actions">
                 ${u.id !== 'u-superadmin' ? `
-                  <button class="btn btn-secondary btn-sm" onclick="UsersModule.openEditUser('${u.id}')">Editar</button>
-                  <button class="btn btn-secondary btn-sm" onclick="UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
-                  <button class="btn btn-danger btn-sm" onclick="UsersModule.deleteUser('${u.id}')">Excluir</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.openEditUser('${u.id}')">Editar</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); UsersModule.deleteUser('${u.id}')">Excluir</button>
                 ` : ''}
               </div>
             </td>
@@ -2151,15 +2151,26 @@ window.UsersModule = (() => {
     }
     window.uiConfirm('Tem certeza que deseja excluir este usuário?', (res) => {
       if (!res) return;
-      if (window.Auth && window.Auth.deleteUser) {
-        window.Auth.deleteUser(id);
-      }
-      // Fallback/Garanta que deletou do localStorage e do Supabase
+      
       let users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
-      users = users.filter(u => u.id !== id);
+      const targetUser = users.find(u => u.id === id);
+      const targetMatricula = targetUser ? targetUser.matricula : null;
+      
+      // Encontra todos com a mesma matrícula para deletar os duplicados
+      const idsToDelete = targetMatricula ? users.filter(u => u.matricula === targetMatricula).map(u => u.id) : [id];
+      
+      idsToDelete.forEach(delId => {
+        if (window.Auth && window.Auth.deleteUser) {
+          window.Auth.deleteUser(delId);
+        }
+        if (window.DB && window.DB.deleteFromSupabase) window.DB.deleteFromSupabase('diman_users', delId);
+      });
+
+      // Fallback
+      users = JSON.parse(localStorage.getItem('diman_users')||'[]');
+      users = users.filter(u => !idsToDelete.includes(u.id));
       localStorage.setItem('diman_users', JSON.stringify(users));
       if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
-      if (window.DB && window.DB.deleteFromSupabase) window.DB.deleteFromSupabase('diman_users', id);
       
       Toast && Toast.success('Sucesso', 'Usuário excluído.');
       Router.navigate('users', { force: true });
