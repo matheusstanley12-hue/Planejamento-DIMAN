@@ -252,7 +252,8 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('include-myself');
     if (includeMyself && includeMyself.checked) {
-      if (myWorker && myWorker.id === 'admin-mode') {
+      const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+      if (!myWorker && isManager) {
         // Auto-create real worker for the admin
         const workers = DB.workforce.list();
         let existingAdminWorker = workers.find(w => w.nome === session.nome);
@@ -660,7 +661,8 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('resume-include-myself');
     if (includeMyself && includeMyself.checked) {
-      if (myWorker && myWorker.id === 'admin-mode') {
+      const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+      if (!myWorker && isManager) {
         const workers = DB.workforce.list();
         let existingAdminWorker = workers.find(w => w.nome === session.nome);
         if (!existingAdminWorker) {
