@@ -740,7 +740,7 @@ window.EquipmentModule = (() => {
       </div>
       <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
         <div class="form-group"><label>Data Planejada</label><input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" /></div>
-        <div class="form-group"><label>Data Prevista / Real</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
+        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
