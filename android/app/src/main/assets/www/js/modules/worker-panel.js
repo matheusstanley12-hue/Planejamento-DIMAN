@@ -133,14 +133,10 @@ window.WorkerPanel = (() => {
           <div class="modal-body" style="padding-top:10px;">
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai executar essa tarefa?</p>
             
-            ${myWorker ? `
             <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border-card);">
                  <input type="checkbox" id="include-myself" checked style="width:18px;height:18px;accent-color:var(--brand-primary);flex-shrink:0;" />
                  <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Incluir a mim mesmo nesta tarefa</span>
             </label>
-            ` : `
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:15px;padding:8px;background:#f3f4f6;border-radius:6px;border:1px dashed #d1d5db;">Como perfil de gestão, você precisa informar a matrícula do executante clicando no botão abaixo.</div>
-            `}
             
             <div id="start-task-executors-list"></div>
             
@@ -252,11 +248,31 @@ window.WorkerPanel = (() => {
     }
 
     const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
+    let myWorker = getMyWorker(session);
     
     const includeMyself = document.getElementById('include-myself');
-    if (includeMyself && includeMyself.checked && myWorker) {
-      if (!targetIds.includes(myWorker.id)) {
+    if (includeMyself && includeMyself.checked) {
+      if (myWorker && myWorker.id === 'admin-mode') {
+        // Auto-create real worker for the admin
+        const workers = DB.workforce.list();
+        let existingAdminWorker = workers.find(w => w.nome === session.nome);
+        if (!existingAdminWorker) {
+          const newId = 'w-admin-' + session.userId;
+          DB.workforce.create({
+             id: newId,
+             nome: session.nome,
+             matricula: session.matricula || Math.floor(Math.random() * 10000).toString(),
+             cargo: session.perfil,
+             funcao: session.perfil,
+             disciplina: session.disciplina || 'Geral',
+             currentState: 'Ocioso',
+             status: 'Ativo'
+          });
+          existingAdminWorker = DB.workforce.get(newId);
+        }
+        myWorker = existingAdminWorker;
+      }
+      if (myWorker && !targetIds.includes(myWorker.id)) {
         targetIds.push(myWorker.id);
       }
     }
@@ -603,14 +619,10 @@ window.WorkerPanel = (() => {
             
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:15px;">Quem vai retomar essa tarefa?</p>
             
-            ${myWorker ? `
             <label style="display:flex;align-items:center;gap:8px;margin-bottom:15px;cursor:pointer;background:var(--bg-base);padding:10px;border-radius:6px;border:1px solid var(--border-card);">
                  <input type="checkbox" id="resume-include-myself" checked style="width:18px;height:18px;accent-color:var(--brand-primary);flex-shrink:0;" />
                  <span style="font-size:14px;font-weight:600;color:var(--text-primary);">Incluir a mim mesmo nesta tarefa</span>
             </label>
-            ` : `
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:15px;padding:8px;background:#f3f4f6;border-radius:6px;border:1px dashed #d1d5db;">Como perfil de gestão, você precisa informar a matrícula do executante clicando no botão abaixo.</div>
-            `}
             
             <div id="resume-task-executors-list"></div>
             
@@ -644,11 +656,30 @@ window.WorkerPanel = (() => {
     }
 
     const session = Auth.getSession();
-    const myWorker = getMyWorker(session);
+    let myWorker = getMyWorker(session);
     
     const includeMyself = document.getElementById('resume-include-myself');
-    if (includeMyself && includeMyself.checked && myWorker) {
-      if (!targetIds.includes(myWorker.id)) {
+    if (includeMyself && includeMyself.checked) {
+      if (myWorker && myWorker.id === 'admin-mode') {
+        const workers = DB.workforce.list();
+        let existingAdminWorker = workers.find(w => w.nome === session.nome);
+        if (!existingAdminWorker) {
+          const newId = 'w-admin-' + session.userId;
+          DB.workforce.create({
+             id: newId,
+             nome: session.nome,
+             matricula: session.matricula || Math.floor(Math.random() * 10000).toString(),
+             cargo: session.perfil,
+             funcao: session.perfil,
+             disciplina: session.disciplina || 'Geral',
+             currentState: 'Ocioso',
+             status: 'Ativo'
+          });
+          existingAdminWorker = DB.workforce.get(newId);
+        }
+        myWorker = existingAdminWorker;
+      }
+      if (myWorker && !targetIds.includes(myWorker.id)) {
         targetIds.push(myWorker.id);
       }
     }
