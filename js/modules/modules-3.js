@@ -747,6 +747,21 @@ window.AIAssistant = (() => {
       });
       return resp;
     }
+    
+    if (intents.includes('costs')) {
+      const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status));
+      const totalParts = pendingParts.reduce((s,p) => s + (parseFloat(p.custoEstimado) || 0), 0);
+      const openServices = window.DB && DB.services ? DB.services.getAll().filter(s=>s.status!=='Concluído') : [];
+      const totalServices = openServices.reduce((s,sv) => s + (parseFloat(sv.custo) || 0), 0);
+      
+      resp += `💰 **Visão Geral de Custos Pendentes**\n\n`;
+      resp += `• **Peças Pendentes:** ${pendingParts.length} item(s) aguardando (Aprox. R$ ${Number(totalParts).toFixed(2)})\n`;
+      resp += `• **Serviços Terceiros em Aberto:** ${openServices.length} serviço(s) (Aprox. R$ ${Number(totalServices).toFixed(2)})\n`;
+      
+      resp += `\nLembrete: Esta é uma visão aproximada baseada nos orçamentos atuais. Para cotações externas, por favor consulte a web.`;
+      return resp;
+    }
+
     if (intents.includes('parts')) {
       const pendingParts = parts.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status));
       if (!pendingParts.length) return '✅ Nenhuma peça pendente de entrega no momento para a oficina.';
