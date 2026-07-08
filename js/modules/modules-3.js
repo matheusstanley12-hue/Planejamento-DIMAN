@@ -607,7 +607,10 @@ window.AIAssistant = (() => {
         const totalDelay = repls.reduce((s,r) => s+window.daysBetween(r.dataAnterior,r.novaData),0);
         if (totalDelay > 0) {
           resp += `• **Atraso Acumulado:** ${totalDelay} dias identificados ao longo de ${repls.length} replanejamento(s).\n`;
-          resp += `• **Última Causa Registrada:** ${repls[repls.length-1].motivo}\n`;
+          resp += `• **Histórico de Replanejamentos:**\n`;
+          repls.forEach(r => {
+             resp += `  - De ${window.formatDate ? window.formatDate(r.dataAnterior) : r.dataAnterior} para ${window.formatDate ? window.formatDate(r.novaData) : r.novaData} (Motivo: ${r.motivo})\n`;
+          });
         } else if (eq.dataLiberacaoPlanejada) {
           const daysToLib = window.daysBetween(new Date().toISOString().slice(0,10), eq.dataLiberacaoPlanejada);
           if (daysToLib < 0) {

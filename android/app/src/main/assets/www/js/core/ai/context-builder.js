@@ -55,7 +55,7 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
        codigo: e.codigo, os: e.os, cliente: e.cliente, modelo: e.modelo, 
        status: e.status, avanco: e.pctAvanco, custo: e.custoAtual,
        replanejamentos: e.replanning ? e.replanning.length : 0,
-       motivos_replan: e.replanning ? e.replanning.map(r => r.motivo).join(' | ') : ''
+       historico_replan: e.replanning ? e.replanning.map(r => `De ${window.formatDate ? window.formatDate(r.dataAnterior) : r.dataAnterior} para ${window.formatDate ? window.formatDate(r.novaData) : r.novaData} (${r.motivo})`).join(' | ') : ''
     }));
 
     const taskMin = tasks.filter(t => filterEqs.some(e => e.id === t.equipmentId)).map(t => ({
