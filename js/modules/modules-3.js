@@ -824,7 +824,10 @@ window.AIAssistant = (() => {
       { role: 'system', content: contextData }
     ];
     
-    history.forEach(m => {
+    // Limit history to last 4 to avoid token bloat
+    const recentHistory = history.slice(-4);
+    
+    recentHistory.forEach(m => {
        apiMessages.push({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content });
     });
 
@@ -834,7 +837,8 @@ window.AIAssistant = (() => {
       body: JSON.stringify({
         messages: apiMessages,
         model: 'openai',
-        temperature: 0.1,
+        temperature: 0.2,
+        seed: Math.floor(Math.random() * 1000000),
         jsonMode: false
       }),
       signal: signal
