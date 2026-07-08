@@ -877,10 +877,14 @@ window.AIAssistant = (() => {
       <div style="display:flex;align-items:center;margin-left:4px;height:24px;">
         <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
       </div>
-      <button onclick="AIAssistant.cancelQuery()" style="margin-left:auto;background:transparent;border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--text-primary)';this.style.borderColor='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-card)'">Cancelar</button>
     `;
     container?.appendChild(typing);
     container.scrollTop = container.scrollHeight;
+
+    const sendBtn = document.getElementById('ai-send-btn');
+    const cancelBtn = document.getElementById('ai-cancel-btn');
+    if (sendBtn) sendBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'block';
 
     currentAbortController = new AbortController();
 
@@ -889,6 +893,7 @@ window.AIAssistant = (() => {
       const responseText = await fetchPollinationsAI(query, dbContext, currentAbortController.signal);
       document.getElementById('ai-typing')?.remove();
       addMessage('ai', responseText);
+      restoreSendButton();
     } catch(err) {
       if (err.name === 'AbortError') return; // Cancelado pelo usuário
       console.error(err);
@@ -897,8 +902,16 @@ window.AIAssistant = (() => {
       setTimeout(() => {
         const response = processQuery(query);
         addMessage('ai', response);
+        restoreSendButton();
       }, 300);
     }
+  }
+
+  function restoreSendButton() {
+    const sendBtn = document.getElementById('ai-send-btn');
+    const cancelBtn = document.getElementById('ai-cancel-btn');
+    if (sendBtn) sendBtn.style.display = 'block';
+    if (cancelBtn) cancelBtn.style.display = 'none';
   }
 
   function cancelQuery() {
@@ -911,6 +924,7 @@ window.AIAssistant = (() => {
       typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Pesquisa cancelada pelo usuário.</span>';
       setTimeout(() => typing.remove(), 2500);
     }
+    restoreSendButton();
   }
 
   const suggestions = [
@@ -941,8 +955,11 @@ window.AIAssistant = (() => {
           <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
           <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);">
             <input id="ai-input" placeholder="Digite sua pergunta..." style="flex:1;" onkeydown="if(event.key==='Enter')AIAssistant.sendFromInput()" />
-            <button class="btn btn-primary" onclick="AIAssistant.sendFromInput()">
+            <button id="ai-send-btn" class="btn btn-primary" onclick="AIAssistant.sendFromInput()">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+            </button>
+            <button id="ai-cancel-btn" class="btn" style="display:none;background:var(--bg-card);border:1px solid var(--border-card);color:var(--text-secondary);" onclick="AIAssistant.cancelQuery()">
+              Cancelar
             </button>
           </div>
         </div>
