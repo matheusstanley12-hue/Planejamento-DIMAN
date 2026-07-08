@@ -718,7 +718,7 @@ window.EquipmentModule = (() => {
     };
 
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEditPlan = !eq || (session && (session.perfil === 'Administrador' || session.perfil === 'Planejador'));
+    const canEditPlan = !eq || (session && ['Desenvolvedor', 'Administrador', 'Planejador'].includes(session.perfil));
 
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row">
@@ -972,7 +972,12 @@ window.EquipmentModule = (() => {
     btn.closest('.modal-overlay').remove();
     Toast.success('Replanejamento criado!', `Nova data: ${formatDate(novaData)}`);
     DB.notifications.add({ type:'warning', title:`Replanejamento — ${eq.codigo}`, message: motivo.slice(0,100) });
-    Router.navigate('equipment', { force: true });
+    const currentRoute = Router.getCurrent();
+    if (currentRoute === 'home') {
+      Router.navigate('home', { force: true });
+    } else {
+      Router.navigate('equipment', { force: true });
+    }
   }
 
   function confirmDelete(id, nome) {
