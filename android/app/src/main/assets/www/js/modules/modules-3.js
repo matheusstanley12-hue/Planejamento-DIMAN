@@ -786,6 +786,14 @@ window.AIAssistant = (() => {
         </div>
       `;
       div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);animation:fadeInUp .3s ease;';
+      
+      // Force all links to open in a new tab
+      const links = div.querySelectorAll('a');
+      links.forEach(l => {
+        l.setAttribute('target', '_blank');
+        l.setAttribute('rel', 'noopener noreferrer');
+      });
+
       if (role === 'user') {
         div.style.flexDirection = 'row-reverse';
         div.children[1].style.background = 'var(--brand-primary)';
