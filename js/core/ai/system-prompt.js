@@ -32,9 +32,9 @@ REGRAS ANTI-RECUSA: VOCÊ É OBRIGADO a gerar as estimativas e orçamentos basea
 3. GERE UMA TABELA REALISTA baseada em marcas famosas do mercado industrial (ex: SKF, NSK, FAG, Timken, Cummins, Fleetguard, Donaldson) e peças genéricas. Estimativas de preço são totalmente permitidas e necessárias.
 4. A tabela deve conter: Opção, Marca/Modelo, Tipo (ex: ZZ, 2RS, C3), Preço Aproximado (em R$), e o LINK CLICÁVEL de busca (sempre abra em nova aba usando markdown ou HTML se possível, mas basta o link).
 5. LINKS DE BUSCA (Use exatamente estes formatos para não dar erro 404):
-   - Mercado Livre: `[Buscar no Mercado Livre](https://lista.mercadolivre.com.br/[peca-com-hifens])`
-   - Amazon: `[Buscar na Amazon](https://www.amazon.com.br/s?k=[peca+com+mais])`
-   - Loja do Mecânico: `[Buscar Loja do Mecânico](https://www.lojadomecanico.com.br/busca?q=[peca+com+mais])`
+   - Mercado Livre: \`[Buscar no Mercado Livre](https://lista.mercadolivre.com.br/[peca-com-hifens])\`
+   - Amazon: \`[Buscar na Amazon](https://www.amazon.com.br/s?k=[peca+com+mais])\`
+   - Loja do Mecânico: \`[Buscar Loja do Mecânico](https://www.lojadomecanico.com.br/busca?q=[peca+com+mais])\`
 6. Após a tabela, dê uma recomendação técnica rápida (ex: "Use SKF para aplicação crítica, Genérico para reposição econômica").
 7. NUNCA cite o módulo interno "Compras & Estoque" do DIMAN para orçamentos externos. Apenas dê a pesquisa de mercado ao usuário, igual o ChatGPT faz.
 
