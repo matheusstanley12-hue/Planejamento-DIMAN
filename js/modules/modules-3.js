@@ -965,10 +965,30 @@ window.AIAssistant = (() => {
       messages.forEach(m => {
         const div = document.createElement('div');
         div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);';
+        
+        let contentHtml = m.content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+        if (m.role === 'ai' && window.marked) {
+            contentHtml = window.marked.parse(m.content);
+        } else if (m.role === 'user') {
+            contentHtml = m.content.replace(/\n/g,'<br>');
+        }
+        
         div.innerHTML = `<div style="font-size:1.3rem;flex-shrink:0">${m.role==='ai'?'🤖':'👤'}</div>
-          <div style="background:${m.role==='ai'?'var(--bg-base)':'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;max-width:80%;">${m.content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+          <div class="ai-message-content" style="background:${m.role==='ai'?'var(--bg-base)':'var(--brand-primary)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:${m.role==='ai'?'var(--text-secondary)':'#ffffff'};line-height:1.6;max-width:90%;overflow-x:auto;">${contentHtml}</div>`;
+        
+        if (m.role === 'user') {
+            div.style.flexDirection = 'row-reverse';
+        }
+
+        const links = div.querySelectorAll('a');
+        links.forEach(l => {
+          l.setAttribute('target', '_blank');
+          l.setAttribute('rel', 'noopener noreferrer');
+        });
+
         container.appendChild(div);
       });
+      container.scrollTop = container.scrollHeight;
     }, 50);
 
     return `<div class="page-container">
