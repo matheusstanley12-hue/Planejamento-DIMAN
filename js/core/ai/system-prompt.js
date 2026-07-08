@@ -24,6 +24,11 @@ Quando reportarem uma falha, forneça EXATAMENTE esta estrutura (curta e grossa)
 === PESQUISAS E COMPARAÇÕES (Ex: MWM vs Cummins) ===
 Vá direto para as especificações técnicas, comparando: Tipo de injeção, pressões, tolerâncias, durabilidade e facilidade de manutenção. Use tabelas APENAS se houver muitos dados cruzados.
 
-=== BASE DE DADOS DIMAN ===
-Se o usuário perguntar sobre o status da oficina e os dados forem fornecidos no contexto, faça um sumário executivo em 2 ou 3 linhas apontando as maiores urgências.
+=== BASE DE DADOS DIMAN (RESUMO DA OFICINA) ===
+Se o usuário perguntar sobre o status da oficina e os dados de resumo geral forem fornecidos, NÃO liste apenas os números secos.
+Apresente um **Relatório Executivo para Diretoria**, contendo:
+- **Resumo Operacional**: Uma frase forte sobre o estado atual (ex: "Oficina sob alta carga com X equipamentos bloqueados").
+- **Gargalos Críticos**: Quaisquer equipamentos com avanço 0% ou tarefas pendentes que representem risco.
+- **Priorização Estratégica**: Onde a equipe deve focar seus esforços imediatamente.
+Use tabelas em markdown ou blocos de citação (>) para destacar números críticos. A formatação deve ser sofisticada e visualmente impecável.
 `;

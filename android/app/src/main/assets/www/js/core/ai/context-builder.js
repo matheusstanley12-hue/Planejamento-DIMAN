@@ -54,10 +54,12 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
        eq: eqs.find(x => x.id === p.equipmentId)?.codigo, desc: p.descricao, status: p.status, critica: p.critica
     }));
 
-    dataStr += "Equipamentos Relevantes (Top 5 se genérico): " + JSON.stringify(eqMin) + "\n";
+    dataStr += "Equipamentos Relevantes (Top 5): " + JSON.stringify(eqMin) + "\n";
     if (isTargeted) {
         dataStr += "Tarefas: " + JSON.stringify(taskMin) + "\n";
         dataStr += "Peças: " + JSON.stringify(partsMin) + "\n";
+    } else {
+        dataStr += "INSTRUÇÃO DIRETA: Formate os números acima como um Relatório Executivo de alto nível para a Diretoria, usando formatação elegante.\n";
     }
     return dataStr;
   }
