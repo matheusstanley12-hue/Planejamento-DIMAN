@@ -781,15 +781,14 @@ window.AIAssistant = (() => {
       div.className = `ai-message ${role}`;
       div.innerHTML = `
         <div style="font-size:1.3rem;flex-shrink:0">${role === 'ai' ? '🤖' : '👤'}</div>
-        <div class="ai-message-content" style="background:${role === 'ai' ? 'var(--bg-base)' : 'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;max-width:80%;overflow-x:auto;">
-          ${window.marked ? window.marked.parse(content) : content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;')}
+        <div class="ai-message-content" style="background:${role === 'ai' ? 'var(--bg-base)' : 'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:${role === 'ai' ? 'var(--text-secondary)' : '#ffffff'};line-height:1.6;max-width:90%;overflow-x:auto;">
+          ${role === 'user' ? content.replace(/\n/g,'<br>') : (window.marked ? window.marked.parse(content) : content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;'))}
         </div>
       `;
       div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);animation:fadeInUp .3s ease;';
       if (role === 'user') {
         div.style.flexDirection = 'row-reverse';
         div.children[1].style.background = 'var(--brand-primary)';
-        div.children[1].style.color = 'white';
       }
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
@@ -957,9 +956,9 @@ window.AIAssistant = (() => {
 
     return `<div class="page-container">
       <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>Assistente IA — Análise Inteligente</div></div>
-      <div style="display:flex;flex-direction:column;gap:var(--space-5);">
+      <div style="display:flex;flex-direction:column;gap:var(--space-5);width:100%;">
         <!-- Chat -->
-        <div class="card" style="display:flex;flex-direction:column;height:70vh;max-width:900px;margin:0 auto;width:100%;">
+        <div class="card" style="display:flex;flex-direction:column;height:75vh;width:100%;">
           <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
           <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);">
             <input id="ai-input" placeholder="Digite sua pergunta..." style="flex:1;" onkeydown="if(event.key==='Enter')AIAssistant.sendFromInput()" />
