@@ -865,8 +865,20 @@ window.AIAssistant = (() => {
     const typing = document.createElement('div');
     typing.id = 'ai-typing';
     typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);animation:fadeInUp .3s ease;';
-    typing.innerHTML = `🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Consultando o Copiloto... 🧠</span>
-      <button onclick="AIAssistant.cancelQuery()" style="margin-left:auto;background:transparent;border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--text-primary)';this.style.borderColor='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-card)'">Cancelar</button>`;
+    typing.innerHTML = `
+      <style>
+        @keyframes ai-pulse-dot { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+        .ai-dot { width: 6px; height: 6px; background-color: var(--text-secondary); border-radius: 50%; display: inline-block; animation: ai-pulse-dot 1.4s infinite ease-in-out both; margin: 0 2px; }
+        .ai-dot:nth-child(1) { animation-delay: -0.32s; }
+        .ai-dot:nth-child(2) { animation-delay: -0.16s; }
+        .ai-dot:nth-child(3) { animation-delay: 0s; }
+      </style>
+      <div style="font-size:1.3rem;">🤖</div>
+      <div style="display:flex;align-items:center;margin-left:4px;height:24px;">
+        <div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div>
+      </div>
+      <button onclick="AIAssistant.cancelQuery()" style="margin-left:auto;background:transparent;border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--text-primary)';this.style.borderColor='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-card)'">Cancelar</button>
+    `;
     container?.appendChild(typing);
     container.scrollTop = container.scrollHeight;
 
