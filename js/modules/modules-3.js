@@ -837,7 +837,7 @@ window.AIAssistant = (() => {
       body: JSON.stringify({
         messages: apiMessages,
         model: 'openai',
-        temperature: 0.2,
+        temperature: 0.6,
         seed: Math.floor(Math.random() * 1000000),
         jsonMode: false
       }),
@@ -855,8 +855,7 @@ window.AIAssistant = (() => {
         if (parsed.content) {
             aiText = parsed.content;
         } else if (parsed.reasoning && !parsed.content) {
-            // Model returned only reasoning or didn't format content properly
-            aiText = "🤖 **Análise Neural:**\n" + parsed.reasoning;
+            aiText = "❌ O motor neural encontrou um problema ao processar esta requisição específica. Por favor, tente perguntar de uma maneira diferente.";
         } else if (parsed.message && parsed.message.content) {
             aiText = parsed.message.content;
         }
