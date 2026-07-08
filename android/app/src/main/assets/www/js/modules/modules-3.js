@@ -630,13 +630,20 @@ window.AIAssistant = (() => {
         }
 
         if (eqParts.length > 0) {
-          resp += `\n📦 **Lista Detalhada de Peças Pendentes (${eqParts.length}):**\n`;
-          eqParts.forEach(p => {
-            const crit = p.critica ? '🚨 [CRÍTICA] ' : '';
-            resp += `  - ${crit}${p.descricao} (Qtd: ${p.quantidade})\n    Status: ${p.status} | Previsão: ${window.formatDate(p.prazoEntrega)}\n`;
-          });
+          const countCrit = eqParts.filter(p => p.critica).length;
+          const countNormal = eqParts.length - countCrit;
+          resp += `\n📦 **Resumo de Peças Pendentes (${eqParts.length} itens totais):**\n`;
+          resp += `  - **Críticas:** ${countCrit}\n`;
+          resp += `  - **Normais:** ${countNormal}\n`;
         } else if (intents.includes('parts')) {
           resp += `\n✅ Nenhuma peça pendente aguardando entrega.\n`;
+        }
+
+        const critRestr = eqRestr.filter(r => r.impactoCaminhosCriticos);
+        if (critRestr.length > 0 || eqCritParts.length > 0) {
+          resp += `\n🚨 **Análise de Caminho Crítico (Gargalos):**\n`;
+          if (critRestr.length > 0) resp += `  - ${critRestr.length} restrição(ões) com impacto direto no prazo final da manutenção.\n`;
+          if (eqCritParts.length > 0) resp += `  - ${eqCritParts.length} peça(s) atrasada(s)/pendente(s) bloqueando a linha de montagem.\n`;
         }
 
         const eqTasks = allTasks.filter(t => t.equipmentId === eq.id);
