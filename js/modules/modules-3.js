@@ -911,18 +911,35 @@ window.AIAssistant = (() => {
     if (cancelBtn) cancelBtn.style.display = 'block';
 
     currentAbortController = new AbortController();
+    
+    // Auto-timeout after 20s
+    const timeoutId = setTimeout(() => {
+      if (currentAbortController) {
+        currentAbortController.abort('TIMEOUT');
+      }
+    }, 20000);
 
     try {
       const dbContext = buildSystemContext(query);
       const responseText = await fetchPollinationsAI(query, dbContext, currentAbortController.signal);
+      clearTimeout(timeoutId);
       document.getElementById('ai-typing')?.remove();
       addMessage('ai', responseText);
       restoreSendButton();
     } catch(err) {
-      if (err.name === 'AbortError') return; // Cancelado pelo usuário
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError' && err.message !== 'TIMEOUT') return; // Cancelado pelo usuário
+      
       console.error(err);
       document.getElementById('ai-typing')?.remove();
-      // Fallback
+      
+      if (err.name === 'AbortError' && err.message === 'TIMEOUT') {
+          addMessage('ai', '🤖 **Timeout de Conexão**\n\nA rede neural demorou muito para responder (mais de 20 segundos) e a requisição foi cancelada automaticamente para não travar o sistema. Tente novamente em alguns instantes.');
+          restoreSendButton();
+          return;
+      }
+
+      // Fallback normal
       setTimeout(() => {
         const response = processQuery(query);
         addMessage('ai', response);
