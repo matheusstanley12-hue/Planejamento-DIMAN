@@ -794,87 +794,57 @@ window.AIAssistant = (() => {
   }
 
   function buildSystemContext(query) {
-    const eqs = window.DB && DB.equipment ? DB.equipment.list() : [];
-    const tasks = window.DB && DB.tasks ? DB.tasks.getAll() : [];
-    const parts = window.DB && DB.parts ? DB.parts.getAll() : [];
-    const restr = window.DB && DB.restrictions ? DB.restrictions.getAll() : [];
-    
-    let matchedEqs = extractEquipments(query);
-    if (matchedEqs.length > 0) {
-      lastMentionedEqs = matchedEqs;
-    } else if (lastMentionedEqs.length > 0 && /ela|ele|esse|essa|desta|deste|esta|este|atrasad|status|peca|pesa|porque|motivo/.test(normalize(query))) {
-      matchedEqs = lastMentionedEqs;
+    const intentTokens = window.DIMAN_INTENT_PARSER ? window.DIMAN_INTENT_PARSER.parseIntent(query) : [];
+    if (intentTokens.length > 0) {
+      lastMentionedEqs = DB.equipment.list().filter(e => intentTokens.includes(e.codigo));
     }
-
-    let eqData = eqs;
-    let taskData = tasks;
-    let partData = parts;
-    let restrData = restr;
-
-    if (matchedEqs.length > 0) {
-      const eqIds = matchedEqs.map(e => e.id);
-      eqData = matchedEqs;
-      taskData = tasks.filter(t => eqIds.includes(t.equipmentId));
-      partData = parts.filter(p => eqIds.includes(p.equipmentId));
-      restrData = restr.filter(r => eqIds.includes(r.equipmentId));
-    }
-
-    // Minify context to save tokens and focus AI
-    const minifiedEqs = eqData.map(e => ({
-      codigo: e.codigo, status: e.status, pctAvanco: e.pctAvanco,
-      liberacao: e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || 'Sem previsão'
-    }));
-    
-    const minifiedTasks = taskData.filter(t => t.status !== 'Concluída').map(t => ({
-      eq: eqs.find(x => x.id === t.equipmentId)?.codigo || '',
-      desc: t.descricao, status: t.status, 
-      resp: window.DB && DB.workforce ? DB.workforce.list().filter(w => w.currentTaskId === t.id).map(w => `${w.nome} (${w.currentState})`).join(', ') : t.responsavel
-    }));
-
-    const minifiedParts = partData.filter(p => ['Solicitada','Comprada','Em Transporte'].includes(p.status)).map(p => ({
-      eq: eqs.find(x => x.id === p.equipmentId)?.codigo || '',
-      desc: p.descricao, status: p.status, critica: p.critica, prazo: window.formatDate(p.prazoEntrega)
-    }));
-
-    return JSON.stringify({ equipamentos: minifiedEqs, tarefas_abertas: minifiedTasks, pecas_pendentes: minifiedParts, restricoes_abertas: restrData.filter(r => r.status === 'Aberta').map(r => ({ eq: eqs.find(x => x.id === r.equipmentId)?.codigo || '', desc: r.descricao, status: r.status })) });
+    return window.DIMAN_CONTEXT_BUILDER ? window.DIMAN_CONTEXT_BUILDER.buildFullSystemPrompt(query, intentTokens) : 'Sem contexto.';
   }
 
   async function fetchPollinationsAI(query, contextData) {
-    const prompt = `Você é o Assistente de IA avançado do DIMAN (Sistema Inteligente da Manutenção).
-Seu objetivo é analisar os dados operacionais em JSON fornecidos e responder EXATAMENTE o que foi perguntado, agindo como um consultor sênior especialista em confiabilidade e planejamento.
-
-Regras Absolutas de Comportamento:
-1. Responda sempre em Português do Brasil usando Markdown avançado (tabelas, listas, negrito, emojis industriais como ⚙️, 🔧, 🚨, 🛑, 📊, 📦).
-2. NUNCA invente ou assuma dados. Use APENAS as informações do JSON fornecido. Se a informação não estiver no JSON, diga que não há dados sobre isso.
-3. Se o usuário pedir para listar, citar ou perguntar "quais", você DEVE varrer o JSON e listar os itens específicos (ex: se perguntar "quais equipamentos estão atrasados", liste o código de cada um deles). Não responda com um mero resumo numérico nesses casos.
-4. Se o usuário perguntar o motivo de um atraso ou bloqueio de um equipamento, procure no JSON por peças críticas pendentes ou restrições ativas para aquele equipamento e aponte-as como a causa raiz provável.
-5. NUNCA diga que você é ChatGPT, OpenAI, Pollinations ou qualquer IA pública. Aja 100% como o motor neural nativo do DIMAN.
-
-Dados do Sistema (Tempo Real):
-${contextData}`;
+    if (window.DIMAN_CONVERSATION_MEMORY) {
+       window.DIMAN_CONVERSATION_MEMORY.addMessage('user', query);
+    }
+    
+    // Get chat history for memory
+    const history = window.DIMAN_CONVERSATION_MEMORY ? window.DIMAN_CONVERSATION_MEMORY.getHistory() : [{role:'user', content:query}];
+    
+    // Convert memory to Pollinations AI format (system prompt first, then history)
+    const apiMessages = [
+      { role: 'system', content: contextData }
+    ];
+    
+    history.forEach(m => {
+       apiMessages.push({ role: m.role, content: m.content });
+    });
 
     const res = await fetch('https://text.pollinations.ai/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          { role: 'system', content: prompt },
-          { role: 'user', content: query }
-        ],
+        messages: apiMessages,
         model: 'gpt-4o',
         temperature: 0.1
       })
     });
     
     if (!res.ok) throw new Error("Servidor Neural Indisponível");
-    return await res.text();
+    const aiText = await res.text();
+    if (window.DIMAN_CONVERSATION_MEMORY) {
+       window.DIMAN_CONVERSATION_MEMORY.addMessage('ai', aiText);
+    }
+    return aiText;
   }
 
-  async function sendQuery(query) {
-    if (!query?.trim()) return;
+  async function sendQuery(rawQuery) {
+    if (!rawQuery?.trim()) return;
     const input = document.getElementById('ai-input');
     if (input) input.value = '';
-    addMessage('user', query);
+    
+    // Parse intenções (ex: "Hoje", "Atrasadas")
+    const query = window.DIMAN_INTENT_PARSER ? window.DIMAN_INTENT_PARSER.expandShortQuery(rawQuery) : rawQuery;
+    
+    addMessage('user', rawQuery);
 
     const container = document.getElementById('ai-chat-messages');
     const typing = document.createElement('div');
