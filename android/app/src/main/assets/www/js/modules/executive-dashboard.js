@@ -13,13 +13,27 @@ window.ExecutiveDashboard = (() => {
     charts = {};
   }
 
+  function isMonth(dStr, mPrefix) {
+    if(!dStr) return false;
+    if(String(dStr).startsWith(mPrefix)) return true;
+    if(String(dStr).includes('/')) {
+      const p = String(dStr).split('/');
+      if(p.length===3 && p[2]+'-'+p[1].padStart(2,'0') === mPrefix) return true;
+    }
+    try {
+      const d = new Date(dStr);
+      if(!isNaN(d) && d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') === mPrefix) return true;
+    }catch(e){}
+    return false;
+  }
+
   function render() {
     const currentMonthPrefix = selectedMonth;
     // Data Fetching
     const eqs = DB.equipment ? DB.equipment.list() : [];
     const tasks = DB.tasks ? DB.tasks.getAll().filter(t => {
       const dt = t.dataRealInicio || t.dataPlanejadaInicio || t.dataRealTermino || '';
-      return dt.startsWith(currentMonthPrefix);
+      return isMonth(dt, currentMonthPrefix);
     }) : [];
     const stats = DB.kpi ? DB.kpi.getEquipmentStats(currentMonthPrefix) : { pctAvancoGeral: 0 };
     
@@ -28,8 +42,8 @@ window.ExecutiveDashboard = (() => {
     const emManutencao = eqs.filter(e => e.status === 'Em Manutenção').length;
     
     // Planejado vs Realizado (Current Month)
-    const libPlanejadasMes = eqs.filter(e => e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length;
-    const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt || '').startsWith(currentMonthPrefix)).length;
+    const libPlanejadasMes = eqs.filter(e => isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
+    const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
     
     const aderencia = libPlanejadasMes > 0 ? Math.round((libRealizadasMes / libPlanejadasMes) * 100) : 0;
     const avancoGeral = Math.round(stats.pctAvancoGeral || 0);
@@ -165,8 +179,8 @@ window.ExecutiveDashboard = (() => {
   function renderSectors(eqs, currentMonthPrefix) {
     const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
     return catsFull.map(cat => {
-      const p = eqs.filter(e => (e.tipo||'') === cat && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length;
-      const r = eqs.filter(e => (e.tipo||'') === cat && e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt || '').startsWith(currentMonthPrefix)).length;
+      const p = eqs.filter(e => (e.tipo||'') === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
+      const r = eqs.filter(e => (e.tipo||'') === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
       const pct = p > 0 ? Math.round((r/p)*100) : 0;
       return renderSectorCard(cat, p, r, pct);
     }).join('');

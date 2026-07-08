@@ -1024,6 +1024,20 @@ window.DB = (() => {
   };
 
   // ==================== KPI CALCULATIONS ====================
+  function isMonth(dStr, mPrefix) {
+    if(!dStr) return false;
+    if(String(dStr).startsWith(mPrefix)) return true;
+    if(String(dStr).includes('/')) {
+      const p = String(dStr).split('/');
+      if(p.length===3 && p[2]+'-'+p[1].padStart(2,'0') === mPrefix) return true;
+    }
+    try {
+      const d = new Date(dStr);
+      if(!isNaN(d) && d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0') === mPrefix) return true;
+    }catch(e){}
+    return false;
+  }
+
   const kpi = {
     getEquipmentStats(monthPrefix) {
       let eqs = equipment.list();
@@ -1034,10 +1048,10 @@ window.DB = (() => {
 
       if (monthPrefix) {
         // Filter equipments to those with release planned for this month or released this month
-        eqs = eqs.filter(e => (e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(monthPrefix)) || (e.dataLiberacaoAtual && e.dataLiberacaoAtual.startsWith(monthPrefix)) || (e.dataFim && e.dataFim.startsWith(monthPrefix)));
+        eqs = eqs.filter(e => isMonth(e.dataLiberacaoPlanejada, monthPrefix) || isMonth(e.dataLiberacaoAtual, monthPrefix) || isMonth(e.dataFim, monthPrefix));
         
         // Filter tasks to those created or updated this month
-        allTasks = allTasks.filter(t => (t.createdAt && t.createdAt.startsWith(monthPrefix)) || (t.dataFim && t.dataFim.startsWith(monthPrefix)));
+        allTasks = allTasks.filter(t => isMonth(t.createdAt, monthPrefix) || isMonth(t.dataFim, monthPrefix));
       }
 
       return {
