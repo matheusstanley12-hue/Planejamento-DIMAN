@@ -863,6 +863,9 @@ window.AIAssistant = (() => {
     } catch(e) {
         // Not a JSON, use raw text
     }
+    
+    // Remove Pollinations ad/watermark
+    aiText = aiText.replace(/Support Pollinations\.AI:[\s\S]*?accessible for everyone\./gi, '').trim();
 
     if (window.DIMAN_CONVERSATION_MEMORY) {
        window.DIMAN_CONVERSATION_MEMORY.addMessage('ai', aiText);
