@@ -816,10 +816,9 @@ window.AIAssistant = (() => {
        window.DIMAN_CONVERSATION_MEMORY.addMessage('user', query);
     }
     
-    // Get chat history for memory
     const history = window.DIMAN_CONVERSATION_MEMORY ? window.DIMAN_CONVERSATION_MEMORY.getHistory() : [{role:'user', content:query}];
     
-    // Convert memory to Pollinations AI format (system prompt first, then history)
+    // Convert memory to Pollinations AI format
     const apiMessages = [
       { role: 'system', content: contextData }
     ];
@@ -828,25 +827,39 @@ window.AIAssistant = (() => {
     const recentHistory = history.slice(-4);
     
     recentHistory.forEach(m => {
-       apiMessages.push({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content });
+       apiMessages.push({ role: m.role==='ai'?'assistant':'user', content: m.content });
     });
 
-    const res = await fetch('https://text.pollinations.ai/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: apiMessages,
-        model: 'openai',
-        temperature: 0.6,
-        seed: Math.floor(Math.random() * 1000000),
-        jsonMode: false
-      }),
-      signal: signal
-    });
+    const models = ['openai', 'claude', 'openai-large'];
+    let rawText = '';
     
-    if (!res.ok) throw new Error("Servidor Neural Indisponível");
+    for (let i = 0; i < models.length; i++) {
+        try {
+            const res = await fetch('https://text.pollinations.ai/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                messages: apiMessages,
+                model: models[i],
+                temperature: 0.6,
+                seed: Math.floor(Math.random() * 1000000),
+                jsonMode: false
+              }),
+              signal: signal
+            });
+            
+            if (res.ok) {
+                rawText = await res.text();
+                break;
+            }
+        } catch(e) {
+            if (e.name === 'AbortError' || e === 'TIMEOUT') throw e;
+            console.warn(`Model ${models[i]} failed, trying next...`);
+        }
+    }
     
-    const rawText = await res.text();
+    if (!rawText) throw new Error("Servidor Neural Indisponível em todos os modelos");
+
     let aiText = rawText;
     
     // Try to parse if it's JSON (Pollinations sometimes returns JSON containing reasoning and content)
@@ -929,6 +942,11 @@ window.AIAssistant = (() => {
     } catch(err) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError' && err.message !== 'TIMEOUT') return; // Cancelado pelo usuário
+      if (err === 'TIMEOUT') {
+          addMessage('ai', '🤖 **Timeout de Conexão**\n\nA rede neural demorou muito para responder (mais de 20 segundos) e a requisição foi cancelada automaticamente para não travar o sistema. Tente novamente em alguns instantes.');
+          restoreSendButton();
+          return;
+      }
       
       console.error(err);
       document.getElementById('ai-typing')?.remove();
