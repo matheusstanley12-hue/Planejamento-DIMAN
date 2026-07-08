@@ -833,7 +833,7 @@ window.AIAssistant = (() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: apiMessages,
-        model: 'openai',
+        model: 'gpt-4o',
         temperature: 0.1,
         jsonMode: false
       }),
