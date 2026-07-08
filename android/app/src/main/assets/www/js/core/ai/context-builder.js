@@ -38,10 +38,10 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
     if (!isTargeted) {
         const liberados = eqs.filter(e => e.status === 'Liberado');
         dataStr += `Resumo Geral: ${eqs.length} equipamentos, ${tasks.length} tarefas abertas, ${parts.length} peças pendentes.\n`;
-        dataStr += `Dica: Equipamentos com códigos que começam com SS (SSM, SSR, SSP, etc) são Sondas.\n`;
+        dataStr += `Dica: Equipamentos com códigos que começam com SS (SSM, SSR, SSP, etc) são Sondas. Preste muita atenção ao 'Tipo' do equipamento (ex: Sondas de Pesquisas vs Sondas Poços).\n`;
         dataStr += `Equipamentos Liberados (${liberados.length}):\n`;
         liberados.forEach(e => {
-            const desc = [e.modelo, e.nome, e.cliente].filter(Boolean).join(' | ');
+            const desc = [e.tipo, e.modelo, e.nome, e.cliente].filter(Boolean).join(' | ');
             dataStr += `- ${e.codigo} (${desc}) - Liberado em: ${e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || 'N/A'}\n`;
         });
         dataStr += `\n`;
