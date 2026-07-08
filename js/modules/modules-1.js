@@ -717,6 +717,9 @@ window.EquipmentModule = (() => {
       }).join('');
     };
 
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const canEditPlan = !eq || (session && (session.perfil === 'Administrador' || session.perfil === 'Planejador'));
+
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row">
         <div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
@@ -742,7 +745,7 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
-            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${eq ? 'readonly style="background:var(--bg-elevated);cursor:not-allowed;"' : ''} />
+            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${canEditPlan ? '' : 'readonly style="background:var(--bg-elevated);cursor:not-allowed;"'} />
             ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
         </div>
@@ -915,7 +918,7 @@ window.EquipmentModule = (() => {
     }
 
     if (id) { 
-      const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador'].includes(window.Auth.getSession().perfil);
+      const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador', 'Planejador'].includes(window.Auth.getSession().perfil);
       if (isDev && document.getElementById('eq-data-plan')) {
         data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value;
       }
