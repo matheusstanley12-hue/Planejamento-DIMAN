@@ -37,7 +37,8 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
     // Limit to prevent Payload Too Large errors on Pollinations API
     if (!isTargeted) {
         const liberados = eqs.filter(e => e.status === 'Liberado');
-        dataStr += `Resumo Geral: ${eqs.length} equipamentos, ${tasks.length} tarefas abertas, ${parts.length} peças pendentes.\n`;
+        const totalReplannings = eqs.reduce((acc, e) => acc + (e.replanning ? e.replanning.length : 0), 0);
+        dataStr += `Resumo Geral: ${eqs.length} equipamentos, ${tasks.length} tarefas abertas, ${parts.length} peças pendentes, ${totalReplannings} replanejamentos históricos globais.\n`;
         dataStr += `Dica: Equipamentos com códigos que começam com SS (SSM, SSR, SSP, etc) são Sondas. Preste muita atenção ao 'Tipo' do equipamento (ex: Sondas de Pesquisas vs Sondas Poços).\n`;
         dataStr += `Equipamentos Liberados (${liberados.length}):\n`;
         liberados.forEach(e => {
