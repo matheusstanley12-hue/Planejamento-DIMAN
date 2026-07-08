@@ -532,8 +532,6 @@ window.AIAssistant = (() => {
     });
   }
 
-  let lastMentionedEqs = [];
-
   function detectIntents(q) {
     q = normalize(q);
     const intents = [];
@@ -569,7 +567,6 @@ window.AIAssistant = (() => {
     const costs = window.DB && DB.costs ? DB.costs.getAll() : [];
     const eqsList = window.DB && DB.equipment ? DB.equipment.list() : [];
 
-    // Fallback para simular IA hiper-mega-inteligente quando nenhum equipamento exato é pego, mas a query pede detalhe
     if (matchedEqs.length === 0 && !intents.some(i => ['summary','productivity','costs','attendance','restrictions','history'].includes(i))) {
       return `🤖 **Aviso do Sistema Neural**\n\nDesculpe, não consegui processar essa pergunta específica com os dados locais e a rede neural da nuvem está inacessível no momento.\n\nVocê pode tentar reformular a pergunta ou me consultar sobre o **resumo da oficina**, **peças críticas**, ou o **status de um equipamento** específico (ex: SSM-265).`;
     }
@@ -589,7 +586,6 @@ window.AIAssistant = (() => {
       return resp;
     }
 
-    // If specific equipment mentioned
     if (matchedEqs.length > 0) {
       matchedEqs.forEach(eq => {
         resp += `📊 **Análise do Equipamento: ${eq.codigo}** (${eq.cliente})\n`;
@@ -672,7 +668,6 @@ window.AIAssistant = (() => {
       return resp;
     }
 
-    // General Summary Logic
     if (intents.includes('summary')) {
       const stats = DB.kpi.getEquipmentStats();
       const eqs = DB.equipment.list();
@@ -801,7 +796,7 @@ window.AIAssistant = (() => {
     return window.DIMAN_CONTEXT_BUILDER ? window.DIMAN_CONTEXT_BUILDER.buildFullSystemPrompt(query, intentTokens) : 'Sem contexto.';
   }
 
-  async function fetchPollinationsAI(query, contextData) {
+  async function fetchPollinationsAI(query, contextData, signal) {
     if (window.DIMAN_CONVERSATION_MEMORY) {
        window.DIMAN_CONVERSATION_MEMORY.addMessage('user', query);
     }
@@ -826,7 +821,8 @@ window.AIAssistant = (() => {
         model: 'openai',
         temperature: 0.1,
         jsonMode: false
-      })
+      }),
+      signal: signal
     });
     
     if (!res.ok) throw new Error("Servidor Neural Indisponível");
@@ -869,16 +865,20 @@ window.AIAssistant = (() => {
     const typing = document.createElement('div');
     typing.id = 'ai-typing';
     typing.style.cssText = 'display:flex;gap:var(--space-2);align-items:center;padding:var(--space-3);animation:fadeInUp .3s ease;';
-    typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Processando rede neural...</span>';
+    typing.innerHTML = `🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Consultando o Copiloto... 🧠</span>
+      <button onclick="AIAssistant.cancelQuery()" style="margin-left:auto;background:transparent;border:1px solid var(--border-card);border-radius:var(--radius-md);padding:4px 8px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:all .2s;" onmouseover="this.style.color='var(--text-primary)';this.style.borderColor='var(--text-secondary)'" onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-card)'">Cancelar</button>`;
     container?.appendChild(typing);
     container.scrollTop = container.scrollHeight;
 
+    currentAbortController = new AbortController();
+
     try {
       const dbContext = buildSystemContext(query);
-      const responseText = await fetchPollinationsAI(query, dbContext);
+      const responseText = await fetchPollinationsAI(query, dbContext, currentAbortController.signal);
       document.getElementById('ai-typing')?.remove();
       addMessage('ai', responseText);
     } catch(err) {
+      if (err.name === 'AbortError') return; // Cancelado pelo usuário
       console.error(err);
       document.getElementById('ai-typing')?.remove();
       // Fallback
@@ -886,6 +886,18 @@ window.AIAssistant = (() => {
         const response = processQuery(query);
         addMessage('ai', response);
       }, 300);
+    }
+  }
+
+  function cancelQuery() {
+    if (currentAbortController) {
+      currentAbortController.abort();
+      currentAbortController = null;
+    }
+    const typing = document.getElementById('ai-typing');
+    if (typing) {
+      typing.innerHTML = '🤖 <span style="color:var(--text-muted);font-size:var(--text-sm)">Pesquisa cancelada pelo usuário.</span>';
+      setTimeout(() => typing.remove(), 2500);
     }
   }
 
@@ -939,7 +951,7 @@ window.AIAssistant = (() => {
     if (input?.value?.trim()) sendQuery(input.value.trim());
   }
 
-  return { render, sendQuery, sendFromInput };
+  return { render, sendQuery, sendFromInput, cancelQuery };
 })();
 
 // ================================================================
