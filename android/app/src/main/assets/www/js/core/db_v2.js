@@ -211,6 +211,17 @@ window.DB = (() => {
         } else {
            upsertPayload = { collection: collection, key: 'all', data: data, updated_at: new Date().toISOString() };
         }
+         
+        // Anexar tombstones (itens deletados) ao payload para garantir que não voltem
+        try {
+           const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
+           const colTomb = tombstones.filter(t => t.collection === collection);
+           colTomb.forEach(t => {
+              if (Array.isArray(upsertPayload)) {
+                 upsertPayload.push({ collection: collection, key: t.key, data: { id: t.key, _deleted: true }, updated_at: new Date().toISOString() });
+              }
+           });
+        } catch(e) {}
 
         const { error } = await supabaseClient.from('diman_store')
           .upsert(upsertPayload, { onConflict: 'collection,key' });
@@ -233,9 +244,18 @@ window.DB = (() => {
   }
 
   async function deleteFromSupabase(collection, key) {
+     // Sempre salva localmente primeiro para garantir a deleção offline
+     try {
+        const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
+        if (!tombstones.find(t => t.collection === collection && t.key === key)) {
+           tombstones.push({ collection, key, timestamp: new Date().toISOString() });
+           localStorage.setItem('diman_tombstones', JSON.stringify(tombstones));
+           localStorage.setItem('diman_unsynced', 'true');
+        }
+     } catch(e) {}
+
      if (!supabaseClient) return;
      try {
-        // We MUST NOT hard delete! We need a tombstone so other clients know to delete it locally when they sync.
         await supabaseClient.from('diman_store').upsert({ 
             collection: collection, 
             key: key, 
@@ -1137,7 +1157,20 @@ window.DB = (() => {
         items[idx].pctAvanco = pct;
         changed = true;
       }
-      if (maxTaskDate && items[idx].dataLiberacaoAtual !== maxTaskDate) {
+
+      let status = items[idx].status;
+      if (pct === 100 && status !== 'Liberado') {
+        status = 'Aguardando Liberação';
+      }
+      // NUNCA reverte automaticamente um equipamento que já foi "Liberado" de volta para "Em Manutenção"
+      // pois os usuários podem querer mantê-lo liberado mesmo se adicionarem novas tarefas menores.
+      
+      if (items[idx].status !== status) {
+        items[idx].status = status;
+        changed = true;
+      }
+
+      if (maxTaskDate && items[idx].dataLiberacaoAtual !== maxTaskDate && status !== 'Liberado') {
         items[idx].dataLiberacaoAtual = maxTaskDate;
         changed = true;
       }
