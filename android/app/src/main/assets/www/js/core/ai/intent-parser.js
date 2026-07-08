@@ -5,19 +5,19 @@ window.DIMAN_INTENT_PARSER = (function() {
     
     if (!window.DB || !window.DB.equipment) return tokens;
 
-    // Se o usuário digitou apenas palavras muito curtas, inferimos a intenção.
-    const isShort = lowerQuery.split(' ').length <= 3;
+    const eqs = DB.equipment.list();
+    const queryClean = lowerQuery.replace(/[- ]/g, '');
     
-    if (isShort) {
-       const eqs = DB.equipment.list();
-       // Checa se mencionou algum equipamento ou cliente
-       eqs.forEach(e => {
-         if ((e.codigo && lowerQuery.includes(e.codigo.toLowerCase())) || 
-             (e.cliente && lowerQuery.includes(e.cliente.toLowerCase()))) {
-           tokens.push(e.codigo);
-         }
-       });
-    }
+    // Checa se mencionou algum equipamento ou cliente independentemente do tamanho da query
+    eqs.forEach(e => {
+      const codClean = (e.codigo||'').toLowerCase().replace(/[- ]/g, '');
+      const clientClean = (e.cliente||'').toLowerCase().replace(/[- ]/g, '');
+      
+      if ((codClean && codClean.length >= 3 && queryClean.includes(codClean)) || 
+          (clientClean && clientClean.length >= 3 && queryClean.includes(clientClean))) {
+        tokens.push(e.codigo);
+      }
+    });
 
     // Retorna tokens relevantes extraídos da intenção (ex: ['SSH530'])
     return [...new Set(tokens)];
