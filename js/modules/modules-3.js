@@ -925,10 +925,12 @@ window.AIAssistant = (() => {
 
     currentAbortController = new AbortController();
     
+    let wasTimeout = false;
     // Auto-timeout after 20s
     const timeoutId = setTimeout(() => {
       if (currentAbortController) {
-        currentAbortController.abort('TIMEOUT');
+        wasTimeout = true;
+        currentAbortController.abort();
       }
     }, 20000);
 
@@ -941,22 +943,19 @@ window.AIAssistant = (() => {
       restoreSendButton();
     } catch(err) {
       clearTimeout(timeoutId);
-      if (err.name === 'AbortError' && err.message !== 'TIMEOUT') return; // Cancelado pelo usuário
-      if (err === 'TIMEOUT') {
+      
+      if (wasTimeout) {
+          document.getElementById('ai-typing')?.remove();
           addMessage('ai', '🤖 **Timeout de Conexão**\n\nA rede neural demorou muito para responder (mais de 20 segundos) e a requisição foi cancelada automaticamente para não travar o sistema. Tente novamente em alguns instantes.');
           restoreSendButton();
           return;
       }
+      
+      if (err.name === 'AbortError') return; // Cancelado pelo usuário
       
       console.error(err);
       document.getElementById('ai-typing')?.remove();
       
-      if (err.name === 'AbortError' && err.message === 'TIMEOUT') {
-          addMessage('ai', '🤖 **Timeout de Conexão**\n\nA rede neural demorou muito para responder (mais de 20 segundos) e a requisição foi cancelada automaticamente para não travar o sistema. Tente novamente em alguns instantes.');
-          restoreSendButton();
-          return;
-      }
-
       // Fallback normal
       setTimeout(() => {
         const response = processQuery(query);
