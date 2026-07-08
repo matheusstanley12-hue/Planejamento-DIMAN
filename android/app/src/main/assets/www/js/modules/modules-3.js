@@ -824,12 +824,31 @@ window.AIAssistant = (() => {
       body: JSON.stringify({
         messages: apiMessages,
         model: 'openai',
-        temperature: 0.1
+        temperature: 0.1,
+        jsonMode: false
       })
     });
     
     if (!res.ok) throw new Error("Servidor Neural Indisponível");
-    const aiText = await res.text();
+    
+    const rawText = await res.text();
+    let aiText = rawText;
+    
+    // Try to parse if it's JSON (Pollinations sometimes returns JSON containing reasoning and content)
+    try {
+        const parsed = JSON.parse(rawText);
+        if (parsed.content) {
+            aiText = parsed.content;
+        } else if (parsed.reasoning && !parsed.content) {
+            // Model returned only reasoning or didn't format content properly
+            aiText = "🤖 **Análise Neural:**\n" + parsed.reasoning;
+        } else if (parsed.message && parsed.message.content) {
+            aiText = parsed.message.content;
+        }
+    } catch(e) {
+        // Not a JSON, use raw text
+    }
+
     if (window.DIMAN_CONVERSATION_MEMORY) {
        window.DIMAN_CONVERSATION_MEMORY.addMessage('ai', aiText);
     }
