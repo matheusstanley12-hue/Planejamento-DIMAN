@@ -1,0 +1,33 @@
+﻿import { diman } from './diman.js';
+import { mecanica } from './mecanica.js';
+import { eletrica } from './eletrica.js';
+import { hidraulica } from './hidraulica.js';
+import { pneumatica } from './pneumatica.js';
+import { automacao } from './automacao.js';
+import { instrumentacao } from './instrumentacao.js';
+import { pcm } from './pcm.js';
+import { planejamento } from './planejamento.js';
+import { normas } from './normas.js';
+import { componentes } from './componentes.js';
+import { fabricantes } from './fabricantes.js';
+import { compras } from './compras.js';
+import { estoque } from './estoque.js';
+import { diagnosticos } from './diagnosticos.js';
+
+window.DIMAN_AGENTS = window.DIMAN_AGENTS || {};
+window.DIMAN_AGENTS['diman'] = diman;
+window.DIMAN_AGENTS['mecanica'] = mecanica;
+window.DIMAN_AGENTS['eletrica'] = eletrica;
+window.DIMAN_AGENTS['hidraulica'] = hidraulica;
+window.DIMAN_AGENTS['pneumatica'] = pneumatica;
+window.DIMAN_AGENTS['automacao'] = automacao;
+window.DIMAN_AGENTS['instrumentacao'] = instrumentacao;
+window.DIMAN_AGENTS['pcm'] = pcm;
+window.DIMAN_AGENTS['planejamento'] = planejamento;
+window.DIMAN_AGENTS['normas'] = normas;
+window.DIMAN_AGENTS['componentes'] = componentes;
+window.DIMAN_AGENTS['fabricantes'] = fabricantes;
+window.DIMAN_AGENTS['compras'] = compras;
+window.DIMAN_AGENTS['estoque'] = estoque;
+window.DIMAN_AGENTS['diagnosticos'] = diagnosticos;
+

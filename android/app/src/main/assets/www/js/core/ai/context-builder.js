@@ -53,10 +53,17 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
   function buildFullSystemPrompt(userQuery, parsedIntentTokens) {
     const prompt = window.DIMAN_AI_PROMPT || '';
     const kb = window.DIMAN_KNOWLEDGE_BASE || '';
+    
+    // Inject agents
+    let agentsStr = "";
+    if (window.DIMAN_AGENTS) {
+        agentsStr = "\n=== AGENTES ESPECIALISTAS ATIVOS ===\n" + Object.keys(window.DIMAN_AGENTS).join(", ") + "\n";
+    }
+
     const screenCtx = getCurrentScreenContext();
     const dataCtx = getSystemDataOverview(parsedIntentTokens);
 
-    return `${prompt}\n\n=== BASE DE CONHECIMENTO ===\n${kb}\n\n=== CONTEXTO DO USUÁRIO ===\n${screenCtx}\n${dataCtx}`;
+    return `${prompt}\n${agentsStr}\n=== BASE DE CONHECIMENTO (LEGADO) ===\n${kb}\n\n=== CONTEXTO DO USUÁRIO ===\n${screenCtx}\n${dataCtx}`;
   }
 
   return {
