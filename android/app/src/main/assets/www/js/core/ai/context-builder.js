@@ -42,8 +42,8 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
     }
 
     const eqMin = filterEqs.map(e => ({
-       codigo: e.codigo, status: e.status, avanco: e.pctAvanco,
-       custo: e.custoAtual
+       codigo: e.codigo, os: e.os, cliente: e.cliente, modelo: e.modelo, 
+       status: e.status, avanco: e.pctAvanco, custo: e.custoAtual
     }));
 
     const taskMin = tasks.filter(t => filterEqs.some(e => e.id === t.equipmentId)).map(t => ({
