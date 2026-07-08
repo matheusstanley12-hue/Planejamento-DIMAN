@@ -36,9 +36,16 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
 
     // Limit to prevent Payload Too Large errors on Pollinations API
     if (!isTargeted) {
+        const liberados = eqs.filter(e => e.status === 'Liberado');
         dataStr += `Resumo Geral: ${eqs.length} equipamentos, ${tasks.length} tarefas abertas, ${parts.length} peças pendentes.\n`;
-        // Só injeta o json minificado dos 5 primeiros para dar uma ideia à IA.
-        filterEqs = eqs.slice(0, 5);
+        dataStr += `Equipamentos Liberados (${liberados.length}):\n`;
+        liberados.forEach(e => {
+            dataStr += `- ${e.codigo} (Cliente: ${e.cliente || 'N/A'}, Liberado em: ${e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || 'N/A'})\n`;
+        });
+        dataStr += `\n`;
+        
+        // Só injeta o json minificado dos 5 primeiros em manutenção para dar uma ideia à IA.
+        filterEqs = eqs.filter(e => e.status === 'Em Manutenção').slice(0, 5);
     }
 
     const eqMin = filterEqs.map(e => ({
