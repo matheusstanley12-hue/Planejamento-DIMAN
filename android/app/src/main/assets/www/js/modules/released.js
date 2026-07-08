@@ -64,17 +64,59 @@ window.ReleasedModule = (() => {
             </div>
           </div>
         </div>
-        <div style="display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fill,minmax(300px,1fr));">
-          ${eqs.length > 0 ? eqs.map(e => `
-            <div class="card hover-lift" onclick="Router.navigate('equipment-panel', {id:'${e.id}'})" style="cursor:pointer;padding:var(--space-4);border-left:4px solid var(--color-success);">
-              <div style="font-size:1.4rem;font-weight:900;">${e.codigo}</div>
-              <div style="color:var(--text-secondary);font-size:var(--text-sm);margin-bottom:var(--space-2);">${e.nome}</div>
-              <div style="display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);color:var(--text-muted);">
-                <span class="badge badge-success">Liberado</span>
-                ${e.dataRealLiberacao ? `<span>Data: ${formatDate(e.dataRealLiberacao)}</span>` : (e.dataLiberacaoAtual ? `<span>Data: ${formatDate(e.dataLiberacaoAtual)}</span>` : '')}
+        <div style="margin-top: 24px;">
+          ${(() => {
+            if (eqs.length === 0) return '<div style="padding:var(--space-6);color:var(--text-muted);text-align:center;">Nenhum equipamento liberado encontrado para este mês.</div>';
+            
+            // Group by tipo
+            const groups = {};
+            eqs.forEach(e => {
+                const tipo = e.tipo || 'Outros Equipamentos';
+                if (!groups[tipo]) groups[tipo] = [];
+                groups[tipo].push(e);
+            });
+            
+            // Render groups
+            return Object.keys(groups).sort().map(tipo => `
+              <div style="margin-bottom: 32px;">
+                <h3 style="font-size: 1.1rem; color: var(--text-secondary); border-bottom: 2px solid var(--border-light, #e2e8f0); padding-bottom: 8px; margin-bottom: 16px; font-weight: 700;">
+                  ${tipo} <span style="font-size:0.8rem; font-weight:500; background:var(--bg-card); padding:2px 8px; border-radius:12px; border:1px solid var(--border-card); margin-left:8px;">${groups[tipo].length} equipamento(s)</span>
+                </h3>
+                <div style="display:grid;gap:var(--space-4);grid-template-columns:repeat(auto-fill,minmax(300px,1fr));">
+                  ${groups[tipo].map(e => `
+                    <div class="card hover-lift" onclick="Router.navigate('equipment-panel', {id:'${e.id}'})" style="cursor:pointer;padding:var(--space-4);border-left:4px solid var(--color-success);display:flex;flex-direction:column;gap:8px;">
+                      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                          <div style="font-size:1.4rem;font-weight:900;">${e.codigo}</div>
+                          <div style="color:var(--text-secondary);font-size:var(--text-sm);">${e.nome || 'Sem Nome'}</div>
+                        </div>
+                        <span class="badge badge-success">Liberado</span>
+                      </div>
+                      
+                      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size:var(--text-xs); color:var(--text-muted); background: var(--bg-body, #f8fafc); padding: 8px; border-radius: 6px; margin-top: 4px;">
+                        <div>
+                          <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">Cliente</strong>
+                          ${e.cliente || '-'}
+                        </div>
+                        <div>
+                          <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">OS</strong>
+                          ${e.os || '-'}
+                        </div>
+                        <div>
+                          <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">Data Planejada</strong>
+                          ${e.dataLiberacaoPlanejada ? window.formatDate(e.dataLiberacaoPlanejada) : '-'}
+                        </div>
+                        <div>
+                          <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">Data Real</strong>
+                          <span style="color:var(--color-success);font-weight:600;">${e.dataRealLiberacao ? window.formatDate(e.dataRealLiberacao) : (e.dataLiberacaoAtual ? window.formatDate(e.dataLiberacaoAtual) : '-')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
               </div>
-            </div>
-          `).join('') : '<div style="grid-column:1/-1;padding:var(--space-6);color:var(--text-muted);text-align:center;">Nenhum equipamento liberado encontrado para este mês.</div>'}
+            `).join('');
+          })()}
         </div>
       </div>
     `;
