@@ -29,7 +29,7 @@ window.ExecutiveDashboard = (() => {
     
     // Planejado vs Realizado (Current Month)
     const libPlanejadasMes = eqs.filter(e => e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length;
-    const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && e.dataLiberacaoAtual && e.dataLiberacaoAtual.startsWith(currentMonthPrefix)).length;
+    const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt || '').startsWith(currentMonthPrefix)).length;
     
     const aderencia = libPlanejadasMes > 0 ? Math.round((libRealizadasMes / libPlanejadasMes) * 100) : 0;
     const avancoGeral = Math.round(stats.pctAvancoGeral || 0);
@@ -166,7 +166,7 @@ window.ExecutiveDashboard = (() => {
     const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
     return catsFull.map(cat => {
       const p = eqs.filter(e => (e.tipo||'') === cat && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length;
-      const r = eqs.filter(e => (e.tipo||'') === cat && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix)).length;
+      const r = eqs.filter(e => (e.tipo||'') === cat && e.status === 'Liberado' && (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt || '').startsWith(currentMonthPrefix)).length;
       const pct = p > 0 ? Math.round((r/p)*100) : 0;
       return renderSectorCard(cat, p, r, pct);
     }).join('');
