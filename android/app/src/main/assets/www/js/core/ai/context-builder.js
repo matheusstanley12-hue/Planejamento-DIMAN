@@ -23,30 +23,42 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
     const parts = DB.parts ? DB.parts.getAll() : [];
     const restr = DB.restrictions ? DB.restrictions.getAll() : [];
 
-    // Se o intentToken mencionar uma sonda específica (ex: SSH530), filtra para evitar overload.
     let filterEqs = eqs;
+    let isTargeted = false;
+    
     if (intentTokens && intentTokens.length > 0) {
        const matched = eqs.filter(e => intentTokens.some(tok => (e.codigo||'').toLowerCase().includes(tok.toLowerCase()) || (e.cliente||'').toLowerCase().includes(tok.toLowerCase())));
-       if (matched.length > 0) filterEqs = matched;
+       if (matched.length > 0) {
+           filterEqs = matched;
+           isTargeted = true;
+       }
     }
 
-    // Minificando os equipamentos retornados
+    // Limit to prevent Payload Too Large errors on Pollinations API
+    if (!isTargeted) {
+        dataStr += `Resumo Geral: ${eqs.length} equipamentos, ${tasks.length} tarefas abertas, ${parts.length} peças pendentes.\n`;
+        // Só injeta o json minificado dos 5 primeiros para dar uma ideia à IA.
+        filterEqs = eqs.slice(0, 5);
+    }
+
     const eqMin = filterEqs.map(e => ({
-       codigo: e.codigo, cliente: e.cliente, status: e.status, avanco: e.pctAvanco,
-       custo: e.custoAtual, previsao: e.dataLiberacaoAtual || 'Sem previsão'
+       codigo: e.codigo, status: e.status, avanco: e.pctAvanco,
+       custo: e.custoAtual
     }));
 
     const taskMin = tasks.filter(t => filterEqs.some(e => e.id === t.equipmentId)).map(t => ({
-       eq: eqs.find(x => x.id === t.equipmentId)?.codigo, desc: t.descricao, status: t.status, responsavel: t.responsavel
+       eq: eqs.find(x => x.id === t.equipmentId)?.codigo, desc: t.descricao, status: t.status
     }));
 
     const partsMin = parts.filter(p => filterEqs.some(e => e.id === p.equipmentId)).map(p => ({
        eq: eqs.find(x => x.id === p.equipmentId)?.codigo, desc: p.descricao, status: p.status, critica: p.critica
     }));
 
-    dataStr += "Equipamentos Relevantes: " + JSON.stringify(eqMin) + "\n";
-    dataStr += "Tarefas Relacionadas: " + JSON.stringify(taskMin) + "\n";
-    dataStr += "Peças Relacionadas: " + JSON.stringify(partsMin) + "\n";
+    dataStr += "Equipamentos Relevantes (Top 5 se genérico): " + JSON.stringify(eqMin) + "\n";
+    if (isTargeted) {
+        dataStr += "Tarefas: " + JSON.stringify(taskMin) + "\n";
+        dataStr += "Peças: " + JSON.stringify(partsMin) + "\n";
+    }
     return dataStr;
   }
 
