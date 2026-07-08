@@ -733,7 +733,7 @@ window.EquipmentModule = (() => {
       </div>
       <div class="form-row cols-3">
         <div class="form-group"><label>Modelo</label><input id="eq-modelo" value="${eq?.modelo||''}" /></div>
-        <div class="form-group"><label>Data de Entrada</label><input type="date" id="eq-entrada" value="${toDateInput(eq?.dataEntrada)}" /></div>
+        <div class="form-group"><label>Data de Entrada</label><input type="date" id="eq-entrada" value="${toDateInput(eq?.dataEntrada)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
         <div class="form-group">
           <label>Prioridade / Urgência</label>
           <select id="eq-prioridade" class="form-control" style="width:100%;height:38px;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:0 var(--space-3);">
@@ -745,11 +745,11 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
-            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" ${canEditPlan ? '' : 'readonly style="background:var(--bg-elevated);cursor:not-allowed;"'} />
+            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${canEditPlan ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} />
             ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
         </div>
-        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" /></div>
+        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
