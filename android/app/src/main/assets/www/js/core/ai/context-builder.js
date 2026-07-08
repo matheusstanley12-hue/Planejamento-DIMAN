@@ -66,7 +66,14 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
 
   function buildFullSystemPrompt(userQuery, parsedIntentTokens) {
     const prompt = window.DIMAN_AI_PROMPT || '';
-    const kb = window.DIMAN_KNOWLEDGE_BASE || '';
+    let kb = '';
+    
+    // Inject knowledge base ONLY if user is asking for help/tutorials to save tokens
+    const queryLower = (userQuery || '').toLowerCase();
+    const needsTutorial = queryLower.includes('como') || queryLower.includes('ajuda') || queryLower.includes('manual') || queryLower.includes('módulo') || queryLower.includes('sistema') || queryLower.includes('cadastrar') || queryLower.includes('onde fica');
+    if (needsTutorial) {
+        kb = "\n=== BASE DE CONHECIMENTO (LEGADO) ===\n" + (window.DIMAN_KNOWLEDGE_BASE || '');
+    }
     
     // Inject agents
     let agentsStr = "";
@@ -80,7 +87,7 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
     const session = window.Auth ? window.Auth.getSession() : null;
     const userName = session && session.nome ? session.nome.split(' ')[0] : 'Usuário';
 
-    return `${prompt}\n${agentsStr}\n=== BASE DE CONHECIMENTO (LEGADO) ===\n${kb}\n\n=== CONTEXTO DO USUÁRIO ===\nVocê está conversando com: **${userName}**.\n${screenCtx}\n${dataCtx}`;
+    return `${prompt}\n${agentsStr}${kb}\n\n=== CONTEXTO DO USUÁRIO ===\nVocê está conversando com: **${userName}**.\n${screenCtx}\n${dataCtx}`;
   }
 
   return {
