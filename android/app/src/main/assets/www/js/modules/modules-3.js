@@ -815,7 +815,7 @@ window.AIAssistant = (() => {
     ];
     
     history.forEach(m => {
-       apiMessages.push({ role: m.role, content: m.content });
+       apiMessages.push({ role: m.role === 'ai' ? 'assistant' : m.role, content: m.content });
     });
 
     const res = await fetch('https://text.pollinations.ai/', {
