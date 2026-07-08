@@ -949,9 +949,9 @@ window.AIAssistant = (() => {
 
     return `<div class="page-container">
       <div class="section-header"><div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>Assistente IA — Análise Inteligente</div></div>
-      <div style="display:grid;grid-template-columns:2fr 1fr;gap:var(--space-5);">
+      <div style="display:flex;flex-direction:column;gap:var(--space-5);">
         <!-- Chat -->
-        <div class="card" style="display:flex;flex-direction:column;height:70vh;">
+        <div class="card" style="display:flex;flex-direction:column;height:70vh;max-width:900px;margin:0 auto;width:100%;">
           <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
           <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);">
             <input id="ai-input" placeholder="Digite sua pergunta..." style="flex:1;" onkeydown="if(event.key==='Enter')AIAssistant.sendFromInput()" />
@@ -961,14 +961,6 @@ window.AIAssistant = (() => {
             <button id="ai-cancel-btn" class="btn" style="display:none;background:var(--bg-card);border:1px solid var(--border-card);color:var(--text-secondary);" onclick="AIAssistant.cancelQuery()">
               Cancelar
             </button>
-          </div>
-        </div>
-        <!-- Suggestions -->
-        <div style="display:flex;flex-direction:column;gap:var(--space-3);">
-          <div class="card"><div class="card-header"><div class="card-title">💡 Perguntas Sugeridas</div></div>
-            <div style="display:flex;flex-direction:column;gap:var(--space-2);">
-              ${suggestions.map(s=>`<button onclick="AIAssistant.sendQuery('${s}')" style="text-align:left;background:var(--bg-base);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-xs);color:var(--text-secondary);cursor:pointer;transition:all .15s;line-height:1.4;" onmouseover="this.style.borderColor='var(--brand-primary-light)'" onmouseout="this.style.borderColor='var(--border-card)'">${s}</button>`).join('')}
-            </div>
           </div>
         </div>
       </div>
