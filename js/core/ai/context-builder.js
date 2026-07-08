@@ -77,7 +77,10 @@ window.DIMAN_CONTEXT_BUILDER = (function() {
     const screenCtx = getCurrentScreenContext();
     const dataCtx = getSystemDataOverview(parsedIntentTokens);
 
-    return `${prompt}\n${agentsStr}\n=== BASE DE CONHECIMENTO (LEGADO) ===\n${kb}\n\n=== CONTEXTO DO USUÁRIO ===\n${screenCtx}\n${dataCtx}`;
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const userName = session && session.nome ? session.nome.split(' ')[0] : 'Usuário';
+
+    return `${prompt}\n${agentsStr}\n=== BASE DE CONHECIMENTO (LEGADO) ===\n${kb}\n\n=== CONTEXTO DO USUÁRIO ===\nVocê está conversando com: **${userName}**.\n${screenCtx}\n${dataCtx}`;
   }
 
   return {

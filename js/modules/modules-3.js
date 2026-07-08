@@ -507,7 +507,13 @@ window.SimulatorModule = (() => {
 // AI ASSISTANT MODULE
 // ================================================================
 window.AIAssistant = (() => {
-  const messages = [{ role:'ai', content:'Olá! Sou o Assistente de IA avançado do **PLANEJAMENTO DIMAN-BHZ**. Posso analisar dados em tempo real e responder perguntas detalhadas sobre equipamentos, tarefas, restrições, peças, produtividade, custos e riscos. **Importante:** Fui programado exclusivamente para tratar de dados operacionais deste sistema. Como posso ajudar na sua gestão hoje?' }];
+  let userName = 'Usuário';
+  if (window.Auth) {
+    const session = window.Auth.getSession();
+    if (session && session.nome) userName = session.nome.split(' ')[0];
+  }
+
+  const messages = [{ role:'ai', content:`Olá ${userName}! Sou o Assistente de IA avançado do **PLANEJAMENTO DIMAN-BHZ**. Posso analisar dados em tempo real e responder perguntas detalhadas sobre equipamentos, tarefas, restrições, peças, produtividade, custos e riscos. **Importante:** Fui programado exclusivamente para tratar de dados operacionais deste sistema. Como posso ajudar na sua gestão hoje?` }];
 
   function normalize(str) {
     return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "");
