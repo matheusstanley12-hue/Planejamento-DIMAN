@@ -876,7 +876,10 @@ window.AIAssistant = (() => {
   async function sendQuery(rawQuery) {
     if (!rawQuery?.trim()) return;
     const input = document.getElementById('ai-input');
-    if (input) input.value = '';
+    if (input) {
+      input.value = '';
+      input.style.height = '44px';
+    }
     
     // Parse intenções (ex: "Hoje", "Atrasadas")
     const query = window.DIMAN_INTENT_PARSER ? window.DIMAN_INTENT_PARSER.expandShortQuery(rawQuery) : rawQuery;
@@ -976,7 +979,7 @@ window.AIAssistant = (() => {
         <div class="card" style="display:flex;flex-direction:column;height:75vh;width:100%;">
           <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
           <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);align-items:flex-end;">
-            <textarea id="ai-input" placeholder="Digite sua pergunta... (Shift + Enter para quebrar linha)" style="flex:1;resize:vertical;min-height:44px;max-height:200px;padding:var(--space-2) var(--space-3);border:1px solid var(--border-input, var(--border-card));border-radius:var(--radius-md);background:var(--bg-base);color:var(--text-primary);font-family:inherit;line-height:1.5;overflow-y:auto;" rows="1" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); AIAssistant.sendFromInput(); }"></textarea>
+            <textarea id="ai-input" placeholder="Digite sua pergunta... (Shift + Enter para quebrar linha)" style="flex:1;resize:none;min-height:44px;max-height:300px;padding:10px var(--space-3);border:1px solid var(--border-input, var(--border-card));border-radius:var(--radius-md);background:var(--bg-base);color:var(--text-primary);font-family:inherit;line-height:1.5;overflow-y:auto;box-sizing:border-box;" rows="1" oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 300) + 'px'" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); AIAssistant.sendFromInput(); }"></textarea>
             <button id="ai-send-btn" class="btn btn-primary" style="height:44px;" onclick="AIAssistant.sendFromInput()">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
             </button>
