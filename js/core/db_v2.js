@@ -659,6 +659,14 @@ window.DB = (() => {
         }
       }
 
+      if (before.status === 'Liberado' && data.status && (data.status === 'Em Manutenção' || data.status === 'Aguardando Manutenção' || data.status === 'Backlog')) {
+        const tItems = get(KEYS.tasks);
+        const remainingTasks = tItems.filter(t => String(t.equipmentId) !== String(id));
+        if (tItems.length !== remainingTasks.length) {
+          set(KEYS.tasks, remainingTasks);
+        }
+      }
+
       if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('UPDATE_EQUIPMENT', `Equipamento ${items[idx].nome} atualizado`, { before, after: items[idx] });
       if (window.events && window.events.emit) window.events.emit('equipment:updated', items[idx]);
       return items[idx];

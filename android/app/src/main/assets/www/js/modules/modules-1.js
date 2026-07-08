@@ -895,14 +895,8 @@ window.EquipmentModule = (() => {
         }
       }
     }
-    // Check if status is Liberado and validate pending tasks
+    // Check if status is Liberado
     if (data.status === 'Liberado') {
-      const eqTasks = id ? DB.tasks.getByEquipment(id) : [];
-      const pendingTasks = eqTasks.filter(t => t.status !== 'Concluída');
-      if (pendingTasks.length > 0) {
-        Toast.error('Erro', `Existem ${pendingTasks.length} tarefa(s) pendente(s). Não é possível liberar o equipamento.`);
-        return;
-      }
       
       const existingEq = id ? DB.equipment.get(id) : null;
       if (!existingEq || existingEq.status !== 'Liberado') {
