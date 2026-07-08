@@ -781,7 +781,9 @@ window.AIAssistant = (() => {
       div.className = `ai-message ${role}`;
       div.innerHTML = `
         <div style="font-size:1.3rem;flex-shrink:0">${role === 'ai' ? '🤖' : '👤'}</div>
-        <div style="background:${role === 'ai' ? 'var(--bg-base)' : 'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;max-width:80%;">${content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;')}</div>
+        <div class="ai-message-content" style="background:${role === 'ai' ? 'var(--bg-base)' : 'rgba(21,101,192,0.2)'};border-radius:var(--radius-md);padding:var(--space-3);font-size:var(--text-sm);color:var(--text-secondary);line-height:1.6;max-width:80%;overflow-x:auto;">
+          ${window.marked ? window.marked.parse(content) : content.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/•/g,'&bull;')}
+        </div>
       `;
       div.style.cssText = 'display:flex;gap:var(--space-3);align-items:flex-start;margin-bottom:var(--space-3);animation:fadeInUp .3s ease;';
       if (role === 'user') {

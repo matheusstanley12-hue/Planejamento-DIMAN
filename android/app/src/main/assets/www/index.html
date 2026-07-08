@@ -29,6 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="js/supabase.js"></script>
 
   <script>
@@ -299,6 +300,26 @@
       .kpi-grid { grid-template-columns:repeat(2,1fr); }
       .charts-grid { grid-template-columns:1fr; }
     }
+    .ai-message-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 0.9em;
+    }
+    .ai-message-content th, .ai-message-content td {
+      border: 1px solid var(--border-default);
+      padding: 8px;
+      text-align: left;
+    }
+    .ai-message-content th {
+      background-color: rgba(0,0,0,0.05);
+      font-weight: 600;
+    }
+    .ai-message-content a {
+      color: var(--brand-primary);
+      text-decoration: underline;
+    }
+    
   </style>
 </head>
 <body>
