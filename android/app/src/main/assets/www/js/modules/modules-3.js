@@ -1088,11 +1088,23 @@ window.AIAssistant = (() => {
   }
 
   function handleImageInput() {
+    const mockPieceName = prompt("Simulação de IA Visual: Qual o nome da peça que está na foto? (ex: Bomba Rexroth A10VSO)");
+    
+    if (!mockPieceName) {
+      messages.push({ role:'user', content:`*[Imagem anexada]*` });
+      messages.push({ role:'ai', content:`A imagem não está nítida o suficiente para eu identificar o produto automaticamente. Você poderia descrever a peça ou enviar uma foto melhor?` });
+      renderMessages();
+      return;
+    }
+
     messages.push({ role:'user', content:`*[Imagem anexada para análise]*` });
     renderMessages();
     
     setTimeout(() => {
-      messages.push({ role:'ai', content:`**Análise Visual Concluída** 📷\n\nIdentifiquei a peça na imagem como sendo uma **Bomba Hidráulica de Pistão (Ref: Rexroth A10VSO)**.\n\nBusquei este produto no mercado e encontrei as seguintes opções de compra imediata:\n\n🛒 **Mercado Livre**\n- **Bomba Hidráulica A10vso45** (Nova)\n- **Preço:** R$ 18.500,00\n- [Acessar Anúncio no Mercado Livre](#)\n\n🛒 **Distribuidor Autorizado (Belo Horizonte)**\n- **Pronta Entrega:** Sim (3 unidades em estoque local)\n- **Preço Estimado:** R$ 21.000,00\n- **Contato:** (31) 3333-4444\n\n🔍 **Compatibilidade:** Sonda de Pesquisa, Sonda de Poços.\n\nDeseja que eu crie uma solicitação de compra (SC) no sistema para essa peça usando o fornecedor mais rápido?`});
+      const mlSearchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(mockPieceName)}`;
+      const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(mockPieceName + ' comprar')}`;
+
+      messages.push({ role:'ai', content:`**Análise Visual Concluída** 📷\n\nIdentifiquei a peça na imagem como: **${mockPieceName}**.\n\nBusquei este produto no mercado e gerei os links diretos para você consultar preços e disponibilidade:\n\n🛒 **Mercado Livre**\n- [Buscar "${mockPieceName}" no Mercado Livre](${mlSearchUrl})\n\n🔍 **Busca Google (Distribuidores)**\n- [Pesquisar fornecedores no Google](${googleSearchUrl})\n\nDeseja que eu registre o status deste equipamento como "Aguardando Peça" ou crie uma Solicitação de Compra (SC)?`});
       renderMessages();
     }, 2000);
   }
