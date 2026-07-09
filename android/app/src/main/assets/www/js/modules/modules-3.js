@@ -1149,11 +1149,17 @@ window.MeetingMode = (() => {
     completedTasks.forEach(t => {
       const taskWorkers = new Set();
       if (t.responsavel && t.responsavel !== 'Não atribuído' && t.responsavel !== 'Sistema') {
-        taskWorkers.add(t.responsavel);
+        t.responsavel.split(',').forEach(respName => {
+          const trimmed = respName.trim();
+          if (trimmed) taskWorkers.add(trimmed);
+        });
       }
       timesheets.forEach(ts => {
         if (ts.taskId === t.id && (!ts.tipo || ts.tipo === 'Trabalho') && ts.workerNome) {
-          taskWorkers.add(ts.workerNome);
+          ts.workerNome.split(',').forEach(respName => {
+            const trimmed = respName.trim();
+            if (trimmed) taskWorkers.add(trimmed);
+          });
         }
       });
       taskWorkers.forEach(wName => {

@@ -148,8 +148,13 @@ window.DPanel = (() => {
       const taskWorkers = new Set();
       if (t.responsavel && t.responsavel !== 'Não atribuído' && t.responsavel !== 'Sistema') {
         const wfList = window.DB.workforce ? window.DB.workforce.list() : [];
-        const w = wfList.find(wf => wf.nome === t.responsavel);
-        taskWorkers.add(w ? w.id : `name:${t.responsavel}`);
+        t.responsavel.split(',').forEach(respName => {
+           const trimmedName = respName.trim();
+           if (trimmedName) {
+             const w = wfList.find(wf => wf.nome === trimmedName);
+             taskWorkers.add(w ? w.id : `name:${trimmedName}`);
+           }
+        });
       }
       timesheets.forEach(ts => {
         if (ts.taskId === t.id && (!ts.tipo || ts.tipo === 'Trabalho')) {
