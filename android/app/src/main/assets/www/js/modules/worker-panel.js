@@ -38,7 +38,31 @@ window.WorkerPanel = (() => {
   }
 
   function getMyEquipments(session) {
-    return window.DB.equipment.list();
+    const eqs = window.DB.equipment.list();
+    const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+    if (isAdminMode || isManager) return eqs;
+
+    const myWorker = getMyWorker(session);
+    if (!myWorker) return [];
+
+    const myWorkerName = myWorker.nome || session.nome;
+    const allowedIds = myWorker.equipmentIds || [];
+    if (myWorker.equipmentId && !allowedIds.includes(myWorker.equipmentId)) {
+      allowedIds.push(myWorker.equipmentId);
+    }
+    
+    const allTasks = window.DB.tasks.getAll();
+
+    return eqs.filter(e => {
+      if (allowedIds.includes(e.id)) return true;
+      
+      const eqTasks = allTasks.filter(t => t.equipmentId === e.id && t.status !== 'Concluída');
+      return eqTasks.some(t => {
+        if (!t.responsavel) return false;
+        const resps = t.responsavel.split(',').map(s => s.trim());
+        return resps.includes(myWorkerName);
+      });
+    });
   }
 
   function canExecuteTask(session, task) {
