@@ -1,4 +1,4 @@
-window.EquipmentPanel = (() => {
+﻿window.EquipmentPanel = (() => {
   let currentEqId = null;
   let editingTaskId = null;
   let expandedTaskId = null; // store the ID of the expanded task
@@ -240,7 +240,7 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('resumo', 'RESUMO EXECUTIVO', 'chart-bar', renderResumo(eq, tasks, openRestr, pendingParts, adherencia, hPlan, hReal))}
           
-          ${['Mecânica','Mecânica de poço','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Teste','Retrabalho'].map(disc => {
+          ${['Mecânica','Caldeiraria','Elétrica','Usinagem','Pintor','Lavador','Montagem','Teste','Retrabalho'].map(disc => {
             const discTasks = tasks.filter(t => t.disciplina === disc);
             const discHPlan = discTasks.reduce((s,t) => s + (t.horasPlanejadas||0), 0);
             const discHReal = discTasks.reduce((s,t) => s + (t.horasRealizadas||0), 0);
@@ -1897,3 +1897,4 @@ window.EquipmentPanel = (() => {
     addCommentFromModal, updatePredsDisplay, removePred
   };
 })();
+

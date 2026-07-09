@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    PLANEJAMENTO DIMAN-BHZ — Module: Worker Panel (Executante)
    ============================================================ */
 
@@ -2305,7 +2305,7 @@ window.WorkerPanel = (() => {
                 <label>Setor Destino *</label>
                   <option value="Usinagem">Usinagem</option>
                   <option value="Mecânica">Mecânica</option>
-                  <option value="Mecânica de poço">Mecânica de poço</option>
+                  
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Caldeiraria">Caldeiraria</option>
@@ -2580,7 +2580,7 @@ window.WorkerPanel = (() => {
         <p style="color:var(--text-primary);font-size:14px;margin:0;">${s.observacoes}</p>
       </div>` : '';
 
-    const setores = ['Usinagem','Caldeiraria','Mecânica','Mecânica de poço','Teste','Retrabalho','Elétrica','Lubrificação','Subconjunto','Pintura','Lavador'];
+    const setores = ['Usinagem','Caldeiraria','Mecânica','Teste','Retrabalho','Elétrica','Lubrificação','Subconjunto','Pintura','Lavador'];
     const setorOptions = setores.map(st => `<option value="${st}" ${st === s.destino ? 'selected' : ''}>${st}</option>`).join('');
 
     // Remover modal anterior se existir
@@ -2952,7 +2952,7 @@ window.WorkerServices = (() => {
                   <option value="Usinagem">Usinagem</option>
                   <option value="Caldeiraria">Caldeiraria</option>
                   <option value="Mecânica">Mecânica</option>
-                  <option value="Mecânica de poço">Mecânica de poço</option>
+                  
                   <option value="Teste">Teste</option>
                   <option value="Retrabalho">Retrabalho</option>
                   <option value="Elétrica">Elétrica</option>
@@ -3097,3 +3097,4 @@ window.WorkerServices = (() => {
 
   return { render, openEditRequest, saveEditRequest };
 })();
+
