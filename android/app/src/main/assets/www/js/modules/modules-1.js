@@ -1,4 +1,4 @@
-﻿/* ================================================================
+/* ================================================================
    PLANEJAMENTO DIMAN-BHZ — All Remaining Modules (Compact)
    dashboard, workshop, equipment, tasks, gantt, critical-path,
    parts, workforce, planning, restrictions, costs, kpi, timeline,
@@ -310,55 +310,175 @@ window.Dashboard = (() => {
 // WORKSHOP MODULE (Controle de Oficina)
 // ================================================================
 window.WorkshopModule = (() => {
-  function render() {
-    const eqs = DB.equipment.list().filter(e => e.status !== 'Liberado');
-    const parts = DB.parts.getAll();
-    const today = new Date().toISOString().slice(0,10);
+  let charts = [];
 
-    return `<div class="page-container">
-      <div class="section-header">
-        <div class="section-title">
-          <div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15"/></svg></div>
-          Controle de Oficina
-        </div>
-        <div style="font-size:var(--text-sm);color:var(--text-muted);">${eqs.length} equipamentos em oficina</div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Equipamento</th><th>Cliente</th><th>Status</th><th>Avanço</th>
-            <th>Data Planejada</th><th>Dias</th><th>Peças Pendentes</th><th>Ações</th>
-          </tr></thead>
-          <tbody>
-            ${eqs.length === 0 ? `<tr><td colspan="8" style="text-align:center;padding:var(--space-8);color:var(--text-muted)">Nenhum equipamento em oficina</td></tr>` :
-            eqs.map(e => {
-              const pct = e.pctAvanco || 0;
-              const pctClass = pct >= 80 ? 'success' : pct >= 50 ? '' : 'warning';
-              const days = e.dataLiberacaoPlanejada ? daysBetween(today, e.dataLiberacaoPlanejada) : null;
-              const daysClass = days === null ? '' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success';
-              const pendParts = parts.filter(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
-              return `<tr>
-                <td><div style="font-weight:700">${e.codigo}</div><div style="font-size:var(--text-xs);color:var(--text-muted)">${e.nome.slice(0,30)}</div></td>
-                <td>${e.cliente}</td>
-                <td>${statusBadge(e.status)}</td>
-                <td style="min-width:120px;">
-                  <div class="workshop-status-bar"><div class="workshop-status-fill ${pctClass}" style="width:${pct}%;background:var(--color-${pctClass === 'success' ? 'success' : pctClass === 'warning' ? 'warning' : 'info'})"></div></div>
-                  <div style="font-size:10px;color:var(--text-muted);text-align:right;margin-top:2px">${pct}%</div>
-                </td>
-                <td>${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</td>
-                <td><span class="badge badge-${daysClass}">${days === null ? '—' : days < 0 ? Math.abs(days)+' atrasado' : days === 0 ? 'Hoje' : days+'d'}</span></td>
-                <td>${pendParts > 0 ? `<span class="badge badge-danger">${pendParts} pendente${pendParts>1?'s':''}</span>` : `<span class="badge badge-success">OK</span>`}</td>
-                <td><div class="table-actions">
-                  <button class="btn btn-secondary btn-sm" onclick="window.Router.navigate('equipment-panel', { id: '${e.id}' })">Ver</button>
-                </div></td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
+  function destroyCharts() {
+    charts.forEach(c => {
+      if (c) c.destroy();
+    });
+    charts = [];
   }
-  return { render };
+
+  function getDaysDiff(startStr, endStr) {
+    if (!startStr) return 0;
+    const start = new Date(startStr);
+    const end = endStr ? new Date(endStr) : new Date();
+    const diffTime = Math.abs(end - start);
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  function renderCharts() {
+    const eqs = window.DB.equipment.list();
+    const workshopData = eqs.map(eq => {
+      let status = eq.status || '';
+      let isCurrent = (status === 'Em Manutenção' || status === 'Aguardando Manutenção' || status === 'Backlog');
+      let days = 0;
+      if (eq.dataEntrada) {
+        if (isCurrent || !eq.dataLiberacaoAtual) {
+          days = getDaysDiff(eq.dataEntrada, new Date().toISOString());
+        } else {
+          days = getDaysDiff(eq.dataEntrada, eq.dataLiberacaoAtual);
+        }
+      }
+      return { ...eq, daysInWorkshop: days, isCurrent };
+    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada);
+
+    const currentInWorkshop = workshopData.filter(e => e.isCurrent).sort((a, b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
+    const categories = {};
+    workshopData.forEach(e => {
+      const cat = e.tipo || 'Outros';
+      if (!categories[cat]) categories[cat] = { totalDays: 0, count: 0 };
+      categories[cat].totalDays += e.daysInWorkshop;
+      categories[cat].count++;
+    });
+    const catLabels = Object.keys(categories);
+    const catAverages = catLabels.map(cat => (categories[cat].totalDays / categories[cat].count).toFixed(1));
+
+    const ctxTop = document.getElementById('chart-top-10');
+    if (ctxTop && currentInWorkshop.length > 0) {
+      charts.push(new Chart(ctxTop, {
+        type: 'bar',
+        data: {
+          labels: currentInWorkshop.map(e => e.codigo || e.nome),
+          datasets: [{
+            label: 'Dias na Oficina',
+            data: currentInWorkshop.map(e => e.daysInWorkshop),
+            backgroundColor: 'rgba(239, 68, 68, 0.8)',
+            borderRadius: 4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+      }));
+    } else if (ctxTop) {
+      ctxTop.parentElement.innerHTML = '<div class="empty-state"><p>Nenhum equipamento atualmente na oficina.</p></div>';
+    }
+
+    const ctxAvg = document.getElementById('chart-avg-cat');
+    if (ctxAvg && catLabels.length > 0) {
+      charts.push(new Chart(ctxAvg, {
+        type: 'bar',
+        data: {
+          labels: catLabels,
+          datasets: [{
+            label: 'Tempo Médio (Dias)',
+            data: catAverages,
+            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+            borderRadius: 4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      }));
+    } else if (ctxAvg) {
+      ctxAvg.parentElement.innerHTML = '<div class="empty-state"><p>Sem dados suficientes.</p></div>';
+    }
+  }
+
+  function render() {
+    const eqs = window.DB.equipment.list();
+    const workshopData = eqs.map(eq => {
+      let status = eq.status || '';
+      let isCurrent = (status === 'Em Manutenção' || status === 'Aguardando Manutenção' || status === 'Backlog');
+      let days = 0;
+      if (eq.dataEntrada) {
+        if (isCurrent || !eq.dataLiberacaoAtual) {
+          days = getDaysDiff(eq.dataEntrada, new Date().toISOString());
+        } else {
+          days = getDaysDiff(eq.dataEntrada, eq.dataLiberacaoAtual);
+        }
+      }
+      return { ...eq, daysInWorkshop: days, isCurrent };
+    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada);
+
+    let tabContent = `
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Top 10 Maior Tempo (Atuais na Oficina)</h3>
+          <div style="position:relative;height:300px;width:100%;"><canvas id="chart-top-10"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Tempo Médio por Categoria (Dias)</h3>
+          <div style="position:relative;height:300px;width:100%;"><canvas id="chart-avg-cat"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:var(--space-6);">
+        <div class="card-header" style="padding:var(--space-4);border-bottom:1px solid var(--border-card);display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="font-size:var(--text-lg);font-weight:700;">Histórico Detalhado</h3>
+          <span style="font-size:var(--text-sm);color:var(--text-muted);">${workshopData.length} registros</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table" style="width:100%; text-align:left; border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border-card);">
+                <th style="padding:12px;">Equipamento</th>
+                <th style="padding:12px;">Modelo/Tipo</th>
+                <th style="padding:12px;">Status Atual</th>
+                <th style="padding:12px;">Data Entrada</th>
+                <th style="padding:12px;">Tempo na Oficina</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${workshopData.sort((a,b) => b.daysInWorkshop - a.daysInWorkshop).map(eq => `
+                <tr style="border-bottom:1px solid var(--border-hover);">
+                  <td style="padding:12px;"><strong>${eq.codigo || eq.nome}</strong></td>
+                  <td style="padding:12px;">${eq.tipo || '-'}</td>
+                  <td style="padding:12px;">
+                    <span class="badge ${eq.isCurrent ? 'badge-warning' : 'badge-success'}" style="${eq.isCurrent ? 'background:rgba(239,68,68,0.1);color:var(--color-danger);border-color:rgba(239,68,68,0.2);' : 'background:rgba(34,197,94,0.1);color:var(--color-success);border-color:rgba(34,197,94,0.2);'}">
+                      ${eq.status || '-'}
+                    </span>
+                  </td>
+                  <td style="padding:12px;">${eq.dataEntrada ? new Date(eq.dataEntrada).toLocaleDateString('pt-BR') : '-'}</td>
+                  <td style="padding:12px;"><strong>${eq.daysInWorkshop} dias</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    const html = `
+      <div class="page-container fade-in">
+        <div class="section-header" style="margin-bottom: var(--space-6);">
+          <div class="section-title">
+            <div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15"/></svg></div>
+            Controle de Oficina
+          </div>
+        </div>
+
+        ${tabContent}
+      </div>
+    `;
+
+    setTimeout(renderCharts, 100);
+
+    return html;
+  }
+  
+  function destroy() {
+    destroyCharts();
+  }
+
+  return { render, destroy };
 })();
 
 // ================================================================
@@ -432,7 +552,11 @@ window.EquipmentModule = (() => {
                 groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
                   const pct = e.pctAvanco || 0;
                   const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
-                  const days = e.dataLiberacaoPlanejada ? daysBetween(refDate, e.dataLiberacaoPlanejada) : null;
+                  let ePlan = e.dataLiberacaoPlanejada;
+                  if (e.replanning && e.replanning.length > 0) {
+                    ePlan = e.replanning[e.replanning.length - 1].novaData;
+                  }
+                  const days = ePlan ? daysBetween(refDate, ePlan) : null;
                   const isLiberated = e.status === 'Liberado';
                   const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
                   const pendParts = parts.filter(p=>p.equipmentId===e.id&&['Solicitada','Comprada','Em Transporte'].includes(p.status)).length;
@@ -1196,6 +1320,7 @@ window.TasksModule = (() => {
 
   let _viewMode = 'equipments'; // 'equipments' | 'realtime'
   let _taskStatusFilter = 'Todos';
+  let _eqModelFilter = 'Todos';
 
   function setViewMode(mode) {
     _viewMode = mode;
@@ -1204,6 +1329,11 @@ window.TasksModule = (() => {
 
   function setTaskFilter(filter) {
     _taskStatusFilter = filter;
+    if (window.Router) window.Router.navigate(window.Router.getCurrent(), { force: true });
+  }
+
+  function setEqModelFilter(model) {
+    _eqModelFilter = model;
     if (window.Router) window.Router.navigate(window.Router.getCurrent(), { force: true });
   }
 
@@ -1241,7 +1371,14 @@ window.TasksModule = (() => {
     eqs.forEach(e => { equipMap[e.id] = e; });
 
     if (!eqFilter) {
-      const cardsHtml = eqs.map(e => {
+      const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+      
+      let filteredEqs = eqs;
+      if (_eqModelFilter !== 'Todos') {
+        filteredEqs = eqs.filter(e => (e.tipo || '') === _eqModelFilter);
+      }
+
+      const cardsHtml = filteredEqs.map(e => {
         const pct = e.pctAvanco || 0;
         const eqTasks = tasks.filter(t => t.equipmentId === e.id);
         const concludedCount = eqTasks.filter(t => t.status === 'Concluída').length;
@@ -1302,6 +1439,42 @@ window.TasksModule = (() => {
           
           <div style="margin-bottom:var(--space-5);font-size:var(--text-sm);color:var(--text-muted);">
             Selecione um equipamento abaixo para visualizar e gerenciar suas tarefas:
+          </div>
+          
+          <div style="margin-bottom:var(--space-6);">
+            <div style="position: relative; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-hover); box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
+              <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-muted);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                </svg>
+              </div>
+              <select class="input" style="width: 100%; padding-left: 44px; padding-top: 12px; padding-bottom: 12px; font-weight: 600; font-size: 1rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="if(this.value) TasksModule.setEq(this.value)">
+                <option value="">Pesquisar e selecionar equipamento...</option>
+                ${(() => {
+                  const groups = {};
+                  eqs.forEach(e => {
+                    const cod = e.codigo || '';
+                    let prefix = cod.split(/[\-\d]/)[0].trim().toUpperCase();
+                    if (!prefix) prefix = 'OUTROS';
+                    if (!groups[prefix]) groups[prefix] = [];
+                    groups[prefix].push(e);
+                  });
+                  const sortedGroups = Object.keys(groups).sort();
+                  return sortedGroups.map(groupName => {
+                    const groupOptions = groups[groupName].map(e => {
+                      const cod = e.codigo || '';
+                      const nom = e.nome || '';
+                      const displayName = (cod.trim() === nom.trim()) ? cod : `${cod} - ${nom}`;
+                      return `<option value="${e.id}">${displayName}</option>`;
+                    }).join('');
+                    return `<optgroup label="${groupName}">${groupOptions}</optgroup>`;
+                  }).join('');
+                })()}
+              </select>
+              <div style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--brand-primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+              </div>
+            </div>
           </div>
 
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-5);">
@@ -1918,7 +2091,8 @@ window.TasksModule = (() => {
     setEq,
     onFormChange,
     setViewMode,
-    setTaskFilter
+    setTaskFilter,
+    setEqModelFilter
   };
 })();
 

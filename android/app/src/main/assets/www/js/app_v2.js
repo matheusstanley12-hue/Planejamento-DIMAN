@@ -620,8 +620,8 @@ function renderShell(session) {
 
     { route:'timeline',   label:'Timeline',              icon:'clock',          perm:'timeline',    section:'' },
     { route:'impacts',    label:'Relatório de Impactos', icon:'document-report', perm:'impacts',    section:'' },
-    { route:'reports',    label:'Relatórios',            icon:'document-chart-bar', perm:'reports', section:'' },
-
+    { route:'reports',        label:'Relatórios',            icon:'document-chart-bar', perm:'dashboard', section:'RELATÓRIOS' },
+    { route:'audit',          label:'Auditoria (Log)',       icon:'clipboard-document-list', perm:'manageUsers', section:'' },
     { route:'checklists', label:'Check-lists (Anexos)',  icon:'document-report',perm:'dashboard',   section:'DOCUMENTAÇÃO & ROTINAS' },
     { route:'manuals',    label:'Gestão de Manuais',     icon:'document-report', perm:'equipment',  section:'' },
     { route:'meetings',   label:'Ata de Reunião',        icon:'clipboard-list', perm:'planning',    section:'' },

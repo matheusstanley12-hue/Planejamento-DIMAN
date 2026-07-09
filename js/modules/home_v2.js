@@ -46,8 +46,12 @@ window.HomeModule = (() => {
     const emManutencao = eqs.filter(e => e.status !== 'Liberado').length;
     let atrasados = 0;
     eqs.forEach(e => {
-      if (e.status !== 'Liberado' && e.dataLiberacaoPlanejada) {
-        const days = daysBetween(today, e.dataLiberacaoPlanejada);
+      let currentPlan = e.dataLiberacaoPlanejada;
+      if (e.replanning && e.replanning.length > 0) {
+        currentPlan = e.replanning[e.replanning.length - 1].novaData;
+      }
+      if (e.status !== 'Liberado' && currentPlan) {
+        const days = daysBetween(today, currentPlan);
         if (days < 0) atrasados++;
       }
     });
@@ -80,7 +84,11 @@ window.HomeModule = (() => {
       }
       
       const isManutencao = e.status !== 'Liberado' ? '1' : '0';
-      const isAtrasado = (e.status !== 'Liberado' && e.dataLiberacaoPlanejada && daysBetween(today, e.dataLiberacaoPlanejada) < 0) ? '1' : '0';
+      let ePlan = e.dataLiberacaoPlanejada;
+      if (e.replanning && e.replanning.length > 0) {
+        ePlan = e.replanning[e.replanning.length - 1].novaData;
+      }
+      const isAtrasado = (e.status !== 'Liberado' && ePlan && daysBetween(today, ePlan) < 0) ? '1' : '0';
       const isLib7 = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) >= 0 && daysBetween(today, e.dataLiberacaoAtual) <= 7) ? '1' : '0';
       const hasRestr = restrictions.some(r => r.equipmentId === e.id && r.status === 'Aberta') ? '1' : '0';
       const hasPecas = parts.some(p => p.equipmentId === e.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status)) ? '1' : '0';
@@ -201,7 +209,10 @@ window.HomeModule = (() => {
       eqIdsInBucket.forEach(id => {
          const eq = eqs.find(e => e.id === id);
          sumPct += eq.pctAvanco || 0;
-         const dtPlan = eq.dataLiberacaoPlanejada;
+         let dtPlan = eq.dataLiberacaoPlanejada;
+         if (eq.replanning && eq.replanning.length > 0) {
+           dtPlan = eq.replanning[eq.replanning.length - 1].novaData;
+         }
          if (eq.status !== 'Liberado' && dtPlan && daysBetween(today, dtPlan) < 0) {
             delayedCount++;
          }
@@ -462,11 +473,36 @@ window.HomeModule = (() => {
         <div style="margin-bottom:16px; display:flex; gap:16px; align-items:center; max-width:450px;">
           <div style="position: relative; width: 100%; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
             <div style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; z-index: 2;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
               </svg>
             </div>
-            <input type="text" id="home-search" class="input" placeholder="Pesquisar equipamento ou cliente..." style="width: 100%; padding-left: 40px; padding-top: 10px; padding-bottom: 10px; font-weight: 500; font-size: 0.95rem; border: none; background-color: transparent; color: var(--text-primary); outline: none;" oninput="window.HomeModule.filter(this.value)" autocomplete="off">
+            <select id="home-search" class="input" style="width: 100%; padding-left: 40px; padding-top: 10px; padding-bottom: 10px; font-weight: 500; font-size: 0.95rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none; outline: none;" onchange="window.HomeModule.filter(this.value)">
+              <option value="">Pesquisar e selecionar equipamento...</option>
+              ${(() => {
+                const groups = {};
+                eqs.forEach(e => {
+                  const cod = e.codigo || '';
+                  let prefix = cod.split(/[\-\d]/)[0].trim().toUpperCase();
+                  if (!prefix) prefix = 'OUTROS';
+                  if (!groups[prefix]) groups[prefix] = [];
+                  groups[prefix].push(e);
+                });
+                const sortedGroups = Object.keys(groups).sort();
+                return sortedGroups.map(groupName => {
+                  const groupOptions = groups[groupName].map(e => {
+                    const cod = e.codigo || '';
+                    const nom = e.cliente || '';
+                    const displayName = (cod.trim() === nom.trim() || nom === '') ? cod : `${cod} - ${nom}`;
+                    return `<option value="${cod}">${displayName}</option>`;
+                  }).join('');
+                  return `<optgroup label="${groupName}">${groupOptions}</optgroup>`;
+                }).join('');
+              })()}
+            </select>
+            <div style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--brand-primary);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/></svg>
+            </div>
           </div>
         </div>
 

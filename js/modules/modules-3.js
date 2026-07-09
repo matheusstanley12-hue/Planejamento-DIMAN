@@ -1,4 +1,4 @@
-﻿/* ================================================================
+/* ================================================================
    PLANEJAMENTO DIMAN-BHZ — Modules Batch 3
    Costs, Planning, KPI, Simulator, AI Assistant
    Meeting Mode, Timeline, Lessons, Reports, Audit, Users, Impacts
@@ -700,7 +700,13 @@ window.AIAssistant = (() => {
       resp += `• **${activeRestr}** restrições ativas no momento.\n`;
       resp += `• **${critParts}** peças críticas atrasando cronogramas.\n\n`;
 
-      const lateEqs = eqs.filter(e => e.status === 'Em Manutenção' && (e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) && window.daysBetween(new Date().toISOString().slice(0,10), e.dataLiberacaoAtual || e.dataLiberacaoPlanejada) < 0);
+      const lateEqs = eqs.filter(e => {
+        let ePlan = e.dataLiberacaoPlanejada;
+        if (e.replanning && e.replanning.length > 0) {
+          ePlan = e.replanning[e.replanning.length - 1].novaData;
+        }
+        return e.status === 'Em Manutenção' && ePlan && window.daysBetween(new Date().toISOString().slice(0,10), ePlan) < 0;
+      });
       if (lateEqs.length > 0) {
         resp += `⚠️ **Equipamentos Atrasados:**\n`;
         lateEqs.forEach(e => resp += `  - ${e.codigo} (Avanço: ${e.pctAvanco||0}%)\n`);
