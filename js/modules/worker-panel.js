@@ -1095,6 +1095,71 @@ window.WorkerPanel = (() => {
     const mm = now.getMinutes();
     const todayStr = now.toISOString().slice(0, 10);
 
+    // Fechar automaticamente tarefas do dia anterior que ficaram abertas
+    if (window.lastAutoConcludeDate !== todayStr) {
+      window.lastAutoConcludeDate = todayStr;
+      
+      let pendingWorkers = window.DB.workforce.list().filter(w => 
+        (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa') && 
+        w.currentActionStartTime && w.currentTaskId
+      );
+      
+      let tasksConcluded = 0;
+      
+      pendingWorkers.forEach(w => {
+        const startStr = w.currentActionStartTime.slice(0, 10);
+        if (startStr !== todayStr && startStr < todayStr) {
+          const t = window.DB.tasks.get(w.currentTaskId);
+          if (t) {
+            // Gerar apontamento de horas limitado a 12h no máximo, para o dia anterior
+            const startTime = new Date(w.currentActionStartTime);
+            let elapsedHrs = (new Date(startStr + 'T23:59:59Z') - startTime) / (1000 * 60 * 60);
+            if (elapsedHrs > 12) elapsedHrs = 12;
+            
+            if (elapsedHrs > 0) {
+               window.DB.timesheets.create({
+                  workerId: w.id,
+                  equipmentId: t.equipmentId || null,
+                  taskId: t.id,
+                  data: startStr,
+                  horaInicio: startTime.toISOString(),
+                  horaFim: new Date(startStr + 'T23:59:59Z').toISOString(),
+                  horasTrabalhadas: Math.max(0.01, Math.round(elapsedHrs * 100) / 100),
+                  tipo: w.currentState === 'Trabalhando' ? 'Trabalho' : 'Pausa'
+               });
+               
+               window.DB.tasks.update(t.id, { 
+                  horasRealizadas: (t.horasRealizadas || 0) + Math.max(0, Math.round(elapsedHrs * 100) / 100)
+               });
+            }
+
+            // Concluir a tarefa do dia anterior
+            if (t.status !== 'Concluída') {
+                window.DB.tasks.update(t.id, {
+                    status: 'Concluída',
+                    pctExecutado: 100,
+                    dataRealTermino: window.DB.now()
+                });
+            }
+          }
+          
+          // Libertar o executante
+          window.DB.workforce.update(w.id, {
+             currentState: 'Ocioso',
+             currentTaskId: null,
+             currentActionStartTime: null,
+             currentPauseReason: ''
+          });
+          tasksConcluded++;
+        }
+      });
+      
+      if (tasksConcluded > 0 && window.Toast) {
+         window.Toast.info('Ajuste Automático', `Foram concluídas ${tasksConcluded} tarefas esquecidas do dia anterior.`);
+         window.Router.navigate(window.location.hash.replace('#', '') || 'worker-panel', { force: true });
+      }
+    }
+
     // 12:00 -> Pausa Almoço
     if (hh === 12) {
       if (window.lastLunchPauseDate !== todayStr) {
