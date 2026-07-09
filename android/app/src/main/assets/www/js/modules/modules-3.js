@@ -1063,7 +1063,13 @@ window.AIAssistant = (() => {
         <div class="card" style="display:flex;flex-direction:column;height:75vh;width:100%;">
           <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
           <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);align-items:flex-end;">
-            <textarea id="ai-input" placeholder="Digite sua pergunta... (Shift + Enter para quebrar linha)" style="flex:1;resize:none;min-height:44px;max-height:300px;padding:10px var(--space-3);border:1px solid var(--border-input, var(--border-card));border-radius:var(--radius-md);background:var(--bg-base);color:var(--text-primary);font-family:inherit;line-height:1.5;overflow-y:auto;box-sizing:border-box;" rows="1" oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 300) + 'px'" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); AIAssistant.sendFromInput(); }"></textarea>
+            <button class="btn btn-ghost" style="height:44px;padding:0 var(--space-3);color:var(--text-secondary);" onclick="AIAssistant.mockCamera()" title="Tirar Foto">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg>
+            </button>
+            <button class="btn btn-ghost" style="height:44px;padding:0 var(--space-3);color:var(--text-secondary);" onclick="AIAssistant.mockUpload()" title="Anexar Imagem">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
+            </button>
+            <textarea id="ai-input" placeholder="Digite sua pergunta ou cole uma imagem... (Shift + Enter quebra linha)" style="flex:1;resize:none;min-height:44px;max-height:300px;padding:10px var(--space-3);border:1px solid var(--border-input, var(--border-card));border-radius:var(--radius-md);background:var(--bg-base);color:var(--text-primary);font-family:inherit;line-height:1.5;overflow-y:auto;box-sizing:border-box;" rows="1" oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 300) + 'px'" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); AIAssistant.sendFromInput(); }" onpaste="AIAssistant.handlePaste(event)"></textarea>
             <button id="ai-send-btn" class="btn btn-primary" style="height:44px;" onclick="AIAssistant.sendFromInput()">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
             </button>
@@ -1081,7 +1087,48 @@ window.AIAssistant = (() => {
     if (input?.value?.trim()) sendQuery(input.value.trim());
   }
 
-  return { render, sendQuery, sendFromInput, cancelQuery };
+  function handleImageInput() {
+    messages.push({ role:'user', content:`*[Imagem anexada para análise]*` });
+    renderMessages();
+    
+    setTimeout(() => {
+      messages.push({ role:'ai', content:`**Análise Visual Concluída** 📷\n\nIdentifiquei a peça na imagem como sendo uma **Bomba Hidráulica de Pistão (Ref: Rexroth A10VSO)**.\n\nBusquei este produto no mercado e encontrei as seguintes opções de compra imediata:\n\n🛒 **Mercado Livre**\n- **Bomba Hidráulica A10vso45** (Nova)\n- **Preço:** R$ 18.500,00\n- [Acessar Anúncio no Mercado Livre](#)\n\n🛒 **Distribuidor Autorizado (Belo Horizonte)**\n- **Pronta Entrega:** Sim (3 unidades em estoque local)\n- **Preço Estimado:** R$ 21.000,00\n- **Contato:** (31) 3333-4444\n\n🔍 **Compatibilidade:** Sonda de Pesquisa, Sonda de Poços.\n\nDeseja que eu crie uma solicitação de compra (SC) no sistema para essa peça usando o fornecedor mais rápido?`});
+      renderMessages();
+    }, 2000);
+  }
+
+  function mockCamera() {
+    window.Toast && Toast.info('Abrindo câmera...');
+    setTimeout(() => {
+      handleImageInput();
+    }, 1500);
+  }
+
+  function mockUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      if (e.target.files.length > 0) {
+        handleImageInput();
+      }
+    };
+    input.click();
+  }
+
+  function handlePaste(e) {
+    if (e.clipboardData && e.clipboardData.items) {
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        if (e.clipboardData.items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          handleImageInput();
+          break;
+        }
+      }
+    }
+  }
+
+  return { render, sendQuery, sendFromInput, cancelQuery, mockCamera, mockUpload, handlePaste };
 })();
 
 // ================================================================
@@ -1556,7 +1603,19 @@ window.ReportsModule = (() => {
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-4);">
         ${[
           {id:'aderencia', title:'Relatório de Aderência',icon:'📊',desc:'Aderência ao planejamento por período'},
-          {id:'equipamentos', title:'Relatório de Equipamentos',icon:'⚙️',desc:'Status e avanço de todos os equipamentos'},
+          {
+            id:'equipamentos', 
+            title:'Relatório de Equipamentos',
+            icon:'⚙️',
+            desc:'Status e avanço de todos os equipamentos',
+            extraHtml: `<select id="report-eq-type" class="input-field" style="width:100%;margin-top:10px;padding:6px;font-size:12px;border-radius:4px;border:1px solid var(--border-default);background:var(--bg-base);color:var(--text-primary);" onclick="event.stopPropagation()">
+              <option value="ALL">Todos os Tipos</option>
+              <option value="sonda de pesquisa">Sonda de Pesquisa</option>
+              <option value="sonda de poços">Sonda de Poços</option>
+              <option value="bomba de pesquisa">Bomba de Pesquisa</option>
+              <option value="bomba de poços">Bomba de Poços</option>
+            </select>`
+          },
           {id:'pecas', title:'Relatório de Peças',icon:'📦',desc:'Peças pendentes e criticidade'},
           {id:'custos', title:'Relatório de Custos',icon:'💰',desc:'Custos planejados vs realizados'},
           {id:'restricoes', title:'Relatório de Restrições',icon:'🚫',desc:'Restrições abertas e fechadas'},
@@ -1565,6 +1624,7 @@ window.ReportsModule = (() => {
           <div style="font-size:2rem;margin-bottom:var(--space-3)">${r.icon}</div>
           <div style="font-weight:700;font-size:var(--text-sm);margin-bottom:var(--space-2)">${r.title}</div>
           <div style="font-size:var(--text-xs);color:var(--text-muted)">${r.desc}</div>
+          ${r.extraHtml || ''}
           <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-4)">Gerar PDF</button>
         </div>`).join('')}
       </div>

@@ -265,6 +265,8 @@ window.EquipmentPanel = (() => {
           
           ${renderAccordion('svrequests', 'SOLICITAÇÕES DE SERVIÇO', 'clipboard', renderSvRequests(eq.id))}
           
+          ${renderAccordion('checklists', 'CHECK-LISTS E ANEXOS', 'document-report', renderChecklists(eq))}
+          
           ${renderAccordion('historico', 'HISTÓRICO & REPLANEJAMENTOS', 'clock', renderHistorico(eq))}
 
         </div>
@@ -484,6 +486,67 @@ window.EquipmentPanel = (() => {
         </div>
       </div>
     `;
+  }
+
+  function renderChecklists(eq) {
+    if (!eq.checklists) return '<div class="empty-state" style="padding:var(--space-6);"><p>Nenhum anexo encontrado para este equipamento.</p></div>';
+    
+    let html = '';
+    const tabs = [
+      { id: 'desmob', label: 'Desmobilização' },
+      { id: 'rec', label: 'Recebimento' },
+      { id: 'teste', label: 'Teste' },
+      { id: 'lib', label: 'Liberação' }
+    ];
+
+    tabs.forEach(tab => {
+      const files = eq.checklists[tab.id] || [];
+      if (files.length > 0) {
+        html += `<div style="margin-bottom:var(--space-4);">
+          <h4 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:var(--space-2);border-bottom:1px solid var(--border-card);padding-bottom:4px;">${tab.label}</h4>
+          <div class="table-wrap">
+            <table style="width:100%;text-align:left;">
+              <thead>
+                <tr>
+                  <th>Nome do Arquivo</th>
+                  <th>Data</th>
+                  <th>Tamanho</th>
+                  <th>Enviado por</th>
+                  <th style="width:50px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${files.map(f => `
+                  <tr>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:var(--space-2);font-weight:600;color:var(--brand-primary-light);">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;color:var(--text-muted)"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" /></svg>
+                        ${f.name}
+                      </div>
+                    </td>
+                    <td>${f.date}</td>
+                    <td>${f.size}</td>
+                    <td>${f.user}</td>
+                    <td>
+                      <button class="btn btn-ghost btn-sm" onclick="EquipmentPanel.downloadChecklistFile('${eq.id}', '${tab.id}', '${f.id}')" title="Baixar Anexo" style="color:var(--text-primary);padding:4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+      }
+    });
+
+    if (!html) return '<div class="empty-state" style="padding:var(--space-6);"><p>Nenhum anexo encontrado para este equipamento.</p></div>';
+    return html;
+  }
+
+  function downloadChecklistFile(eqId, tabId, fileId) {
+    window.Toast && Toast.success('Download simulado do arquivo.');
   }
 
   function toggleAccordion(headerEl) {
@@ -2014,7 +2077,7 @@ window.EquipmentPanel = (() => {
     cancelCommentEdit, saveCommentEdit, deleteComment, renderComments,
     togglePartEntregue, onStatusFormChange, onEntregueFormChange,
     getEditingTaskId: () => editingTaskId,
-    addCommentFromModal, updatePredsDisplay, removePred
+    addCommentFromModal, updatePredsDisplay, removePred, downloadChecklistFile
   };
 })();
 

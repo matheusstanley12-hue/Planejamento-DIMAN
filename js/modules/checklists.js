@@ -1,13 +1,6 @@
 window.ChecklistsModule = (() => {
   let currentTab = 'desmob';
-  
-  // Storage para os anexos na sessão atual
-  const attachments = {
-    'desmob': [],
-    'rec': [],
-    'teste': [],
-    'lib': []
-  };
+  let selectedEqId = null;
 
   const tabs = [
     { id: 'desmob', label: 'Desmobilização' },
@@ -21,7 +14,31 @@ window.ChecklistsModule = (() => {
     Router.navigate('checklists', { force: true });
   }
 
+  function setEquipment(eqId) {
+    selectedEqId = eqId;
+    Router.navigate('checklists', { force: true });
+  }
+
+  function getCurrentEquipment() {
+    if (!selectedEqId) return null;
+    return window.DB.equipment.get(selectedEqId);
+  }
+
+  function getAttachments() {
+    const eq = getCurrentEquipment();
+    if (!eq) return [];
+    if (!eq.checklists) eq.checklists = {};
+    if (!eq.checklists[currentTab]) eq.checklists[currentTab] = [];
+    return eq.checklists[currentTab];
+  }
+
   function mockUpload() {
+    const eq = getCurrentEquipment();
+    if (!eq) {
+      window.Toast && Toast.error('Selecione um equipamento primeiro.');
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
@@ -34,10 +51,13 @@ window.ChecklistsModule = (() => {
                       String(today.getMonth() + 1).padStart(2, '0') + '/' + 
                       today.getFullYear();
       
+      if (!eq.checklists) eq.checklists = {};
+      if (!eq.checklists[currentTab]) eq.checklists[currentTab] = [];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const sizeMb = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
-        attachments[currentTab].push({
+        eq.checklists[currentTab].push({
           id: Date.now() + i,
           name: file.name,
           date: dateStr,
@@ -46,6 +66,7 @@ window.ChecklistsModule = (() => {
         });
       }
       
+      window.DB.equipment.save(eq);
       window.Toast && Toast.success(files.length > 1 ? `${files.length} arquivos anexados!` : 'Arquivo anexado com sucesso!');
       Router.navigate('checklists', { force: true });
     };
@@ -53,16 +74,31 @@ window.ChecklistsModule = (() => {
   }
 
   function deleteFile(id) {
+    const eq = getCurrentEquipment();
+    if (!eq) return;
+
     window.uiConfirm('Tem certeza que deseja remover este anexo?', (res) => {
       if (!res) return;
-      attachments[currentTab] = attachments[currentTab].filter(f => f.id !== id);
+      if (eq.checklists && eq.checklists[currentTab]) {
+        eq.checklists[currentTab] = eq.checklists[currentTab].filter(f => f.id !== id);
+        window.DB.equipment.save(eq);
+      }
       window.Toast && Toast.success('Anexo removido.');
       Router.navigate('checklists', { force: true });
     });
   }
 
   function render() {
-    const currentFiles = attachments[currentTab] || [];
+    const eqs = window.DB.equipment.list().filter(e => {
+      if (e.status === 'Liberado') return false;
+      const tipo = (e.tipo || '').toLowerCase();
+      const isSondaOuBomba = tipo.includes('sonda') || tipo.includes('bomba');
+      const isPesquisaOuPoco = tipo.includes('pesquisa') || tipo.includes('poço') || tipo.includes('poco');
+      return isSondaOuBomba && isPesquisaOuPoco;
+    });
+    const eqOptions = eqs.map(e => `<option value="${e.id}" ${selectedEqId === e.id ? 'selected' : ''}>${e.codigo} - ${e.nome}</option>`).join('');
+    
+    const currentFiles = getAttachments();
     
     let html = `
       <div class="page-container" style="max-width:100%;padding:var(--space-6);">
@@ -75,12 +111,20 @@ window.ChecklistsModule = (() => {
             </div>
             <div>
               Check-lists (Anexos)
-              <div class="section-subtitle">Gerenciamento de arquivos e check-lists</div>
+              <div class="section-subtitle">Gerenciamento de arquivos e check-lists vinculados ao equipamento</div>
             </div>
           </div>
         </div>
 
-        <div class="card" style="padding:0;overflow:hidden;">
+        <div class="card" style="margin-bottom:var(--space-6);padding:var(--space-5);">
+          <label style="display:block;font-size:var(--text-sm);font-weight:600;color:var(--text-secondary);margin-bottom:8px;">Selecionar Equipamento na Oficina:</label>
+          <select class="input-field" onchange="ChecklistsModule.setEquipment(this.value)" style="width:100%;max-width:400px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);padding:10px 14px;">
+            <option value="">-- Selecione um equipamento --</option>
+            ${eqOptions}
+          </select>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;opacity:${selectedEqId ? '1' : '0.5'};pointer-events:${selectedEqId ? 'auto' : 'none'};">
           <!-- Tabs -->
           <div style="display:flex;border-bottom:1px solid var(--border-card);background:var(--bg-base);overflow-x:auto;">
             ${tabs.map(t => `
@@ -94,15 +138,19 @@ window.ChecklistsModule = (() => {
           <div style="padding:var(--space-5);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4);">
               <h3 style="font-size:1.2rem;font-weight:800;color:var(--text-primary);">Anexos - ${tabs.find(t=>t.id===currentTab)?.label}</h3>
-              <button class="btn btn-primary" onclick="ChecklistsModule.mockUpload()">
+              <button class="btn btn-primary" onclick="ChecklistsModule.mockUpload()" ${!selectedEqId ? 'disabled' : ''}>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:8px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 Anexar Arquivo
               </button>
             </div>
 
-            ${currentFiles.length === 0 ? `
+            ${!selectedEqId ? `
               <div class="empty-state" style="padding:var(--space-8) var(--space-4);">
-                <p>Nenhum anexo encontrado para esta etapa.</p>
+                <p>Selecione um equipamento acima para gerenciar anexos.</p>
+              </div>
+            ` : currentFiles.length === 0 ? `
+              <div class="empty-state" style="padding:var(--space-8) var(--space-4);">
+                <p>Nenhum anexo encontrado para esta etapa neste equipamento.</p>
               </div>
             ` : `
               <div class="table-wrap">
@@ -146,10 +194,11 @@ window.ChecklistsModule = (() => {
     return html;
   }
 
-  return { render, setTab, mockUpload, deleteFile };
+  return { render, setTab, setEquipment, mockUpload, deleteFile };
 })();
 
 // Register route
 if (typeof Router !== 'undefined') {
   Router.register('checklists', ChecklistsModule.render);
 }
+
