@@ -1018,27 +1018,14 @@ window.WorkerPanel = (() => {
           });
         }
 
-        const othersWorking = DB.workforce.list().some(w => w.currentTaskId === t.id && w.id !== myWorker.id && (w.currentState === 'Trabalhando' || w.currentState === 'Em Pausa'));
-        
-        if (!othersWorking) {
-          DB.tasks.update(t.id, {
-            status: 'Concluída',
-            pctExecutado: 100,
-            dataRealTermino: new Date().toISOString().slice(0,10),
-            observacoes: newObs,
-            anexos: attachments,
-            fotoComprovacao: base64Img || t.fotoComprovacao || ''
-          });
-        } else {
-          const updatePayload = {};
-          if (newObs && newObs !== t.observacoes) updatePayload.observacoes = newObs;
-          if (attachments.length > 0) updatePayload.anexos = attachments;
-          if (base64Img) updatePayload.fotoComprovacao = base64Img;
-          
-          if (Object.keys(updatePayload).length > 0) {
-            DB.tasks.update(t.id, updatePayload);
-          }
-        }
+        DB.tasks.update(t.id, {
+          status: 'Concluída',
+          pctExecutado: 100,
+          dataRealTermino: new Date().toISOString().slice(0,10),
+          observacoes: newObs || t.observacoes,
+          anexos: attachments,
+          fotoComprovacao: base64Img || t.fotoComprovacao || ''
+        });
       }
 
       // Set all target workers to Ocioso
