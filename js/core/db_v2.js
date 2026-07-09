@@ -1136,7 +1136,8 @@ window.DB = (() => {
 
   function recalculateEquipmentProgress(equipmentId) {
     if (!equipmentId) return;
-    const allTasks = get(KEYS.tasks).filter(t => t.equipmentId === equipmentId);
+    const allEqTasks = get(KEYS.tasks).filter(t => t.equipmentId === equipmentId);
+    const allTasks = allEqTasks.filter(t => !t.parentId); // Only count main/standalone tasks
     const total = allTasks.length;
     let pct = 0;
     
@@ -1237,7 +1238,8 @@ window.DB = (() => {
           }
         }
 
-        const eqTasks = get(KEYS.tasks).filter(t => t.equipmentId === e.id);
+        const allEqTasks = get(KEYS.tasks).filter(t => t.equipmentId === e.id);
+        const eqTasks = allEqTasks.filter(t => !t.parentId);
         const total = eqTasks.length;
         let pct = 0;
         if (total > 0) {

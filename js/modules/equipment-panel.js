@@ -1,4 +1,4 @@
-﻿window.EquipmentPanel = (() => {
+window.EquipmentPanel = (() => {
   let currentEqId = null;
   let editingTaskId = null;
   let expandedTaskId = null; // store the ID of the expanded task
@@ -281,6 +281,20 @@
               <input type="text" id="new-task-desc" placeholder="Ex: Montagem do rolamento principal" />
             </div>
             
+            <div class="form-row cols-2" style="margin-bottom:var(--space-3);">
+              <div class="form-group">
+                <label>Tipo de Tarefa</label>
+                <select id="new-task-type" onchange="const p = document.getElementById('new-task-parent-container'); if(this.value==='sub') p.style.display='block'; else p.style.display='none';">
+                  <option value="main">Tarefa Principal (Agrupadora)</option>
+                  <option value="sub">Subtarefa</option>
+                </select>
+              </div>
+              <div class="form-group" id="new-task-parent-container" style="display:none;">
+                <label>Tarefa Principal Correspondente</label>
+                <select id="new-task-parent"></select>
+              </div>
+            </div>
+            
             <div class="form-row" style="margin-bottom:var(--space-3);">
               <div class="form-group">
                 <label>Responsável</label>
@@ -537,41 +551,83 @@
               </tr>
             </thead>
             <tbody>
-              ${tasks.map(t => {
-                const isChecked = t.status === 'Concluída';
-                const isTaskCritico = window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t, allEqTasks) : t.critico;
+              ${(() => {
+                const mainTasks = tasks.filter(t => !t.parentId);
+                let rowsHtml = '';
                 
-                const preds = (t.predecessoras || []).map(pid => allEqTasks.find(x => x.id === pid)).filter(Boolean);
-                const predsHtml = preds.map(p => `
-                  <span class="badge" style="font-size:9px;padding:2px 6px;background:rgba(255,179,0,0.15);color:var(--color-warning);border:1px solid rgba(255,179,0,0.25);display:inline-flex;align-items:center;gap:3px;margin-top:2px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:9px;height:9px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
-                    Depende: ${p.descricao} (${p.disciplina})
-                  </span>
-                `).join(' ');
+                mainTasks.forEach(t => {
+                  const subTasks = tasks.filter(st => st.parentId === t.id);
+                  const isChecked = t.status === 'Concluída';
+                  const isTaskCritico = window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t, allEqTasks) : t.critico;
+                  
+                  const preds = (t.predecessoras || []).map(pid => allEqTasks.find(x => x.id === pid)).filter(Boolean);
+                  const predsHtml = preds.map(p => `
+                    <span class="badge" style="font-size:9px;padding:2px 6px;background:rgba(255,179,0,0.15);color:var(--color-warning);border:1px solid rgba(255,179,0,0.25);display:inline-flex;align-items:center;gap:3px;margin-top:2px;">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:9px;height:9px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" /></svg>
+                      Depende: ${p.descricao} (${p.disciplina})
+                    </span>
+                  `).join(' ');
 
-                return `
-                <tr style="${isChecked?'opacity:0.7;':''} ${isTaskCritico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
-                  <td><input type="checkbox" ${isChecked?'checked':''} onclick="event.stopPropagation(); window.EquipmentPanel.updateTaskStatus('${currentEqId}', '${t.id}', this.checked ? 'Concluída' : 'Não Iniciada')" style="cursor:pointer;" /></td>
-                  <td>
-                    <div style="font-weight:600;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;">
-                      ${isTaskCritico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;">CRÍTICO</span>':''}
-                      ${predsHtml}
-                    </div>
-                  </td>
-                  <td style="font-size:var(--text-xs);color:var(--text-muted);">${t.dataPlanejadaInicio ? `${formatDate(t.dataPlanejadaInicio)} → ${formatDate(t.dataPlanejadaTermino)}` : '—'}</td>
-                  <td style="font-size:var(--text-xs);color:var(--brand-primary-light);font-weight:600;">${t.dataReplanejada ? formatDate(t.dataReplanejada) : '—'}</td>
-                  <td>${t.responsavel || '—'}</td>
-                  <td>${statusBadge(t.status)}</td>
-                  <td><span style="font-weight:700;color:var(--text-primary);">${t.pctExecutado||0}%</span></td>
-                  ${canEdit ? `<td>
-                    <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.EquipmentPanel.deleteTask('${currentEqId}', '${t.id}')" style="color:var(--color-danger);padding:4px;">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                    </button>
-                  </td>` : ''}
-                </tr>
-                `;
-              }).join('')}
+                  const hasSubs = subTasks.length > 0;
+                  const toggleBtn = hasSubs ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); const e = document.getElementById('subtasks-${t.id}'); e.style.display = e.style.display === 'none' ? 'table-row-group' : 'none'; const i = this.querySelector('svg'); i.style.transform = e.style.display === 'none' ? 'rotate(0deg)' : 'rotate(90deg)';" style="padding:4px;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;transition:transform 0.2s;"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg></button>` : '';
+
+                  rowsHtml += `
+                  <tr style="${isChecked?'opacity:0.7;':''} ${isTaskCritico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
+                    <td style="text-align:center;">${toggleBtn}</td>
+                    <td>
+                      <div style="font-weight:600;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;">
+                        ${isTaskCritico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;">CRÍTICO</span>':''}
+                        ${predsHtml}
+                        ${hasSubs ? `<span style="font-size:9px;background:var(--bg-card);color:var(--text-secondary);padding:1px 4px;border-radius:2px;border:1px solid var(--border-hover);display:inline-block;">${subTasks.length} SUBTAREFAS</span>` : ''}
+                      </div>
+                    </td>
+                    <td style="font-size:var(--text-xs);color:var(--text-muted);">${t.dataPlanejadaInicio ? `${formatDate(t.dataPlanejadaInicio)} → ${formatDate(t.dataPlanejadaTermino)}` : '—'}</td>
+                    <td style="font-size:var(--text-xs);color:var(--brand-primary-light);font-weight:600;">${t.dataReplanejada ? formatDate(t.dataReplanejada) : '—'}</td>
+                    <td>${t.responsavel || '—'}</td>
+                    <td>${statusBadge(t.status)}</td>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-weight:700;color:var(--text-primary);">${t.pctExecutado||0}%</span>
+                        <div style="flex:1;height:4px;background:var(--border-default);border-radius:2px;overflow:hidden;"><div style="height:100%;background:var(--brand-primary);width:${t.pctExecutado||0}%"></div></div>
+                      </div>
+                    </td>
+                    ${canEdit ? `<td>
+                      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.EquipmentPanel.deleteTask('${currentEqId}', '${t.id}')" style="color:var(--color-danger);padding:4px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                      </button>
+                    </td>` : ''}
+                  </tr>
+                  `;
+
+                  if (hasSubs) {
+                    rowsHtml += `<tbody id="subtasks-${t.id}" style="display:none;background:rgba(0,0,0,0.1);">`;
+                    subTasks.forEach(st => {
+                      const stChecked = st.status === 'Concluída';
+                      rowsHtml += `
+                      <tr style="${stChecked?'opacity:0.7;':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${st.disciplina}', '${st.id}')" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''">
+                        <td style="border-left:2px solid var(--brand-primary-light);"></td>
+                        <td style="padding-left:var(--space-6);">
+                          <div style="font-weight:500;color:var(--text-secondary);${stChecked?'text-decoration:line-through;':''}"><span style="color:var(--text-muted);margin-right:4px;">└</span>${st.descricao}</div>
+                        </td>
+                        <td style="font-size:var(--text-xs);color:var(--text-muted);">${st.dataPlanejadaInicio ? `${formatDate(st.dataPlanejadaInicio)} → ${formatDate(st.dataPlanejadaTermino)}` : '—'}</td>
+                        <td style="font-size:var(--text-xs);color:var(--brand-primary-light);font-weight:600;">${st.dataReplanejada ? formatDate(st.dataReplanejada) : '—'}</td>
+                        <td style="font-size:12px;">${st.responsavel || '—'}</td>
+                        <td>${statusBadge(st.status)}</td>
+                        <td><span style="font-weight:700;color:var(--text-secondary);">${st.pctExecutado||0}%</span></td>
+                        ${canEdit ? `<td>
+                          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); window.EquipmentPanel.deleteTask('${currentEqId}', '${st.id}')" style="color:var(--color-danger);padding:4px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                          </button>
+                        </td>` : ''}
+                      </tr>
+                      `;
+                    });
+                    rowsHtml += `</tbody>`;
+                  }
+                });
+                return rowsHtml;
+              })()}
             </tbody>
           </table>
         </div>`;
@@ -878,6 +934,11 @@
     const predsSelect = document.getElementById('new-task-preds');
     predsSelect.innerHTML = otherTasks.map(ot => `<option value="${ot.id}">${ot.descricao} (${ot.disciplina})</option>`).join('');
 
+    // Render Parent Tasks selector options
+    const parentSelect = document.getElementById('new-task-parent');
+    const mainTasks = otherTasks.filter(t => !t.parentId); // Only tasks without parents
+    parentSelect.innerHTML = '<option value="">(Nenhuma / Selecione)</option>' + mainTasks.map(ot => `<option value="${ot.id}">${ot.descricao}</option>`).join('');
+
     // Populate the Responsável dropdown based on workforce allocated to currentEqId
     const respSelect = document.getElementById('new-task-resp');
     let wf = DB.workforce.list();
@@ -926,6 +987,18 @@
       document.getElementById('new-task-replan').value = t.dataReplanejada || '';
       document.getElementById('new-task-critico').checked = !!t.critico;
       if (deleteBtn) deleteBtn.style.display = 'block';
+
+      const typeSelect = document.getElementById('new-task-type');
+      const parentContainer = document.getElementById('new-task-parent-container');
+      if (t.parentId) {
+        typeSelect.value = 'sub';
+        parentContainer.style.display = 'block';
+        document.getElementById('new-task-parent').value = t.parentId;
+      } else {
+        typeSelect.value = 'main';
+        parentContainer.style.display = 'none';
+        document.getElementById('new-task-parent').value = '';
+      }
       
       const session = window.Auth.getSession();
       const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
@@ -1019,6 +1092,10 @@
       const saveBtn = document.getElementById('new-task-save-btn');
       if (saveBtn) saveBtn.style.display = 'block';
       Array.from(predsSelect.options).forEach(opt => opt.selected = false);
+      
+      document.getElementById('new-task-type').value = 'main';
+      document.getElementById('new-task-parent-container').style.display = 'none';
+      document.getElementById('new-task-parent').value = '';
     }
     
     document.getElementById('preds-edit-area').style.display = 'none';
@@ -1143,6 +1220,9 @@
       inputPct = 10;
     }
 
+    const taskType = document.getElementById('new-task-type').value;
+    const parentId = (taskType === 'sub') ? document.getElementById('new-task-parent').value : null;
+
     const taskData = {
       equipmentId: eqId || currentEqId,
       descricao: desc,
@@ -1159,15 +1239,17 @@
       observacoes: finalObservacoes,
       predecessoras: selectedPreds,
       status: finalStatus,
-      pctExecutado: inputPct
+      pctExecutado: inputPct,
+      parentId: parentId
     };
     const targetEqId = eqId || currentEqId;
 
     if (editingTaskId) {
       const t = DB.tasks.get(editingTaskId);
-      const updatedTask = { ...t, ...taskData };
+      const updatedTask = { ...t, ...taskData, updatedAt: new Date().toISOString() };
       DB.tasks.update(editingTaskId, updatedTask);
       Toast.success('Atividade Atualizada', `A atividade "${desc}" foi atualizada com sucesso.`);
+      if (parentId) window.updateParentTaskProgress(parentId);
     } else {
       const newTask = {
         ...taskData,
@@ -1176,6 +1258,7 @@
       };
       DB.tasks.create(newTask);
       Toast.success('Atividade Adicionada', `A atividade "${desc}" foi criada com sucesso.`);
+      if (parentId) window.updateParentTaskProgress(parentId);
     }
     
     closeModal('eq-task-modal');
@@ -1345,6 +1428,38 @@
     }
   }
 
+  window.updateParentTaskProgress = function(parentId) {
+    const parent = window.DB.tasks.get(parentId);
+    if (!parent) return;
+    
+    const allTasks = window.DB.tasks.getAll();
+    const subTasks = allTasks.filter(t => t.parentId === parentId);
+    
+    if (subTasks.length === 0) return;
+    
+    let sum = 0;
+    subTasks.forEach(st => {
+      sum += (st.pctExecutado || 0);
+    });
+    
+    let avg = Math.round(sum / subTasks.length);
+    if (avg > 100) avg = 100;
+    
+    const data = { pctExecutado: avg, updatedAt: new Date().toISOString() };
+    
+    if (avg === 100) {
+      data.status = 'Concluída';
+      if (!parent.dataRealTermino) data.dataRealTermino = new Date().toISOString().slice(0,10);
+    } else if (avg > 0 && parent.status === 'Não Iniciada') {
+      data.status = 'Em Andamento';
+      if (!parent.dataRealInicio) data.dataRealInicio = new Date().toISOString().slice(0,10);
+    } else if (avg < 100 && parent.status === 'Concluída') {
+      data.status = 'Em Andamento';
+    }
+    
+    window.DB.tasks.update(parentId, data);
+  };
+
   function updateTaskField(eqId, id, field, value) {
     const t = window.DB.tasks.get(id);
     if (!t) return;
@@ -1373,6 +1488,11 @@
     }
     
     window.DB.tasks.update(id, data);
+    
+    if (t.parentId && window.updateParentTaskProgress) {
+      window.updateParentTaskProgress(t.parentId);
+    }
+
     window.Toast.success('Salvo', 'Atividade atualizada com sucesso.');
     if (field === 'pctExecutado' || field === 'descricao') {
       window.Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });

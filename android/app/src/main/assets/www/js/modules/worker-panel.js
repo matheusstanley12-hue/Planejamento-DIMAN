@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    PLANEJAMENTO DIMAN-BHZ — Module: Worker Panel (Executante)
    ============================================================ */
 
@@ -51,18 +51,7 @@ window.WorkerPanel = (() => {
       allowedIds.push(myWorker.equipmentId);
     }
     
-    const allTasks = window.DB.tasks.getAll();
-
-    return eqs.filter(e => {
-      if (allowedIds.includes(e.id)) return true;
-      
-      const eqTasks = allTasks.filter(t => t.equipmentId === e.id && t.status !== 'Concluída');
-      return eqTasks.some(t => {
-        if (!t.responsavel) return false;
-        const resps = t.responsavel.split(',').map(s => s.trim());
-        return resps.includes(myWorkerName);
-      });
-    });
+    return eqs.filter(e => allowedIds.includes(e.id));
   }
 
   function canExecuteTask(session, task) {
@@ -1050,6 +1039,9 @@ window.WorkerPanel = (() => {
           anexos: attachments,
           fotoComprovacao: base64Img || t.fotoComprovacao || ''
         });
+        if (t.parentId && window.updateParentTaskProgress) {
+          window.updateParentTaskProgress(t.parentId);
+        }
       }
 
       // Set all target workers to Ocioso
@@ -1151,6 +1143,10 @@ window.WorkerPanel = (() => {
                     pctExecutado: 100,
                     dataRealTermino: window.DB.now()
                 });
+                if (t.parentId && window.updateParentTaskProgress) {
+                  window.updateParentTaskProgress(t.parentId);
+                }
+                tasksConcluded++;
             }
           }
           
@@ -1161,7 +1157,6 @@ window.WorkerPanel = (() => {
              currentActionStartTime: null,
              currentPauseReason: ''
           });
-          tasksConcluded++;
         }
       });
       
@@ -1237,6 +1232,7 @@ window.WorkerPanel = (() => {
     }
     const eqs = DB.equipment.list();
     const tasks = DB.tasks.getAll();
+    const parentIds = new Set(tasks.filter(t => t.parentId).map(t => t.parentId));
     const myEqs = getMyEquipments(session);
     const myEqIds = myEqs.map(e => e.id);
     let myTasks = tasks.filter(t => myEqIds.includes(t.equipmentId));
@@ -1465,7 +1461,7 @@ window.WorkerPanel = (() => {
       return bCanExec - aCanExec;
     });
 
-    const tasksHtml = listTasks.map(t => {
+    const renderCard = (t, isSubtask = false) => {
       const eq = eqs.find(e => e.id === t.equipmentId);
       const blockedBy = checkPredecessors(t, tasks);
       const isBlocked = blockedBy.length > 0;
@@ -1570,26 +1566,44 @@ window.WorkerPanel = (() => {
 
       const priorityClass = t.prioridade === 'Crítica' ? 'prio-crit' : (t.prioridade === 'Alta' ? 'prio-high' : 'prio-med');
 
+      const subTasks = !isSubtask ? listTasks.filter(st => st.parentId === t.id) : [];
+      let subtasksHtml = '';
+      if (subTasks.length > 0) {
+        actionBtn = `<button class="btn-start-task" onclick="const e = document.getElementById('subtasks-w-${t.id}'); if(e.style.display==='none') { e.style.display='block'; this.innerHTML='OCULTAR SUBTAREFAS'; } else { e.style.display='none'; this.innerHTML='VER SUBTAREFAS (${subTasks.length})'; }" style="border-color:var(--text-muted);color:var(--text-secondary);">VER SUBTAREFAS (${subTasks.length})</button>`;
+        subtasksHtml = `
+          <div id="subtasks-w-${t.id}" style="display:none; padding-left:15px; margin-top:10px; border-left:2px solid var(--border-card);">
+            ${subTasks.map(st => renderCard(st, true)).join('')}
+          </div>
+        `;
+      }
+
+      const cardStyle = isSubtask ? 'style="margin-bottom:10px; border:none; box-shadow:none; border-bottom:1px dashed var(--border-card); border-radius:0; padding-bottom:15px;"' : '';
+      const photoHtml = t.fotoPeca ? `
+        <div style="margin-top:10px;margin-bottom:10px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-card);cursor:pointer;" onclick="WorkerPanel.openTaskDetail('${t.id}')">
+          <img src="${t.fotoPeca}" style="width:100%;height:140px;object-fit:cover;display:block;" />
+          <div style="text-align:center;font-size:10px;color:white;background:rgba(0,0,0,0.6);padding:4px;font-weight:600;position:absolute;bottom:0;width:100%;">TOCAR PARA AMPLIAR</div>
+        </div>
+      ` : '';
+
       return `
-        <div class="task-card-v4">
+        <div class="task-card-v4" ${cardStyle}>
           <div class="task-card-header">
             <span class="task-discipline">${t.disciplina || 'Geral'}</span>
             <span class="task-prio ${priorityClass}">${t.prioridade || 'Média'}</span>
           </div>
-          ${t.fotoPeca ? `
-          <div style="margin-top:10px;margin-bottom:10px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-card);cursor:pointer;" onclick="WorkerPanel.openTaskDetail('${t.id}')">
-            <img src="${t.fotoPeca}" style="width:100%;height:140px;object-fit:cover;display:block;" />
-            <div style="text-align:center;font-size:10px;color:white;background:rgba(0,0,0,0.6);padding:4px;font-weight:600;position:absolute;bottom:0;width:100%;">TOCAR PARA AMPLIAR</div>
-          </div>
-          ` : ''}
+          ${photoHtml}
           <div class="task-card-title">${t.descricao}</div>
           <div class="task-card-eq">${eq ? eq.codigo + ' - ' + eq.nome : 'Sem equipamento'}</div>
           <div class="task-card-footer">
             ${actionBtn}
           </div>
+          ${subtasksHtml}
         </div>
       `;
-    }).join('');
+    };
+
+    const mainTasks = listTasks.filter(t => !t.parentId);
+    const tasksHtml = mainTasks.map(t => renderCard(t, false)).join('');
 
     return `
       <style>
