@@ -1282,7 +1282,10 @@ window.MeetingMode = (() => {
     const eqMaintenance = eqs.filter(e => {
       if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
       if (e.tipo === 'Subconjuntos') return false;
-      const dataPrazo = e.dataLiberacaoPlanejada || '';
+      let dataPrazo = e.dataLiberacaoPlanejada || '';
+      if (e.replanning && e.replanning.length > 0) {
+        dataPrazo = e.replanning[e.replanning.length - 1].novaData;
+      }
       return matchesMonth(dataPrazo, currentMonth);
     });
 
@@ -1365,13 +1368,25 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => {
+              const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
+              const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
+              return dPrazoA.localeCompare(dPrazoB);
+            }).map(e => {
+              const isReplanned = e.replanning && e.replanning.length > 0;
+              let prazoStr = '';
+              if (isReplanned) {
+                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—';
+                const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
+                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
+              } else {
+                prazoStr = `<span style="color:white">${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</span>`;
+              }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
@@ -1435,13 +1450,25 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => {
+              const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
+              const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
+              return dPrazoA.localeCompare(dPrazoB);
+            }).map(e => {
+              const isReplanned = e.replanning && e.replanning.length > 0;
+              let prazoStr = '';
+              if (isReplanned) {
+                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—';
+                const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
+                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
+              } else {
+                prazoStr = `<span style="color:white">${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</span>`;
+              }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#FFE0B2">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
