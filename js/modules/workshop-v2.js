@@ -342,42 +342,62 @@ window.WorkshopModule = (() => {
       }));
     }
 
-    // Motivos parada / Status reais
-    const statusMap = {};
-    currentEqs.forEach(e => {
-       const s = e.status || 'Indefinido';
-       statusMap[s] = (statusMap[s] || 0) + 1;
+    // Motivos parada reais (Restrições e Status de Pendência)
+    const motivoMap = { 'Aguardando Peças': 0, 'Falta Mão de Obra': 0, 'Aguardando Cliente': 0, 'Outros': 0 };
+    
+    // 1. Peças (via flag no equipamento)
+    motivoMap['Aguardando Peças'] = currentEqs.filter(e => e.aguardandoPecas).length;
+
+    // 2. Restrições ativas
+    if (window.DB && window.DB.restrictions) {
+       const openRestr = window.DB.restrictions.getAll().filter(r => r.status === 'Aberta' && currentEqs.some(e => e.id === r.equipmentId));
+       openRestr.forEach(r => {
+          if (r.tipo === 'Falta de Mão de Obra' || (r.descricao && r.descricao.toLowerCase().includes('mão de obra'))) motivoMap['Falta Mão de Obra']++;
+          else if (r.tipo === 'Aguardando Aprovação' || (r.descricao && r.descricao.toLowerCase().includes('cliente'))) motivoMap['Aguardando Cliente']++;
+          else if (r.tipo !== 'Falta de Peça' && r.tipo !== 'Falta de Peças') motivoMap['Outros']++;
+       });
+    }
+
+    // 3. Tarefas aguardando
+    if (window.DB && window.DB.tasks) {
+       const pendingTasks = window.DB.tasks.getAll().filter(t => currentEqs.some(e => e.id === t.equipmentId) && t.status !== 'Concluída');
+       pendingTasks.forEach(t => {
+          if (t.status === 'Aguardando Recurso') motivoMap['Falta Mão de Obra']++;
+          // Aguardando peça normalmente reflete na flag aguardandoPecas do equipamento
+       });
+    }
+
+    const labelsMotivos = [];
+    const dataMotivos = [];
+    Object.keys(motivoMap).forEach(k => {
+       if (motivoMap[k] > 0) {
+          labelsMotivos.push(k);
+          dataMotivos.push(motivoMap[k]);
+       }
     });
+
+    if (dataMotivos.length === 0) {
+       labelsMotivos.push('Fluxo Normal');
+       dataMotivos.push(1);
+    }
     
-    // Sort to have the largest first
-    const sortedStatus = Object.keys(statusMap).sort((a,b) => statusMap[b] - statusMap[a]);
-    const statusData = sortedStatus.map(s => statusMap[s]);
-    
-    // Assign consistent colors
     const colorMap = {
        'Aguardando Peças': '#F59E0B',
-       'Em Manutenção': '#3B82F6',
-       'Falta de Mão de Obra': '#EF4444',
-       'Liberado': '#10B981',
-       'Aguardando Cliente': '#8B5CF6',
-       'Backlog': '#8EACC8',
-       'Indefinido': '#94A3B8'
+       'Falta Mão de Obra': '#EF4444',
+       'Aguardando Cliente': '#3B82F6',
+       'Outros': '#8EACC8',
+       'Fluxo Normal': '#10B981'
     };
-    const defaultColors = ['#14B8A6', '#F43F5E', '#D946EF', '#EAB308', '#0EA5E9'];
-    let cIdx = 0;
-    const statusColors = sortedStatus.map(s => {
-       if(colorMap[s]) return colorMap[s];
-       return defaultColors[(cIdx++) % defaultColors.length];
-    });
+    const statusColors = labelsMotivos.map(l => colorMap[l] || '#94A3B8');
 
     const motCtx = document.getElementById('ws-chart-motivo');
     if (motCtx) {
        charts.push(new Chart(motCtx, {
          type: 'doughnut',
          data: {
-            labels: sortedStatus,
+            labels: labelsMotivos,
             datasets: [{
-               data: statusData,
+               data: dataMotivos,
                backgroundColor: statusColors,
                borderWidth: 0
             }]
