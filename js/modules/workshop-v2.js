@@ -275,23 +275,39 @@ window.WorkshopModule = (() => {
       }));
     }
 
-    // Lead Time Simulado
+    // Lead Time com dados reais
+    const leadMap = {};
+    currentEqs.forEach(e => {
+       const c = e.etapa;
+       if (!leadMap[c]) leadMap[c] = { sumReal: 0, sumMeta: 0, cnt: 0 };
+       leadMap[c].sumReal += e.daysInWorkshop;
+       leadMap[c].sumMeta += e.metaDias;
+       leadMap[c].cnt++;
+    });
+    const leadLabels = Object.keys(leadMap);
+    const leadRealData = Object.values(leadMap).map(v => Math.round(v.sumReal / v.cnt));
+    const leadMetaData = Object.values(leadMap).map(v => Math.round(v.sumMeta / v.cnt));
+    const maxVal = Math.max(...leadRealData, ...leadMetaData, 1);
+
     const leadCtx = document.getElementById('ws-chart-lead');
-    if (leadCtx) {
+    if (leadCtx && leadLabels.length > 0) {
       charts.push(new Chart(leadCtx, {
         type: 'line',
         data: {
-          labels: ['Receb.', 'Desmont.', 'Insp.', 'Mont.', 'Teste', 'Pintura', 'Pronto'],
+          labels: leadLabels,
           datasets: [
-             { label: 'Realizado (dias)', data: [1, 4, 3, 12, 4, 2, 1], borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true, tension: 0.4, datalabels: { align: 'top', anchor: 'end' } },
-             { label: 'Meta', data: [1, 2, 2, 7, 2, 1, 1], borderColor: '#10B981', borderDash: [5,5], fill: false, tension: 0, datalabels: { align: 'bottom', anchor: 'start' } }
+             { label: 'Realizado (dias)', data: leadRealData, borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true, tension: 0.4, datalabels: { align: 'top', anchor: 'end' } },
+             { label: 'Meta', data: leadMetaData, borderColor: '#10B981', borderDash: [5,5], fill: false, tension: 0, datalabels: { align: 'bottom', anchor: 'start', display: true } }
           ]
         },
         options: { 
            responsive: true, maintainAspectRatio: false,
            layout: { padding: { top: 20 } },
            plugins: { legend: { onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C', padding: 20 } } },
-           scales: { y: { beginAtZero: true, suggestedMax: 14, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } }
+           scales: { 
+             y: { beginAtZero: true, suggestedMax: maxVal + 4, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, 
+             x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } 
+           }
         }
       }));
     }
