@@ -405,15 +405,7 @@ window.WorkshopModule = (() => {
          options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { 
-               legend: { position: 'right', onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } },
-               datalabels: {
-                  color: '#FFFFFF',
-                  font: { weight: 'bold', size: 14 },
-                  display: true,
-                  anchor: 'center',
-                  align: 'center',
-                  formatter: (value) => value > 0 ? value : ''
-               }
+               legend: { position: 'right', onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } }
             },
             onClick: (event, elements, chart) => {
                if (elements[0]) {
@@ -421,7 +413,29 @@ window.WorkshopModule = (() => {
                   WorkshopModule.setFilter('search', label);
                }
             }
-         }
+         },
+         plugins: [{
+            id: 'doughnutLabels',
+            afterDraw(chart) {
+               const { ctx } = chart;
+               chart.data.datasets.forEach((dataset, i) => {
+                  const meta = chart.getDatasetMeta(i);
+                  meta.data.forEach((element, index) => {
+                     const value = dataset.data[index];
+                     if (value > 0) {
+                        ctx.save();
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.font = 'bold 14px Inter, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const pos = element.tooltipPosition();
+                        ctx.fillText(value, pos.x, pos.y);
+                        ctx.restore();
+                     }
+                  });
+               });
+            }
+         }]
        }));
     }
 
