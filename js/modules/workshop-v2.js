@@ -289,8 +289,9 @@ window.WorkshopModule = (() => {
         },
         options: { 
            responsive: true, maintainAspectRatio: false,
-           plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C' } } },
-           scales: { y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } }
+           layout: { padding: { top: 20 } },
+           plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C', padding: 20 } } },
+           scales: { y: { beginAtZero: true, suggestedMax: 14, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } }
         }
       }));
     }
