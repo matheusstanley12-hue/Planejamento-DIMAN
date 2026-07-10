@@ -520,133 +520,15 @@ window.DB = (() => {
         }
       }
 
-      // 2. Real-time subscription
+      // 2. Real-time subscription (DESATIVADO PARA ECONOMIA DE BANCO DE DADOS)
+      /*
       supabaseClient
         .channel('diman-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'diman_store' }, payload => {
-          if (localStorage.getItem('diman_unsynced') === 'true') {
-            console.log('[DIMAN] Ignorando atualização em tempo real (dados locais em sincronização pendente).');
-            return;
-          }
-
-          if (payload.eventType === 'DELETE' && payload.old) {
-            const row = payload.old;
-            if (row.key === 'all') return;
-            let localArr = [];
-            try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
-            if (Array.isArray(localArr)) {
-               localArr = localArr.filter(i => i && i.id !== row.key);
-               localStorage.setItem(row.collection, JSON.stringify(localArr));
-            }
-          } else if (payload.new) {
-            const row = payload.new;
-            if (row.collection && row.collection.startsWith('photo_')) return;
-            
-            if (row.key === 'all') {
-              if (Array.isArray(row.data) && row.data.length > 0 && row.data[0] && row.data[0].id) {
-                 let localArr = [];
-                 try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
-                 if (!Array.isArray(localArr)) localArr = [];
-                 const mergedMap = new Map();
-                 localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
-                 row.data.forEach(item => {
-                    if (item && item.id) {
-                       if (item._deleted) {
-                          mergedMap.delete(item.id);
-                       } else {
-                          const existing = mergedMap.get(item.id);
-                          const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                          const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
-                          
-                          if (!existing || newTime > existTime) {
-                             mergedMap.set(item.id, item);
-                          }
-                       }
-                    }
-                 });
-                 
-                 let finalArray = Array.from(mergedMap.values());
-                 finalArray = stripLargeFields(row.collection, finalArray);
-                 try { localStorage.setItem(row.collection, JSON.stringify(finalArray)); } catch(e) {}
-              } else if (Array.isArray(row.data) && row.data.length === 0) {
-                 // Clear legacy 'all' key from local storage if the server sends an empty array (from new clients)
-                 // Wait, we don't want to clear the local array if it's already using individual keys!
-                 // So do nothing if it's an empty array sent to clear legacy data
-                 if (!localStorage.getItem(row.collection)) {
-                    localStorage.setItem(row.collection, '[]');
-                 }
-              } else {
-                 localStorage.setItem(row.collection, JSON.stringify(row.data));
-              }
-            } else {
-              // Individual row updated
-              let localArr = [];
-              try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
-              if (!Array.isArray(localArr)) localArr = [];
-              
-              const idx = localArr.findIndex(i => i && i.id === row.key);
-              
-              let itemToSave = row.data;
-              if (!itemToSave) return;
-              if (row.collection === KEYS.tasks && itemToSave.status === 'Concluída' && itemToSave.updatedAt) {
-                  const diffDays = (new Date() - new Date(itemToSave.updatedAt)) / (1000 * 60 * 60 * 24);
-                  if (diffDays > 3) {
-                     itemToSave = { ...itemToSave };
-                     delete itemToSave.fotoComprovacao;
-                     delete itemToSave.anexos;
-                  }
-              }
-
-              if (idx !== -1) {
-                 if (itemToSave._deleted) {
-                    localArr.splice(idx, 1);
-                 } else {
-                    const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
-                    const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
-                    
-                    // Enforce: once finalized, never reverts
-                    if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
-                       itemToSave.status = 'Concluída';
-                       itemToSave.pctExecutado = 100;
-                       if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
-                    }
-
-                    if (newTime >= existTime) {
-                       localArr[idx] = itemToSave;
-                    }
-                 }
-              } else {
-                 if (!itemToSave._deleted) {
-                    localArr.push(itemToSave);
-                 }
-              }
-              try { localStorage.setItem(row.collection, JSON.stringify(localArr)); } catch(e) {}
-            }
-          }
-
-          if (window.Router) {
-            const current = window.Router.getCurrent();
-            if (current === 'tasks-ongoing') {
-              const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
-              if (!hasOpenModal) {
-                if (window._syncRenderTimeout) clearTimeout(window._syncRenderTimeout);
-                window._syncRenderTimeout = setTimeout(() => {
-                  window.Router.navigate(current, { force: true });
-                }, 3000);
-              }
-            } else if (current && ['dashboard', 'manager-dashboard', 'workforce-time', 'home', 'equipment', 'services', 'planning', 'meetings'].includes(current)) {
-              if (window.Toast && !window._toastUpdateShown) {
-                window._toastUpdateShown = true;
-                if (!document.querySelector('.modal-overlay.open, .modal.open')) {
-                   window.Toast.info('Atualização Recebida', 'Novos dados sincronizados da nuvem. Clique em Atualizar para recarregar a tela.');
-                }
-                setTimeout(() => window._toastUpdateShown = false, 15000);
-              }
-            }
-          }
+           // Lógica de tempo real removida para evitar consumo de conexões e reads
         })
         .subscribe();
-
+      */
     } catch(e) {
       console.error('Failed to init Supabase:', e);
     }
