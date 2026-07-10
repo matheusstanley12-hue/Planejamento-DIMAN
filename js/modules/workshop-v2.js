@@ -290,7 +290,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            layout: { padding: { top: 20 } },
-           plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C', padding: 20 } } },
+           plugins: { legend: { onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C', padding: 20 } } },
            scales: { y: { beginAtZero: true, suggestedMax: 14, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } }
         }
       }));
@@ -311,7 +311,7 @@ window.WorkshopModule = (() => {
          },
          options: { 
             responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'right', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } } },
+            plugins: { legend: { position: 'right', onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } } },
             onClick: (event, elements, chart) => {
                if (elements[0]) {
                   const label = chart.data.labels[elements[0].index];
