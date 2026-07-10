@@ -345,7 +345,7 @@ window.WorkshopModule = (() => {
     // Motivos parada / Status reais
     const statusMap = {};
     currentEqs.forEach(e => {
-       const s = e.statusAtual || 'Indefinido';
+       const s = e.status || 'Indefinido';
        statusMap[s] = (statusMap[s] || 0) + 1;
     });
     
@@ -379,24 +379,25 @@ window.WorkshopModule = (() => {
             datasets: [{
                data: statusData,
                backgroundColor: statusColors,
-               borderWidth: 0,
-               datalabels: {
-                  color: '#FFFFFF',
-                  font: { weight: 'bold', size: 14 },
-                  display: true,
-                  formatter: (value) => value > 0 ? value : ''
-               }
+               borderWidth: 0
             }]
          },
          options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { 
-               legend: { position: 'right', onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } }
+               legend: { position: 'right', onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } },
+               datalabels: {
+                  color: '#FFFFFF',
+                  font: { weight: 'bold', size: 14 },
+                  display: true,
+                  anchor: 'center',
+                  align: 'center',
+                  formatter: (value) => value > 0 ? value : ''
+               }
             },
             onClick: (event, elements, chart) => {
                if (elements[0]) {
                   const label = chart.data.labels[elements[0].index];
-                  // Filter by status if clicked
                   WorkshopModule.setFilter('search', label);
                }
             }
