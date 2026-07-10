@@ -153,21 +153,31 @@ window.HomeModule = (() => {
               </div>
             </div>
             
-            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-              <div style="display:flex; gap:6px; color:var(--color-danger);">
-                ${hasPecas === '1' ? `<span title="Aguardando Peças">${iconBox}</span>` : ''}
-                ${hasRestr === '1' || isAtrasado === '1' ? `<span title="${isAtrasado==='1'?'Atrasado':'Restrição Aberta'}">${iconAlert}</span>` : ''}
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                <div style="display:flex; gap:6px; color:var(--color-danger);">
+                  ${hasPecas === '1' ? `<span title="Aguardando Peças">${iconBox}</span>` : ''}
+                  ${hasRestr === '1' || isAtrasado === '1' ? `<span title="${isAtrasado==='1'?'Atrasado':'Restrição Aberta'}">${iconAlert}</span>` : ''}
+                </div>
+                ${isAdmin ? `
+                  <div style="display:flex; gap: 4px;">
+                    <button class="btn-premium-edit" 
+                            style="background:rgba(16,185,129,0.1); color:#10B981; border:1px solid rgba(16,185,129,0.2);"
+                            title="Liberar Equipamento (Remover do Painel)"
+                            onclick="event.stopPropagation(); if(confirm('Deseja liberar este equipamento? Ele sairá deste painel.')) window.HomeModule.updateEquipmentStatus('${e.id}', 'Liberado')">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    </button>
+                    <button class="btn-premium-edit" 
+                            title="Editar Equipamento"
+                            onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                    </button>
+                  </div>
+                ` : ''}
               </div>
-              ${isAdmin ? `
-                <button class="btn-premium-edit" 
-                        title="Editar Equipamento"
-                        onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                  </svg>
-                </button>
-              ` : ''}
-            </div>
           </div>
           
           <div style="margin-top:12px;">
