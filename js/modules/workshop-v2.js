@@ -127,7 +127,7 @@ window.WorkshopModule = (() => {
        </div>
        <div class="ws-kpi">
           <div class="ws-kpi-lbl">Tempo Médio (Dias)</div>
-          <div class="ws-kpi-val" style="color:#FFF;">${avgDays}</div>
+          <div class="ws-kpi-val" style="color:var(--ws-text);">${avgDays}</div>
        </div>
        <div class="ws-kpi" data-kpi-alert="mais90" onclick="WorkshopModule.setFilter('alerta', 'mais90')">
           <div class="ws-kpi-lbl">Maior Tempo (Dias)</div>
@@ -196,7 +196,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false, indexAxis: 'y', 
            plugins: { legend: { display: false } },
-           scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { display: false } } },
+           scales: { x: { grid: { color: 'var(--border-card)' } }, y: { grid: { display: false } } },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
@@ -226,7 +226,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            plugins: { legend: { display: false } },
-           scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } },
+           scales: { y: { beginAtZero: true, grid: { color: 'var(--border-card)' } } },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
@@ -261,7 +261,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            plugins: { legend: { display: false } },
-           scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } },
+           scales: { y: { beginAtZero: true, grid: { color: 'var(--border-card)' } } },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
@@ -286,8 +286,8 @@ window.WorkshopModule = (() => {
         },
         options: { 
            responsive: true, maintainAspectRatio: false,
-           plugins: { legend: { labels: { color: '#E7EBEE' } } },
-           scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { color: 'rgba(255,255,255,0.05)' } } }
+           plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } } },
+           scales: { y: { beginAtZero: true, grid: { color: 'var(--border-card)' } }, x: { grid: { color: 'var(--border-card)' } } }
         }
       }));
     }
@@ -307,7 +307,7 @@ window.WorkshopModule = (() => {
          },
          options: { 
             responsive: true, maintainAspectRatio: false, 
-            plugins: { legend: { position: 'right', labels: { color: '#E7EBEE' } } },
+            plugins: { legend: { position: 'right', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } } },
             onClick: (event, elements, chart) => {
                if (elements[0]) {
                   const label = chart.data.labels[elements[0].index];
@@ -326,7 +326,7 @@ window.WorkshopModule = (() => {
        else {
           html = criticosList.map(e => `
              <tr class="ws-tr" onclick="WorkshopModule.setFilter('search', '${e.codigo}')" style="cursor:pointer;">
-                <td><span class="badge ${e.prioridade === 'Urgente' ? 'badge-danger' : 'badge-orange'}" style="background:${e.prioridade === 'Urgente' ? '#EF4444' : '#F59E0B'}; color:white; padding: 4px 8px; border-radius:4px;">${e.prioridade}</span></td>
+                <td><span class="badge ${e.prioridade === 'Urgente' ? 'badge-danger' : 'badge-orange'}" style="background:${e.prioridade === 'Urgente' ? '#EF4444' : '#F59E0B'}; color:var(--ws-text); padding: 4px 8px; border-radius:4px;">${e.prioridade}</span></td>
                 <td><strong>${e.codigo}</strong><br><span style="font-size:11px;color:#8EACC8">${e.cliente||'-'}</span></td>
                 <td>${e.etapa}</td>
                 <td>${e.responsavel || '-'}</td>
@@ -383,7 +383,7 @@ window.WorkshopModule = (() => {
        } else {
           html = filtered.map(e => `
              <tr class="ws-tr">
-                <td><span style="background:${e.prioridade === 'Urgente' ? '#EF4444' : (e.prioridade === 'Alta' ? '#F59E0B' : '#4B5563')}; color:white; padding: 2px 6px; border-radius:4px; font-size:11px;">${e.prioridade}</span></td>
+                <td><span style="background:${e.prioridade === 'Urgente' ? '#EF4444' : (e.prioridade === 'Alta' ? '#F59E0B' : '#4B5563')}; color:var(--ws-text); padding: 2px 6px; border-radius:4px; font-size:11px;">${e.prioridade}</span></td>
                 <td><strong>${e.codigo}</strong><br><span style="font-size:10px;color:#8EACC8;">${e.nome||'-'}</span></td>
                 <td>${e.cliente||'-'}</td>
                 <td>${e.categoria}</td>
@@ -427,16 +427,16 @@ window.WorkshopModule = (() => {
     return `
       <style>
         .ws-dashboard {
-           --ws-bg: #0A1929;
-           --ws-card: #132F4C;
-           --ws-border: rgba(30,136,229,0.2);
-           --ws-text: #E7EBEE;
-           --ws-muted: #8EACC8;
+           --ws-bg: transparent;
+           --ws-card: var(--bg-card, #FFFFFF);
+           --ws-border: var(--border-card, #E2E8F0);
+           --ws-text: var(--text-primary, #1A202C);
+           --ws-muted: var(--text-muted, #718096);
            color: var(--ws-text);
         }
         .ws-grid-kpi { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .ws-kpi { background: var(--ws-card); border: 1px solid var(--ws-border); border-radius: 12px; padding: 16px; cursor:pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .ws-kpi:hover { transform: translateY(-3px); border-color: #64B5F6; box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
+        .ws-kpi:hover { transform: translateY(-3px); border-color: #64B5F6; box-shadow: 0 8px 15px var(--bg-default, #F9FAFB); }
         .ws-kpi.active-alert { border-color: #F59E0B; background: rgba(245,158,11,0.1); }
         .ws-kpi-val { font-size: 28px; font-weight: 900; margin: 8px 0 4px 0; }
         .ws-kpi-lbl { font-size: 11px; color: var(--ws-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
@@ -446,20 +446,20 @@ window.WorkshopModule = (() => {
         .ws-chart-card h3 { margin: 0 0 16px 0; font-size: 15px; font-weight: 800; color: #64B5F6; text-transform: uppercase; }
         
         .ws-alerts { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 24px; }
-        .ws-alert { background: rgba(255,255,255,0.05); border: 1px solid var(--ws-border); color: #E7EBEE; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
-        .ws-alert:hover { background: rgba(255,255,255,0.1); }
+        .ws-alert { background: var(--border-card); border: 1px solid var(--ws-border); color: #E7EBEE; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .ws-alert:hover { background: var(--border-card); }
         .ws-alert.active-alert { border-color: #F59E0B; background: rgba(245,158,11,0.1); }
         
         .ws-table-container { background: var(--ws-card); border: 1px solid var(--ws-border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 32px; }
-        .ws-table-header { padding: 16px; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--ws-border); display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 12px; }
+        .ws-table-header { padding: 16px; background: var(--bg-default, #F9FAFB); border-bottom: 1px solid var(--ws-border); display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 12px; }
         .ws-table { width: 100%; text-align: left; border-collapse: collapse; font-size: 13px; }
-        .ws-table th { background: rgba(0,0,0,0.4); padding: 14px 16px; font-weight: 800; color: var(--ws-muted); border-bottom: 1px solid var(--ws-border); position: sticky; top: 0; z-index: 10; white-space: nowrap; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
-        .ws-table td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
-        .ws-tr:hover { background: rgba(255,255,255,0.03); cursor: pointer; }
+        .ws-table th { background: var(--bg-card); padding: 14px 16px; font-weight: 800; color: var(--ws-muted); border-bottom: 1px solid var(--ws-border); position: sticky; top: 0; z-index: 10; white-space: nowrap; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        .ws-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-card); white-space: nowrap; }
+        .ws-tr:hover { background: var(--border-card); cursor: pointer; }
         
         .ws-prod-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; }
-        .ws-prod-card { background: rgba(0,0,0,0.2); border: 1px solid var(--ws-border); padding: 16px; border-radius: 8px; text-align: center; font-weight: 700; color: var(--ws-muted); font-size: 12px; }
-        .ws-prod-card .val { font-size: 32px; font-weight: 900; color: white; margin-top: 8px; }
+        .ws-prod-card { background: var(--bg-default, #F9FAFB); border: 1px solid var(--ws-border); padding: 16px; border-radius: 8px; text-align: center; font-weight: 700; color: var(--ws-muted); font-size: 12px; }
+        .ws-prod-card .val { font-size: 32px; font-weight: 900; color:var(--ws-text); margin-top: 8px; }
       </style>
       <div class="ws-dashboard fade-in">
          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px; flex-wrap:wrap; gap: 16px;">
@@ -469,8 +469,8 @@ window.WorkshopModule = (() => {
             </div>
             <div style="display:flex; gap: 20px; align-items:center; font-size: 13px; color: var(--ws-muted); background: var(--ws-card); padding: 10px 20px; border-radius: 30px; border: 1px solid var(--ws-border);">
                <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10B981;margin-right:6px;animation:pulse 2s infinite;"></span>Sincronizado</span>
-               <span style="border-left:1px solid var(--ws-border); padding-left:20px;">Atualizado: <strong id="ws-last-update" style="color:white;">00:00:00</strong></span>
-               <button onclick="WorkshopModule.forceRender()" style="background:#1E88E5; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer; font-size:12px;">Atualizar</button>
+               <span style="border-left:1px solid var(--ws-border); padding-left:20px;">Atualizado: <strong id="ws-last-update" style="color:var(--ws-text);">00:00:00</strong></span>
+               <button onclick="WorkshopModule.forceRender()" style="background:#1E88E5; color:var(--ws-text); border:none; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer; font-size:12px;">Atualizar</button>
             </div>
          </div>
          
@@ -502,7 +502,7 @@ window.WorkshopModule = (() => {
             </div>
          </div>
          
-         <h3 style="margin-bottom:16px; font-size:16px; font-weight:800; color: white;">Alertas Operacionais</h3>
+         <h3 style="margin-bottom:16px; font-size:16px; font-weight:800; color:var(--ws-text);">Alertas Operacionais</h3>
          <div class="ws-alerts" id="ws-alerts-container"></div>
          
          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 24px;">
@@ -525,10 +525,10 @@ window.WorkshopModule = (() => {
          
          <div class="ws-table-container" id="ws-table-container">
             <div class="ws-table-header">
-               <h3 style="margin:0; font-size:16px; font-weight:800; color: white;">Lista de Equipamentos (<span id="ws-table-count">0</span>)</h3>
+               <h3 style="margin:0; font-size:16px; font-weight:800; color:var(--ws-text);">Lista de Equipamentos (<span id="ws-table-count">0</span>)</h3>
                <div style="display:flex; gap: 8px; flex-wrap:wrap;">
-                  <input type="text" id="ws-search" placeholder="Pesquisar equipamento..." style="padding:8px 16px; border-radius:30px; border:1px solid var(--ws-border); background:rgba(0,0,0,0.2); color:white; min-width: 250px; outline:none;">
-                  <button style="background:var(--ws-card); color:white; border:1px solid var(--ws-border); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="window.Toast&&window.Toast.info('Exportação','Recurso em desenvolvimento')">Exportar Excel</button>
+                  <input type="text" id="ws-search" placeholder="Pesquisar equipamento..." style="padding:8px 16px; border-radius:30px; border:1px solid var(--ws-border); background:var(--bg-default, #F9FAFB); color:var(--ws-text); min-width: 250px; outline:none;">
+                  <button style="background:var(--ws-card); color:var(--ws-text); border:1px solid var(--ws-border); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="window.Toast&&window.Toast.info('Exportação','Recurso em desenvolvimento')">Exportar Excel</button>
                   <button style="background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.3); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="WorkshopModule.setFilter('alerta',''); WorkshopModule.setFilter('etapa',''); WorkshopModule.setFilter('categoria','');">Limpar Filtros</button>
                </div>
             </div>
