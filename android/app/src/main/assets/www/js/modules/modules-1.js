@@ -184,10 +184,26 @@ window.Dashboard = (() => {
         // 5. Gráficos Setores Plan x Real (Column Bar)
         const ctxCat = document.getElementById('mega-ch-cat');
         if (ctxCat) {
-          const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
-          const catsLabels = ['Sondas Pesq', 'Bombas Pesq', 'Sondas Poço', 'Bombas Poço', 'Subconjuntos', 'Almoxarifado'];
-          const cP = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix)).length);
-          const cR = catsFull.map(c => eqs.filter(e => (e.tipo||'') === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix)).length);
+          const catsFull = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado'];
+          const catsLabels = ['Sonda Pesq', 'Bomba Pesq', 'Sonda Poço', 'Bomba Poço', 'Subconjuntos', 'Almoxarifado'];
+          const cP = catsFull.map(c => eqs.filter(e => {
+             let t = e.tipo || '';
+             if (t === 'Sondas de Pesquisas') t = 'Sonda de pesquisa';
+             else if (t === 'Sondas Poços') t = 'Sonda de poços';
+             else if (t === 'Bombas de poços') t = 'Bomba poços';
+             else if (t === 'Subconjuntos') t = 'Subconjunto';
+             else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
+             return t === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix);
+          }).length);
+          const cR = catsFull.map(c => eqs.filter(e => {
+             let t = e.tipo || '';
+             if (t === 'Sondas de Pesquisas') t = 'Sonda de pesquisa';
+             else if (t === 'Sondas Poços') t = 'Sonda de poços';
+             else if (t === 'Bombas de poços') t = 'Bomba poços';
+             else if (t === 'Subconjuntos') t = 'Subconjunto';
+             else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
+             return t === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix);
+          }).length);
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
             data: { labels: catsLabels, datasets: [
@@ -533,17 +549,26 @@ window.EquipmentModule = (() => {
             ${(() => {
               if (eqs.length === 0) return `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>`;
               
+              const seq = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Outros Equipamentos'];
               const groups = {};
               eqs.forEach(e => {
-                 const code = e.codigo || '';
-                 let prefix = 'OUTROS';
-                 const match = code.match(/^([A-Za-zÀ-ÖØ-öø-ÿ]+)/);
-                 if (match && match[1]) prefix = match[1].toUpperCase();
-                 if (!groups[prefix]) groups[prefix] = [];
-                 groups[prefix].push(e);
+                 let groupName = e.tipo || 'Outros Equipamentos';
+                 if (groupName === 'Sondas de Pesquisas') groupName = 'Sonda de pesquisa';
+                 else if (groupName === 'Sondas Poços') groupName = 'Sonda de poços';
+                 else if (groupName === 'Bombas de poços') groupName = 'Bomba poços';
+                 else if (groupName === 'Subconjuntos') groupName = 'Subconjunto';
+                 else if (groupName === 'Programação de almoxarifado') groupName = 'Serviço de almoxarifado';
+                 
+                 if (!seq.includes(groupName)) groupName = 'Outros Equipamentos';
+                 
+                 if (!groups[groupName]) groups[groupName] = [];
+                 groups[groupName].push(e);
               });
 
-              const sortedPrefixes = Object.keys(groups).sort();
+              let sortedPrefixes = seq.filter(k => groups[k]);
+              Object.keys(groups).forEach(k => {
+                 if (!sortedPrefixes.includes(k)) sortedPrefixes.push(k);
+              });
               let html = '';
 
               sortedPrefixes.forEach(prefix => {
@@ -852,7 +877,15 @@ window.EquipmentModule = (() => {
       <div class="form-row">
         <div class="form-group"><label>Cliente</label><input id="eq-cliente" value="${eq?.cliente||''}" /></div>
         <div class="form-group"><label>Tipo</label><select id="eq-tipo" class="form-control" style="width:100%;height:38px;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);padding:0 var(--space-3);">
-          ${['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Outros Equipamentos'].map(t => `<option value="${t}" ${eq?.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+          ${(() => {
+               let currentTipo = eq?.tipo || '';
+               if (currentTipo === 'Sondas de Pesquisas') currentTipo = 'Sonda de pesquisa';
+               else if (currentTipo === 'Sondas Poços') currentTipo = 'Sonda de poços';
+               else if (currentTipo === 'Bombas de poços') currentTipo = 'Bomba poços';
+               else if (currentTipo === 'Subconjuntos') currentTipo = 'Subconjunto';
+               else if (currentTipo === 'Programação de almoxarifado') currentTipo = 'Serviço de almoxarifado';
+               return ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Outros Equipamentos'].map(t => `<option value="${t}" ${currentTipo === t ? 'selected' : ''}>${t}</option>`).join('');
+            })()}
         </select></div>
       </div>
       <div class="form-row cols-3">
@@ -1371,11 +1404,20 @@ window.TasksModule = (() => {
     eqs.forEach(e => { equipMap[e.id] = e; });
 
     if (!eqFilter) {
-      const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+      const catsFull = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado'];
       
-      let filteredEqs = eqs;
+      let filteredEqs = eqs.map(e => {
+        let n = {...e};
+        if (n.tipo === 'Sondas de Pesquisas') n.tipo = 'Sonda de pesquisa';
+        else if (n.tipo === 'Sondas Poços') n.tipo = 'Sonda de poços';
+        else if (n.tipo === 'Bombas de poços') n.tipo = 'Bomba poços';
+        else if (n.tipo === 'Subconjuntos') n.tipo = 'Subconjunto';
+        else if (n.tipo === 'Programação de almoxarifado') n.tipo = 'Serviço de almoxarifado';
+        return n;
+      });
+
       if (_eqModelFilter !== 'Todos') {
-        filteredEqs = eqs.filter(e => (e.tipo || '') === _eqModelFilter);
+        filteredEqs = filteredEqs.filter(e => (e.tipo || '') === _eqModelFilter);
       }
 
       const cardsHtml = filteredEqs.map(e => {
