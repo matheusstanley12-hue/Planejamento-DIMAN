@@ -179,7 +179,7 @@ window.WorkshopModule = (() => {
     destroyCharts();
     
     // Configuração global para textos de gráficos herdarem o tema
-    Chart.defaults.color = getComputedStyle(document.body).getPropertyValue(\'--text-muted\') || '#718096';
+    Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096';
     
     // Top 10
     const top10 = [...currentEqs].sort((a,b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
@@ -199,7 +199,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false, indexAxis: 'y', 
            plugins: { legend: { display: false } },
-           scales: { x: { grid: { color: getComputedStyle(document.body).getPropertyValue(\'--border-card\') || \'#E2E8F0\' } }, y: { grid: { display: false } } },
+           scales: { x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, y: { grid: { display: false } } },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
@@ -229,7 +229,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            plugins: { legend: { display: false } },
-           scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue(\'--border-card\') || \'#E2E8F0\' } } },
+           scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
@@ -264,7 +264,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            plugins: { legend: { display: false } },
-           scales: { x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: false } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue(\'--border-card\') || \'#E2E8F0\' } } },
+           scales: { x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: false } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
@@ -290,7 +290,7 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            plugins: { legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C' } } },
-           scales: { y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue(\'--border-card\') || \'#E2E8F0\' } }, x: { grid: { color: getComputedStyle(document.body).getPropertyValue(\'--border-card\') || \'#E2E8F0\' } } }
+           scales: { y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } }
         }
       }));
     }

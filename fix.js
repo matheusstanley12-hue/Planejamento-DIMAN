@@ -1,6 +1,4 @@
 const fs = require('fs');
-let code = fs.readFileSync('js/modules/modules-1.js', 'utf8');
-code = code.replace(/\\\${/g, '${');
-code = code.replace(/\\\`/g, '`');
-fs.writeFileSync('js/modules/modules-1.js', code);
-console.log('Fixed escaped chars');
+let c = fs.readFileSync('js/modules/workshop-v2.js', 'utf8');
+c = c.replace(/\\'/g, "'");
+fs.writeFileSync('js/modules/workshop-v2.js', c);
