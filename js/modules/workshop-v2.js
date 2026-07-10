@@ -272,6 +272,9 @@ window.WorkshopModule = (() => {
               }
            }
         }
+      }));
+    }
+
     // Lead Time com dados reais das Tarefas (Horas convertidas para Dias)
     const leadCategories = [
        { label: 'Receb.', words: ['receb', 'chegada', 'entrada', 'lavagem'] },
@@ -280,7 +283,7 @@ window.WorkshopModule = (() => {
        { label: 'Mont.', words: ['monta', 'fechar'] },
        { label: 'Teste', words: ['teste', 'bancada'] },
        { label: 'Pintura', words: ['pintura', 'pintar', 'acabamento'] },
-       { label: 'Pronto', label: 'Pronto', words: ['libera', 'finaliz', 'entrega', 'pronto'] }
+       { label: 'Pronto', words: ['libera', 'finaliz', 'entrega', 'pronto'] }
     ];
 
     const allTasks = (window.DB && window.DB.tasks) ? window.DB.tasks.getAll() : [];
