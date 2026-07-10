@@ -507,6 +507,7 @@ window.SimulatorModule = (() => {
 // AI ASSISTANT MODULE
 // ================================================================
 window.AIAssistant = (() => {
+  let pendingImage = false;
   let userName = 'Usuário';
   if (window.Auth) {
     const session = window.Auth.getSession();
@@ -1062,6 +1063,11 @@ window.AIAssistant = (() => {
         <!-- Chat -->
         <div class="card" style="display:flex;flex-direction:column;height:75vh;width:100%;">
           <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:var(--space-4);"></div>
+          <div id="ai-attachment-preview" style="display:none; padding:var(--space-2) var(--space-4); background:var(--bg-base); border-top:1px solid var(--border-card); align-items:center; gap:var(--space-2); color:var(--brand-primary-light); font-size:12px; font-weight:600;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+            1 imagem anexada (pronta para envio junto com a mensagem)
+            <span style="margin-left:auto; cursor:pointer; color:var(--color-danger);" onclick="AIAssistant.removeAttachment()">Remover</span>
+          </div>
           <div style="border-top:1px solid var(--border-card);padding:var(--space-4);display:flex;gap:var(--space-3);align-items:flex-end;">
             <button class="btn btn-ghost" style="height:44px;padding:0 var(--space-3);color:var(--text-secondary);" onclick="AIAssistant.mockCamera()" title="Tirar Foto">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" /></svg>
@@ -1084,36 +1090,60 @@ window.AIAssistant = (() => {
 
   function sendFromInput() {
     const input = document.getElementById('ai-input');
-    if (input?.value?.trim()) sendQuery(input.value.trim());
-  }
-
-  function handleImageInput() {
-    const mockPieceName = prompt("Simulação de IA Visual: Qual o nome da peça que está na foto? (ex: Bomba Rexroth A10VSO)");
+    const text = input?.value?.trim() || '';
     
-    if (!mockPieceName) {
-      messages.push({ role:'user', content:`*[Imagem anexada]*` });
-      messages.push({ role:'ai', content:`A imagem não está nítida o suficiente para eu identificar o produto automaticamente. Você poderia descrever a peça ou enviar uma foto melhor?` });
-      renderMessages();
-      return;
+    if (!text && !pendingImage) return;
+
+    let userMsg = '';
+    if (pendingImage) {
+      userMsg += `*[Imagem anexada]*\n`;
+    }
+    if (text) {
+      userMsg += text;
     }
 
-    messages.push({ role:'user', content:`*[Imagem anexada para análise]*` });
-    renderMessages();
-    
-    setTimeout(() => {
-      const mlSearchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(mockPieceName)}`;
-      const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(mockPieceName + ' comprar')}`;
+    if (input) {
+      input.value = '';
+      input.style.height = '';
+    }
 
-      messages.push({ role:'ai', content:`**Análise Visual Concluída** 📷\n\nIdentifiquei a peça na imagem como: **${mockPieceName}**.\n\nBusquei este produto no mercado e gerei os links diretos para você consultar preços e disponibilidade:\n\n🛒 **Mercado Livre**\n- [Buscar "${mockPieceName}" no Mercado Livre](${mlSearchUrl})\n\n🔍 **Busca Google (Distribuidores)**\n- [Pesquisar fornecedores no Google](${googleSearchUrl})\n\nDeseja que eu registre o status deste equipamento como "Aguardando Peça" ou crie uma Solicitação de Compra (SC)?`});
-      renderMessages();
-    }, 2000);
+    messages.push({ role:'user', content: userMsg });
+    renderMessages();
+
+    if (pendingImage) {
+      pendingImage = false;
+      const preview = document.getElementById('ai-attachment-preview');
+      if (preview) preview.style.display = 'none';
+      
+      const searchTerm = text || 'peça solicitada';
+
+      setTimeout(() => {
+        const mlSearchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(searchTerm)}`;
+        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchTerm + ' comprar')}`;
+
+        messages.push({ role:'ai', content:`**Análise Visual Concluída** 📷\n\nAnalisei a imagem enviada e cruzei com a sua solicitação ("**${searchTerm}**"). Busquei no mercado e gerei os links diretos para você consultar preços e disponibilidade:\n\n🛒 **Mercado Livre**\n- [Buscar "${searchTerm}" no Mercado Livre](${mlSearchUrl})\n\n🔍 **Busca Google (Distribuidores)**\n- [Pesquisar fornecedores no Google](${googleSearchUrl})\n\nDeseja que eu registre o status deste equipamento como "Aguardando Peça" ou crie uma Solicitação de Compra (SC)?`});
+        renderMessages();
+      }, 2000);
+    } else {
+      sendQuery(text);
+    }
+  }
+
+  function attachImage() {
+    pendingImage = true;
+    const preview = document.getElementById('ai-attachment-preview');
+    if (preview) preview.style.display = 'flex';
+  }
+
+  function removeAttachment() {
+    pendingImage = false;
+    const preview = document.getElementById('ai-attachment-preview');
+    if (preview) preview.style.display = 'none';
   }
 
   function mockCamera() {
-    window.Toast && Toast.info('Abrindo câmera...');
-    setTimeout(() => {
-      handleImageInput();
-    }, 1500);
+    if (window.Toast) Toast.info('Câmera', 'Câmera aberta. Imagem capturada!');
+    attachImage();
   }
 
   function mockUpload() {
@@ -1121,9 +1151,7 @@ window.AIAssistant = (() => {
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e) => {
-      if (e.target.files.length > 0) {
-        handleImageInput();
-      }
+      if (e.target.files.length > 0) attachImage();
     };
     input.click();
   }
@@ -1132,15 +1160,13 @@ window.AIAssistant = (() => {
     if (e.clipboardData && e.clipboardData.items) {
       for (let i = 0; i < e.clipboardData.items.length; i++) {
         if (e.clipboardData.items[i].type.indexOf('image') !== -1) {
-          e.preventDefault();
-          handleImageInput();
-          break;
+          attachImage();
         }
       }
     }
   }
 
-  return { render, sendQuery, sendFromInput, cancelQuery, mockCamera, mockUpload, handlePaste };
+  return { render, sendQuery, sendFromInput, cancelQuery, mockCamera, mockUpload, handlePaste, removeAttachment };
 })();
 
 // ================================================================

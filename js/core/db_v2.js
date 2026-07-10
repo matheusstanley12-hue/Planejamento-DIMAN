@@ -401,19 +401,41 @@ window.DB = (() => {
             }
           });
           
-          // First set the 'all' collections
-          for (const [collection, arr] of Object.entries(allData)) {
-            localStorage.setItem(collection, JSON.stringify(arr));
-          }
-          // Then merge the individual rows into them
-          for (const [collection, arr] of Object.entries(groupedData)) {
+          let localTombstones = [];
+          try { localTombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]'); } catch(e){}
+
+          const allKeys = new Set([...Object.keys(allData), ...Object.keys(groupedData), ...Object.values(KEYS)]);
+          let hasLocalChangesToPush = false;
+
+          for (const collection of allKeys) {
+            let localArr = [];
+            try { localArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
+            if (!Array.isArray(localArr)) localArr = [];
+
             let baseArr = allData[collection] || [];
             if (!Array.isArray(baseArr)) baseArr = [];
-            
-            // Map by id to prevent duplicates and process tombstones
+
             const mergedMap = new Map();
-            baseArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
             
+            // 1. Inserir dados locais primeiro (fonte da verdade provisória)
+            localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+
+            // 2. Mesclar baseArr (key: 'all' do Supabase)
+            baseArr.forEach(item => {
+               if (item && item.id) {
+                   const existing = mergedMap.get(item.id);
+                   const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+                   const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                   if (!existing || newTime > existTime) {
+                      mergedMap.set(item.id, item);
+                   } else if (existTime > newTime) {
+                      hasLocalChangesToPush = true; // Local é mais novo, força push corretivo
+                   }
+               }
+            });
+
+            // 3. Mesclar groupedData (linhas individuais do Supabase)
+            const arr = groupedData[collection] || [];
             arr.forEach(item => { 
               if (item && item.id) {
                 if (item._deleted) {
@@ -424,11 +446,18 @@ window.DB = (() => {
                 const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                 const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
                 
-                // If it's from individual row, we prefer it unless base is strictly newer
                 if (!existing || newTime >= existTime) {
                   mergedMap.set(item.id, item);
+                } else if (existTime > newTime) {
+                  hasLocalChangesToPush = true;
                 }
               }
+            });
+
+            // 4. Aplicar tombstones locais (Garante que exclusões feitas offline ou não sincronizadas NUNCA voltem)
+            const colTomb = localTombstones.filter(t => t.collection === collection);
+            colTomb.forEach(t => {
+               mergedMap.delete(t.key);
             });
             
             let finalArray = Array.from(mergedMap.values());
@@ -444,6 +473,12 @@ window.DB = (() => {
             }
             
             try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
+          }
+
+          if (hasLocalChangesToPush) {
+             console.log('[DIMAN] Dados locais são mais recentes que a nuvem. Forçando sync para corrigir a nuvem.');
+             localStorage.setItem('diman_unsynced', 'true');
+             setTimeout(forceSyncAll, 1000);
           }
         }
       }
