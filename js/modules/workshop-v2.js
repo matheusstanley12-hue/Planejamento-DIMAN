@@ -283,8 +283,8 @@ window.WorkshopModule = (() => {
         data: {
           labels: ['Receb.', 'Desmont.', 'Insp.', 'Mont.', 'Teste', 'Pintura', 'Pronto'],
           datasets: [
-             { label: 'Realizado (dias)', data: [1, 4, 3, 12, 4, 2, 1], borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true, tension: 0.4 },
-             { label: 'Meta', data: [1, 2, 2, 7, 2, 1, 1], borderColor: '#10B981', borderDash: [5,5], fill: false, tension: 0 }
+             { label: 'Realizado (dias)', data: [1, 4, 3, 12, 4, 2, 1], borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true, tension: 0.4, datalabels: { align: 'top', anchor: 'end' } },
+             { label: 'Meta', data: [1, 2, 2, 7, 2, 1, 1], borderColor: '#10B981', borderDash: [5,5], fill: false, tension: 0, datalabels: { align: 'bottom', anchor: 'start' } }
           ]
         },
         options: { 
