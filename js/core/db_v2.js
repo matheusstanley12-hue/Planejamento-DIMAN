@@ -587,6 +587,7 @@ window.DB = (() => {
               const idx = localArr.findIndex(i => i && i.id === row.key);
               
               let itemToSave = row.data;
+              if (!itemToSave) return;
               if (row.collection === KEYS.tasks && itemToSave.status === 'Concluída' && itemToSave.updatedAt) {
                   const diffDays = (new Date() - new Date(itemToSave.updatedAt)) / (1000 * 60 * 60 * 24);
                   if (diffDays > 3) {
