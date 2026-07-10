@@ -1222,50 +1222,7 @@ window.EquipmentModule = (() => {
     }, 100);
   }
 
-    
-    const bundle = trash[index];
-    
-    // Restore equipment
-    let eqs = JSON.parse(localStorage.getItem('diman_equipment')||'[]');
-    if (!eqs.find(e => e.id === bundle.equipment.id)) {
-      eqs.push(bundle.equipment);
-      localStorage.setItem('diman_equipment', JSON.stringify(eqs));
-      if (window.events && window.events.emit) window.events.emit('equipment:created', bundle.equipment);
-    }
-    
-    // Restore tasks
-    let tasks = JSON.parse(localStorage.getItem('diman_tasks')||'[]');
-    bundle.tasks.forEach(t => {
-      if (!tasks.find(tk => tk.id === t.id)) tasks.push(t);
-    });
-    localStorage.setItem('diman_tasks', JSON.stringify(tasks));
-    
-    // Restore timesheets
-    let ts = JSON.parse(localStorage.getItem('diman_timesheets')||'[]');
-    bundle.timesheets.forEach(t => {
-      if (!ts.find(tk => tk.id === t.id)) ts.push(t);
-    });
-    localStorage.setItem('diman_timesheets', JSON.stringify(ts));
-    
-    // Restore replannings and restrictions if they exist
-    if (bundle.replannings && bundle.replannings.length > 0) {
-      let rpl = JSON.parse(localStorage.getItem('diman_replannings')||'[]');
-      bundle.replannings.forEach(r => { if (!rpl.find(rk => rk.id === r.id)) rpl.push(r); });
-      localStorage.setItem('diman_replannings', JSON.stringify(rpl));
-    }
-    if (bundle.restrictions && bundle.restrictions.length > 0) {
-      let rst = JSON.parse(localStorage.getItem('diman_restrictions')||'[]');
-      bundle.restrictions.forEach(r => { if (!rst.find(rk => rk.id === r.id)) rst.push(r); });
-      localStorage.setItem('diman_restrictions', JSON.stringify(rst));
-    }
-    
-    trash.splice(index, 1);
-    localStorage.setItem('diman_lixeira', JSON.stringify(trash));
-    
-    closeModal('modal-trash');
-    window.Router.navigate('equipment', { force: true });
-    window.Toast.success('Restaurado!', `Equipamento ${bundle.equipment.codigo} foi restaurado.`);
-  }
+
   function filterList(term) {
     const rows = document.querySelectorAll('.eq-row');
     const lowerTerm = term.toLowerCase().trim();
