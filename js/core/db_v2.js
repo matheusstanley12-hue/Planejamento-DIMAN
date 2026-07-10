@@ -626,14 +626,21 @@ window.DB = (() => {
 
           if (window.Router) {
             const current = window.Router.getCurrent();
-            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home', 'equipment', 'services', 'planning', 'meetings'];
-            if (current && liveViews.includes(current)) {
+            if (current === 'tasks-ongoing') {
               const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
               if (!hasOpenModal) {
                 if (window._syncRenderTimeout) clearTimeout(window._syncRenderTimeout);
                 window._syncRenderTimeout = setTimeout(() => {
                   window.Router.navigate(current, { force: true });
                 }, 3000);
+              }
+            } else if (current && ['dashboard', 'manager-dashboard', 'workforce-time', 'home', 'equipment', 'services', 'planning', 'meetings'].includes(current)) {
+              if (window.Toast && !window._toastUpdateShown) {
+                window._toastUpdateShown = true;
+                if (!document.querySelector('.modal-overlay.open, .modal.open')) {
+                   window.Toast.info('Atualização Recebida', 'Novos dados sincronizados da nuvem. Clique em Atualizar para recarregar a tela.');
+                }
+                setTimeout(() => window._toastUpdateShown = false, 15000);
               }
             }
           }

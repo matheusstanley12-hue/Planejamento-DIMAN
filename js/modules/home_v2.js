@@ -131,7 +131,7 @@ window.HomeModule = (() => {
            draggable="true"
            ondragstart="window.HomeModule.drag(event, '${e.id}')"
            ondragend="window.HomeModule.dragEnd(event)"
-           data-search="${e.codigo.toLowerCase()} ${e.nome.toLowerCase()}" 
+           data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()}" 
            data-manutencao="${isManutencao}" 
            data-atrasado="${isAtrasado}" 
            data-lib7="${isLib7}" 
@@ -523,7 +523,7 @@ window.HomeModule = (() => {
           visibleCount++;
         }
       });
-      const countEl = column.querySelector('.column-count');
+      const countEl = column.querySelector('.pch-count');
       if (countEl) {
         countEl.textContent = visibleCount + ' Equipamento' + (visibleCount !== 1 ? 's' : '');
       }
