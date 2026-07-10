@@ -446,9 +446,9 @@ window.WorkshopModule = (() => {
         .ws-chart-card h3 { margin: 0 0 16px 0; font-size: 15px; font-weight: 800; color: #64B5F6; text-transform: uppercase; }
         
         .ws-alerts { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 24px; }
-        .ws-alert { background: var(--border-card); border: 1px solid var(--ws-border); color: #E7EBEE; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
-        .ws-alert:hover { background: var(--border-card); }
-        .ws-alert.active-alert { border-color: #F59E0B; background: rgba(245,158,11,0.1); }
+        .ws-alert { background: var(--border-card); border: 1px solid var(--ws-border); color: var(--ws-text); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .ws-alert:hover { background: var(--ws-border); }
+        .ws-alert.active-alert { border-color: #F59E0B; background: rgba(245,158,11,0.1); color: var(--ws-text); }
         
         .ws-table-container { background: var(--ws-card); border: 1px solid var(--ws-border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 32px; }
         .ws-table-header { padding: 16px; background: var(--bg-default, #F9FAFB); border-bottom: 1px solid var(--ws-border); display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 12px; }
