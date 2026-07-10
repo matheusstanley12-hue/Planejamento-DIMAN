@@ -290,6 +290,29 @@ window.DB = (() => {
       localStorage.setItem(key, JSON.stringify(localDataToSave)); 
     } catch(err) {
       if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        if (key === KEYS.tasks && Array.isArray(localDataToSave)) {
+            // Limpeza de emergência: Remove TODAS as fotos de tarefas concluídas para salvar a atual
+            let emergencyData = localDataToSave.map(t => {
+                if (t && t.status === 'Concluída') {
+                    if (t.fotoComprovacao || (t.anexos && t.anexos.length)) {
+                        const copy = { ...t };
+                        delete copy.fotoComprovacao;
+                        delete copy.anexos;
+                        return copy;
+                    }
+                }
+                return t;
+            });
+            try {
+               localStorage.setItem(key, JSON.stringify(emergencyData));
+               if (window.Toast) window.Toast.info('Memória Otimizada', 'Foi necessário otimizar a memória removendo fotos antigas para concluir esta tarefa.', 5000);
+               syncToSupabase(key, emergencyData);
+               return true;
+            } catch(e2) {
+               if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos do sistema.', 8000);
+               return false;
+            }
+        }
         if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos ou use links.', 8000);
         return false;
       }
@@ -331,6 +354,20 @@ window.DB = (() => {
         }
       }
     }
+
+    try {
+       const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
+       if (tombstones.length > 0) {
+           const tbPayload = tombstones.map(t => ({
+              collection: t.collection,
+              key: t.key,
+              data: { id: t.key, _deleted: true },
+              updated_at: new Date().toISOString()
+           }));
+           await supabaseClient.from('diman_store').upsert(tbPayload, { onConflict: 'collection,key' });
+       }
+    } catch(e) {}
+
     localStorage.setItem('diman_unsynced', 'false');
     if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem.');
   }

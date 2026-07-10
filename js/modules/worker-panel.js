@@ -1322,7 +1322,7 @@ window.WorkerPanel = (() => {
                 `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}" data-accumulated="${accSecs}">${formatTimeDiff(w.currentActionStartTime, accSecs)}</div>`
               }
               <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
-              <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
+              <div class="task-meta">${eq ? eq.codigo : ''}${eq && eq.os ? ` (OS: ${eq.os})` : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
               ${currentT && currentT.fotoPeca ? `
                 <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;" onclick="WorkerPanel.openTaskDetail('${currentT.id}')">
                   <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
@@ -1364,7 +1364,7 @@ window.WorkerPanel = (() => {
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tarefa Pausada</div>`
               }
               <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
-              <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
+              <div class="task-meta">${eq ? eq.codigo : ''}${eq && eq.os ? ` (OS: ${eq.os})` : ''} &bull; Aguardando retomada</div>
               ${currentT && currentT.fotoPeca ? `
                 <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;" onclick="WorkerPanel.openTaskDetail('${currentT.id}')">
                   <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
@@ -1425,7 +1425,8 @@ window.WorkerPanel = (() => {
     sortedPrefixes.forEach(prefix => {
        eqOptionsHtml += `<optgroup label="${prefix}">`;
        groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
-           eqOptionsHtml += `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)</option>`;
+           const osText = e.os ? ` - OS: ${e.os}` : '';
+           eqOptionsHtml += `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)${osText}</option>`;
        });
        eqOptionsHtml += `</optgroup>`;
     });

@@ -519,13 +519,7 @@ window.EquipmentModule = (() => {
         </div>
         <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
           <input type="text" id="eq-search" placeholder="Buscar equipamento..." class="input" style="padding: 6px 12px; width: 250px; font-size:13px;" onkeyup="EquipmentModule.filterList(this.value)">
-          <button class="btn btn-outline" style="border-color:var(--border-hover);color:var(--text-secondary);" onclick="EquipmentModule.toggleLiberados()">
-            ${showLiberados ? 'Esconder Liberados' : 'Mostrar Liberados'}
-          </button>
-          <button class="btn btn-outline" style="border-color:var(--color-danger);color:var(--color-danger);" onclick="EquipmentModule.openTrash()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-            Lixeira
-          </button>
+          <button class="btn btn-outline" onclick="EquipmentModule.toggleLiberados()" style="margin-left:auto;">${showLiberados ? 'Ocultar Liberados' : 'Mostrar Liberados'}</button>
           <button class="btn btn-primary" onclick="EquipmentModule.openCreate()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Novo Equipamento
@@ -674,16 +668,6 @@ window.EquipmentModule = (() => {
           <button class="modal-close" onclick="closeModal('modal-eq-detail')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
         </div>
         <div class="modal-body" id="eq-detail-body"></div>
-      </div>
-    </div>
-    <!-- Modal Lixeira -->
-    <div class="modal-overlay" id="modal-trash">
-      <div class="modal modal-lg">
-        <div class="modal-header">
-          <div class="modal-title">Lixeira de Equipamentos</div>
-          <button class="modal-close" onclick="closeModal('modal-trash')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-        </div>
-        <div class="modal-body" id="trash-body"></div>
       </div>
     </div>`;
   }
@@ -1141,27 +1125,12 @@ window.EquipmentModule = (() => {
       Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir equipamentos.');
       return;
     }
-    confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? O equipamento e suas tarefas serão movidos para a Lixeira.`, () => {
+    confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Esta ação apagará permanentemente o equipamento e todas as tarefas e históricos associados.`, () => {
       try {
-        const eq = DB.equipment.get(id);
         const eqTasks = DB.tasks.list(id);
         const ts = DB.timesheets.list().filter(t => t.equipmentId === id);
         const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
         const rest = DB.restrictions ? DB.restrictions.list(id) : [];
-        
-        const trashBundle = {
-          deletedAt: new Date().toISOString(),
-          deletedBy: session.nome,
-          equipment: eq,
-          tasks: eqTasks,
-          timesheets: ts,
-          replannings: re,
-          restrictions: rest
-        };
-        
-        let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
-        trash.push(trashBundle);
-        localStorage.setItem('diman_lixeira', JSON.stringify(trash));
 
         window.DB.equipment.delete(id);
         eqTasks.forEach(t => DB.tasks.delete(t.id));
@@ -1172,7 +1141,7 @@ window.EquipmentModule = (() => {
         if (typeof closeModal === 'function') closeModal('modal-equipment');
         const route = (window.Router && window.Router.currentRoute) ? window.Router.currentRoute : 'home';
         window.Router.navigate(route, { force: true });
-        window.Toast.success('Movido para a Lixeira', nome);
+        window.Toast.success('Excluído', 'O equipamento foi apagado permanentemente do sistema.');
       } catch(e) {
         alert('Erro ao excluir: ' + e.message);
       }
@@ -1253,39 +1222,6 @@ window.EquipmentModule = (() => {
     }, 100);
   }
 
-  function openTrash() {
-    let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
-    const body = document.getElementById('trash-body');
-    if (!body) return;
-    
-    if (trash.length === 0) {
-      body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:var(--space-6);">A Lixeira está vazia.</div>';
-    } else {
-      body.innerHTML = `
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Equipamento</th><th>Excluído por</th><th>Data</th><th>Tarefas</th><th>Ações</th></tr></thead>
-            <tbody>
-              ${trash.map((t, index) => `
-                <tr>
-                  <td><strong>${t.equipment.codigo}</strong> - ${t.equipment.nome}</td>
-                  <td>${t.deletedBy || '—'}</td>
-                  <td>${formatDate(t.deletedAt)}</td>
-                  <td><span class="badge badge-warning">${t.tasks.length} tarefas</span></td>
-                  <td><button class="btn btn-secondary btn-sm" onclick="EquipmentModule.restoreTrash(${index})">Restaurar</button></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-    openModal('modal-trash');
-  }
-
-  function restoreTrash(index) {
-    let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
-    if (!trash[index]) return;
     
     const bundle = trash[index];
     
@@ -1343,7 +1279,7 @@ window.EquipmentModule = (() => {
     });
   }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, openTrash, restoreTrash, filterList };
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, filterList };
 })();
 
 // ================================================================

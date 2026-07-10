@@ -212,66 +212,77 @@ window.DPanel = (() => {
     const semClass = semaphoreClass(adherence);
 
     return `
-      <div class="card" style="border-top:3px solid var(--color-${semClass});height:100%;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+      <div class="card" style="height:100%; display:flex; flex-direction:column; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02); background:var(--bg-base); font-family:'Inter', sans-serif; padding:var(--space-4);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);padding-bottom:var(--space-3);border-bottom:1px solid var(--border-default);">
           <div>
-            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted)">D-1</div>
-            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">Ontem · ${formatDate(d1)}</div>
+            <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--color-${semClass});"></div>
+              <div style="font-size:16px;font-weight:700;color:var(--text-muted)">D-1 · Ontem</div>
+            </div>
+            <div style="font-size:30px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;">${formatDate(d1)}</div>
           </div>
-          <div style="font-size:2rem;">${semaphoreEmoji(adherence)}</div>
         </div>
 
         <!-- KPI row -->
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-3);margin-bottom:var(--space-4);">
-          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--text-primary)">${planned}</div>
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">Planejadas</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--text-muted);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--text-primary);line-height:1;">${planned}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Planejadas</div>
           </div>
-          <div style="background:var(--color-success-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-success)">${done}</div>
-            <div style="font-size:var(--text-xs);color:var(--color-success)">Executadas</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--color-success);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--color-success);line-height:1;">${done}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Executadas</div>
           </div>
-          <div style="background:var(--color-danger-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-danger)">${notDone.length}</div>
-            <div style="font-size:var(--text-xs);color:var(--color-danger)">Pendentes</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--color-danger);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--color-danger);line-height:1;">${notDone.length}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Pendentes</div>
           </div>
-          <div style="background:var(--color-${semClass}-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-${semClass})">${adherence}%</div>
-            <div style="font-size:var(--text-xs);color:var(--color-${semClass})">Aderência</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--color-${semClass});margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--color-${semClass});line-height:1;">${adherence}%</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Aderência</div>
           </div>
         </div>
 
         <!-- Horas -->
-        <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-4);">
-          <div style="flex:1;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">Horas Planejadas</div>
-            <div style="font-size:var(--text-xl);font-weight:700;color:var(--text-primary);font-family:var(--font-mono)">${hPlanned.toFixed(0)}h</div>
+        <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);">
+          <div style="flex:1;background:var(--bg-card);border-radius:12px;padding:var(--space-3);display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="font-size:12px;color:var(--text-muted)">Hrs Plan.</div>
+            <div style="font-size:20px;font-weight:800;color:var(--text-primary);font-family:var(--font-mono)">${hPlanned.toFixed(0)}h</div>
           </div>
-          <div style="flex:1;background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">Horas Realizadas</div>
-            <div style="font-size:var(--text-xl);font-weight:700;color:var(--brand-primary-light);font-family:var(--font-mono)">${hDone.toFixed(0)}h</div>
+          <div style="flex:1;background:var(--bg-card);border-radius:12px;padding:var(--space-3);display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="font-size:12px;color:var(--text-muted)">Hrs Real.</div>
+            <div style="font-size:20px;font-weight:800;color:var(--brand-primary-light);font-family:var(--font-mono)">${hDone.toFixed(0)}h</div>
           </div>
         </div>
 
         <!-- Adherence bar -->
-        <div class="progress-bar-wrap" style="margin-bottom:var(--space-4);">
-          <div class="progress-bar-header"><span class="progress-bar-label">Aderência ao Planejamento</span><span class="progress-bar-value">${adherence}%</span></div>
-          <div class="progress-track lg"><div class="progress-fill ${semClass}" style="width:${adherence}%"></div></div>
+        <div style="margin-bottom:var(--space-4);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:12px;font-weight:600;color:var(--text-muted);">Progresso D-1</span>
+            <span style="font-size:12px;font-weight:800;color:var(--color-${semClass});">${adherence}%</span>
+          </div>
+          <div style="height:4px;background:var(--border-default);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${adherence}%;background:var(--color-${semClass});border-radius:4px;"></div></div>
         </div>
+
+        <div style="flex:1;"></div>
 
         <!-- Motivos de não execução -->
         ${notDone.length > 0 ? `
-        <div>
-          <div style="font-size:var(--text-xs);font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--space-2);">Motivos de Não Execução</div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-1);">
+        <div style="margin-top:auto;padding-top:var(--space-3);border-top:1px dashed var(--border-default);">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:var(--space-2);">Motivos de Não Execução</div>
+          <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
             ${Object.entries(reasons).filter(([,v])=>v>0).map(([k,v]) => `
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) var(--space-3);background:var(--bg-base);border-radius:var(--radius-sm);">
-                <span style="font-size:var(--text-xs);color:var(--text-secondary)">${k}</span>
-                <span class="badge badge-warning">${v}</span>
+              <div style="display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--bg-card);border-radius:var(--radius-sm);border:1px solid var(--border-default);">
+                <span style="font-size:12px;font-weight:800;color:var(--color-warning);">${v}</span>
+                <span style="font-size:12px;color:var(--text-secondary)">${k}</span>
               </div>
             `).join('')}
           </div>
-        </div>` : `<div class="alert alert-success"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg><div class="alert-content"><div class="alert-title">Todas as atividades de ontem foram concluídas!</div></div></div>`}
+        </div>` : `<div style="margin-top:auto;display:flex;align-items:center;gap:8px;padding:var(--space-3);background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;color:var(--color-success);font-size:12px;font-weight:600;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>Todas concluídas!</div>`}
       </div>
     `;
   }
@@ -287,70 +298,86 @@ window.DPanel = (() => {
     DB.equipment.list().forEach(e => { equipMap[e.id] = e; });
 
     return `
-      <div class="card" style="border-top:3px solid var(--brand-primary-light);height:100%;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+      <div class="card" style="height:100%; display:flex; flex-direction:column; border-radius:12px; box-shadow:0 4px 12px rgba(30,136,229,0.1); border:1px solid var(--brand-primary-light); background:var(--bg-base); font-family:'Inter', sans-serif; padding:var(--space-4);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);padding-bottom:var(--space-3);border-bottom:1px solid var(--border-default);">
           <div>
-            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-primary-light)">D — HOJE</div>
-            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">${formatDate(todayStr)}</div>
+            <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--brand-primary-light);box-shadow:0 0 8px var(--brand-primary-light);"></div>
+              <div style="font-size:16px;font-weight:700;color:var(--brand-primary-light)">D — HOJE</div>
+            </div>
+            <div style="font-size:30px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;">${formatDate(todayStr)}</div>
           </div>
-          <div id="live-clock" style="font-size:var(--text-xl);font-weight:800;color:var(--brand-primary-light);font-family:var(--font-mono)"></div>
+          <div id="live-clock" style="font-size:24px;font-weight:800;color:var(--text-primary);font-family:var(--font-mono);background:var(--bg-card);padding:6px 16px;border-radius:24px;border:1px solid var(--border-default);box-shadow:0 1px 3px rgba(0,0,0,0.05);"></div>
         </div>
 
         <!-- KPI row -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
-          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${total}</div>
-            <div style="font-size:10px;color:var(--text-muted)">Total</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--text-muted);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--text-primary);line-height:1;">${total}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Total</div>
           </div>
-          <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-info)">${emAndamento}</div>
-            <div style="font-size:10px;color:var(--color-info)">Em Andamento</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--color-info);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--color-info);line-height:1;">${emAndamento}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Em Andam.</div>
           </div>
-          <div style="background:var(--color-success-bg);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--color-success)">${concluidas}</div>
-            <div style="font-size:10px;color:var(--color-success)">Concluídas</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--color-success);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--color-success);line-height:1;">${concluidas}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Concluídas</div>
           </div>
         </div>
 
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
-          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">Iniciadas</div>
-            <div style="font-size:var(--text-xl);font-weight:800;color:var(--text-primary)">${iniciadas}/${total}</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-3) var(--space-4);display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="font-size:12px;color:var(--text-muted);font-weight:500;">Iniciadas</div>
+            <div style="font-size:24px;font-weight:800;color:var(--text-primary)">${iniciadas}<span style="color:var(--text-muted);font-weight:500;font-size:14px;">/${total}</span></div>
           </div>
-          <div style="background:${criticas > 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:${criticas > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">Ativ. Críticas</div>
-            <div style="font-size:var(--text-xl);font-weight:800;color:${criticas > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${criticas}</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-3) var(--space-4);display:flex;align-items:center;justify-content:space-between;border:1px solid ${criticas > 0 ? 'var(--color-danger)' : 'var(--border-default)'};box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="font-size:12px;color:${criticas > 0 ? 'var(--color-danger)' : 'var(--text-muted)'};font-weight:500;">Críticas</div>
+            <div style="font-size:24px;font-weight:800;color:${criticas > 0 ? 'var(--color-danger)' : 'var(--text-primary)'}">${criticas}</div>
           </div>
         </div>
 
         <!-- Progress bar -->
         ${total > 0 ? `
-        <div class="progress-bar-wrap" style="margin-bottom:var(--space-4);">
-          <div class="progress-bar-header"><span class="progress-bar-label">Progresso do Dia</span><span class="progress-bar-value">${Math.round((concluidas/total)*100)}%</span></div>
-          <div class="progress-track lg"><div class="progress-fill success" style="width:${(concluidas/total)*100}%"></div></div>
+        <div style="margin-bottom:var(--space-4);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-size:12px;font-weight:600;color:var(--text-muted);">Progresso de Hoje</span>
+            <span style="font-size:12px;font-weight:800;color:var(--color-success);">${Math.round((concluidas/total)*100)}%</span>
+          </div>
+          <div style="height:4px;background:var(--border-default);border-radius:4px;overflow:hidden;"><div style="height:100%;width:${(concluidas/total)*100}%;background:var(--color-success);border-radius:4px;"></div></div>
         </div>` : ''}
 
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:var(--space-2);">Em Andamento</div>
+        
         <!-- Active tasks list -->
         ${emAndamento > 0 ? `
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:220px;overflow-y:auto;">
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:220px;overflow-y:auto;padding-right:4px;">
           ${tasks.filter(t => t.status === 'Em Andamento').map(t => {
             const perc = t.percentual || 0;
             return `
-              <div style="padding:var(--space-2) var(--space-3);background:var(--bg-base);border-radius:var(--radius-sm);border-left:3px solid var(--color-${t.critico ? 'danger' : 'info'});">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-                  <span style="font-weight:600;color:var(--text-primary);font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</span>
-                  <span style="font-size:var(--text-xs);font-weight:700;color:var(--color-info)">${perc}%</span>
+              <div style="padding:var(--space-3);background:var(--bg-card);border-radius:8px;border:1px solid var(--border-default);cursor:default;transition:all 0.2s ease;" onmouseover="this.style.borderColor='var(--brand-primary-light)';this.style.backgroundColor='var(--bg-card-hover)';" onmouseout="this.style.borderColor='var(--border-default)';this.style.backgroundColor='var(--bg-card)';">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <div style="display:flex;align-items:center;gap:8px;overflow:hidden;">
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--color-${t.critico ? 'danger' : 'info'});flex-shrink:0;"></div>
+                    <span style="font-weight:600;color:var(--text-primary);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</span>
+                  </div>
+                  <span style="font-size:12px;font-weight:800;color:var(--text-primary);">${perc}%</span>
                 </div>
-                <div style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;">
+                <div style="font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;padding-left:16px;">
                   <span>${equipMap[t.equipmentId]?.codigo || ''} · ${t.disciplina}</span>
-                  <span style="text-transform:uppercase">${t.responsavel || 'Não atr.'}</span>
+                  <span style="color:var(--text-secondary)">${t.responsavel || 'Não atr.'}</span>
                 </div>
               </div>
             `;
           }).join('')}
-        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);">Nenhuma atividade em andamento</div>`}
+        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:var(--space-4) 0;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;">Nenhuma atividade em andamento</div>`}
 
-        ${criticas > 0 ? `<div style="margin-top:var(--space-3);padding:var(--space-2);background:var(--color-danger-bg);color:var(--color-danger);font-size:var(--text-xs);border-radius:var(--radius-sm);font-weight:600;text-align:center;">⚠️ ${criticas} atividades críticas hoje — monitorar de perto</div>` : ''}
+        <div style="flex:1;"></div>
+
+        ${criticas > 0 ? `<div style="margin-top:var(--space-3);padding:10px;background:var(--bg-card);border:1px solid var(--color-danger);color:var(--color-danger);font-size:12px;border-radius:8px;font-weight:600;display:flex;align-items:center;gap:8px;"><svg style="width:16px;height:16px;flex-shrink:0;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>${criticas} crítica${criticas>1?'s':''} pendente${criticas>1?'s':''} — Monitorar de perto</div>` : ''}
       </div>
     `;
   }
@@ -368,65 +395,84 @@ window.DPanel = (() => {
     }).length;
     const partsNotOk = tasks.length - partsOk;
     const restricted = tasks.filter(t => restrictions.some(r => r.equipmentId === t.equipmentId)).length;
+    const criticas = tasks.filter(t=>window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length;
 
     return `
-      <div class="card" style="border-top:3px solid var(--color-purple);height:100%;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);">
+      <div class="card" style="height:100%; display:flex; flex-direction:column; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.02); background:var(--bg-base); font-family:'Inter', sans-serif; padding:var(--space-4);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-4);padding-bottom:var(--space-3);border-bottom:1px solid var(--border-default);">
           <div>
-            <div style="font-size:var(--text-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--color-purple)">D+1</div>
-            <div style="font-size:var(--text-lg);font-weight:700;color:var(--text-primary)">Amanhã · ${formatDate(d1)}</div>
+            <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:4px;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--color-purple);"></div>
+              <div style="font-size:16px;font-weight:700;color:var(--text-muted)">D+1 · Amanhã</div>
+            </div>
+            <div style="font-size:30px;font-weight:800;color:var(--text-primary);letter-spacing:-1px;">${formatDate(d1)}</div>
           </div>
-          <div style="font-size:2rem;">📋</div>
         </div>
 
         <!-- Validation summary -->
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);margin-bottom:var(--space-4);">
-          <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--text-muted)">Programadas</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--text-primary)">${tasks.length}</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--text-muted);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--text-primary);line-height:1;">${tasks.length}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Programadas</div>
           </div>
-          <div style="background:${partsNotOk > 0 ? 'var(--color-danger-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">Peças OK</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'}">${partsOk}/${tasks.length}</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid ${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--border-default)'};box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'};margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014-8.81c-2.288-1.093-4.81-1.685-7.465-1.685H7.5A4.5 4.5 0 003 7.5v9a4.5 4.5 0 004.5 4.5h3.08a23.87 23.87 0 007.465-1.685"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--color-success)'};line-height:1;">${partsOk}<span style="color:var(--text-muted);font-weight:500;font-size:16px;">/${tasks.length}</span></div>
+            <div style="font-size:12px;color:${partsNotOk > 0 ? 'var(--color-danger)' : 'var(--text-muted)'};margin-top:6px;font-weight:500;">Peças OK</div>
           </div>
-          <div style="background:${restricted > 0 ? 'var(--color-warning-bg)' : 'var(--color-success-bg)'};border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'}">Restrições</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'}">${restricted}</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid ${restricted > 0 ? 'var(--color-warning)' : 'var(--border-default)'};box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'};margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:${restricted > 0 ? 'var(--color-warning)' : 'var(--color-success)'};line-height:1;">${restricted}</div>
+            <div style="font-size:12px;color:${restricted > 0 ? 'var(--color-warning)' : 'var(--text-muted)'};margin-top:6px;font-weight:500;">Restrições</div>
           </div>
-          <div style="background:var(--color-info-bg);border-radius:var(--radius-md);padding:var(--space-3);">
-            <div style="font-size:var(--text-xs);color:var(--color-info)">Críticas</div>
-            <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-info)">${tasks.filter(t=>window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico).length}</div>
+          <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);text-align:center;border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+            <div style="display:flex;align-items:center;justify-content:center;gap:4px;color:var(--color-info);margin-bottom:4px;"><svg style="width:14px;height:14px" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
+            <div style="font-size:36px;font-weight:800;color:var(--color-info);line-height:1;">${criticas}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;font-weight:500;">Críticas</div>
           </div>
         </div>
 
-        <!-- Alerts -->
-        ${alerts.length > 0 ? `
-        <div style="display:flex;flex-direction:column;gap:var(--space-2);margin-bottom:var(--space-3);">
-          ${alerts.map(a => `
-            <div style="display:flex;gap:var(--space-2);padding:var(--space-3);background:var(--color-${a.type === 'danger' ? 'danger' : 'warning'}-bg);border-radius:var(--radius-md);border-left:3px solid var(--color-${a.type === 'danger' ? 'danger' : 'warning'});">
-              <span style="flex-shrink:0;font-size:1rem;">${a.type === 'danger' ? '🔴' : '🟡'}</span>
-              <span style="font-size:var(--text-xs);color:var(--text-secondary);line-height:1.5">${a.msg}</span>
-            </div>
-          `).join('')}
-        </div>` : `<div class="alert alert-success" style="margin-bottom:var(--space-3);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg><div class="alert-content"><div class="alert-title">Programação de amanhã sem restrições identificadas!</div></div></div>`}
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:var(--space-2);">Programação</div>
 
         <!-- Task list -->
         ${tasks.length > 0 ? `
-        <div style="display:flex;flex-direction:column;gap:var(--space-1);max-height:200px;overflow-y:auto;">
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);max-height:180px;overflow-y:auto;padding-right:4px;">
           ${tasks.map(t => {
             const hasIssue = DB.parts.getAll().some(p => p.equipmentId === t.equipmentId && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
             return `
-              <div style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2);background:var(--bg-base);border-radius:var(--radius-sm);">
-                <span style="font-size:.9rem">${hasIssue ? '🔴' : '✅'}</span>
-                <div style="flex:1;min-width:0;">
-                  <div style="font-size:var(--text-xs);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
-                  <div style="font-size:10px;color:var(--text-muted)">${equipNames[t.equipmentId] || ''} · ${t.disciplina}</div>
+              <div style="padding:var(--space-3);background:var(--bg-card);border-radius:8px;border:1px solid var(--border-default);cursor:default;transition:all 0.2s ease;" onmouseover="this.style.borderColor='var(--brand-primary-light)';this.style.backgroundColor='var(--bg-card-hover)';" onmouseout="this.style.borderColor='var(--border-default)';this.style.backgroundColor='var(--bg-card)';">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                  <div style="width:8px;height:8px;border-radius:50%;background:${hasIssue ? 'var(--color-danger)' : 'var(--color-success)'};flex-shrink:0;"></div>
+                  <div style="font-size:14px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
+                </div>
+                <div style="font-size:12px;color:var(--text-muted);padding-left:16px;">
+                  ${equipNames[t.equipmentId] || ''} · ${t.disciplina}
                 </div>
               </div>`;
           }).join('')}
-        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:var(--text-sm);">Nenhuma atividade programada para amanhã</div>`}
+        </div>` : `<div style="text-align:center;color:var(--text-muted);font-size:12px;padding:var(--space-4) 0;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;">Nenhuma programada</div>`}
+
+        <div style="flex:1;"></div>
+
+        <!-- Alerts -->
+        <div style="margin-top:var(--space-4);">
+          ${alerts.length > 0 ? `
+          <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+            ${alerts.map(a => `
+              <div style="display:flex;gap:12px;padding:12px;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-default);border-left:3px solid ${a.type === 'danger' ? 'var(--color-danger)' : 'var(--color-warning)'};">
+                <span style="font-size:16px;display:flex;align-items:center;">${a.type === 'danger' ? '🔴' : '🟡'}</span>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">Atenção</div>
+                  <div style="font-size:12px;color:var(--text-secondary);line-height:1.4;">${a.msg}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>` : `<div style="display:flex;align-items:center;gap:8px;padding:var(--space-3);background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;color:var(--color-success);font-size:12px;font-weight:600;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Sem restrições para amanhã</div>`}
+        </div>
+
       </div>
-    `;
+    `
   }
 
   function renderTVPresentation() {
@@ -474,15 +520,15 @@ window.DPanel = (() => {
     const hProd = todayTs.reduce((s,t) => s + (parseFloat(t.horasTrabalhadas) || 0), 0);
 
     return `
-      <div class="card" style="margin-top:var(--space-5);">
-        <div class="card-header">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+      <div class="card" style="margin-top:var(--space-4); border-radius:12px; background:var(--bg-base); border:1px solid var(--border-default); box-shadow:0 2px 4px rgba(0,0,0,0.02); font-family:'Inter', sans-serif;">
+        <div class="card-header" style="border-bottom:1px solid var(--border-default); padding-bottom:var(--space-3); margin-bottom:var(--space-4);">
+          <div class="card-title" style="font-size:16px; font-weight:700;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
             Indicadores Automáticos
           </div>
-          <span style="font-size:var(--text-xs);color:var(--text-muted)">Calculados em tempo real</span>
+          <span style="font-size:12px;color:var(--text-muted)">Calculados em tempo real</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--space-4);">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-3);">
           ${[
             { label: 'Aderência Diária', value: `${dailyAdh}%`, cls: semaphoreClass(dailyAdh), icon: '📅' },
             { label: 'Aderência Semanal (7d)', value: `${weeklyAdh}%`, cls: semaphoreClass(weeklyAdh), icon: '📊' },
@@ -491,10 +537,12 @@ window.DPanel = (() => {
             { label: 'Horas Produtivas Hoje', value: `${hProd.toFixed(0)}h`, cls: 'info', icon: '⏱️' },
             { label: 'Tarefas Críticas Abertas', value: DB.tasks.getAll().filter(t=>(window.CriticalPath && window.CriticalPath.isTaskCritical ? window.CriticalPath.isTaskCritical(t) : t.critico)&&t.status!=='Concluída').length, cls: 'danger', icon: '⚠️' },
           ].map(item => `
-            <div style="background:var(--bg-base);border-radius:var(--radius-md);padding:var(--space-4);border-left:3px solid var(--color-${item.cls});">
-              <div style="font-size:1.3rem;margin-bottom:var(--space-2)">${item.icon}</div>
-              <div style="font-size:var(--text-2xl);font-weight:800;color:var(--color-${item.cls})">${item.value}</div>
-              <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">${item.label}</div>
+            <div style="background:var(--bg-card);border-radius:12px;padding:var(--space-4);border:1px solid var(--border-default);box-shadow:0 1px 2px rgba(0,0,0,0.02);display:flex;flex-direction:column;align-items:center;text-align:center;height:120px;justify-content:center;">
+              <div style="display:flex;align-items:center;gap:6px;color:var(--color-${item.cls});margin-bottom:8px;">
+                <span style="font-size:16px;">${item.icon}</span>
+              </div>
+              <div style="font-size:36px;font-weight:800;color:var(--color-${item.cls});line-height:1;">${item.value}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:8px;font-weight:500;">${item.label}</div>
             </div>
           `).join('')}
         </div>
