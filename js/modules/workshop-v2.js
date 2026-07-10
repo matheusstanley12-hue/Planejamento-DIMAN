@@ -59,12 +59,39 @@ window.WorkshopModule = (() => {
            el.classList.add('active-alert');
         }
      });
-     document.querySelectorAll('.ws-kpi').forEach(el => {
+     document.querySelectorAll('.ws-kpi-clickable').forEach(el => {
         el.classList.remove('active-alert');
         if (filterState.alerta && el.getAttribute('data-kpi-alert') === filterState.alerta) {
            el.classList.add('active-alert');
         }
      });
+  }
+
+  function clearFilters() {
+     filterState = { search: '', cliente: '', categoria: '', modelo: '', status: '', etapa: '', responsavel: '', prioridade: '', alerta: '' };
+     const searchInput = document.getElementById('ws-search');
+     if (searchInput) searchInput.value = '';
+     renderChartsAndTables();
+  }
+
+  function exportToExcel() {
+     const table = document.querySelector('#ws-table-container table');
+     if (!table) return;
+     let csv = [];
+     const rows = table.querySelectorAll('tr');
+     for (let i = 0; i < rows.length; i++) {
+        let row = [], cols = rows[i].querySelectorAll('td, th');
+        for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""').trim() + '"');
+        csv.push(row.join(';'));
+     }
+     const csvFile = new Blob(["\uFEFF" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+     const downloadLink = document.createElement('a');
+     downloadLink.download = 'Controle_Oficina.csv';
+     downloadLink.href = window.URL.createObjectURL(csvFile);
+     downloadLink.style.display = 'none';
+     document.body.appendChild(downloadLink);
+     downloadLink.click();
+     document.body.removeChild(downloadLink);
   }
 
   function renderChartsAndTables() {
@@ -115,49 +142,51 @@ window.WorkshopModule = (() => {
     const qtdAguardandoPecas = currentEqs.filter(e => e.aguardandoPecas).length;
     const qtdManutencao = currentEqs.filter(e => e.status === 'Em Manutenção').length;
     const qtdTeste = currentEqs.filter(e => e.etapa === 'Teste').length;
+    const qtdEmManutencao = currentEqs.filter(e => e.status === 'Em Manutenção').length;
+    const qtdEmTeste = currentEqs.filter(e => e.etapa === 'Teste').length;
     const qtdLiberados = completedToday.length;
     const qtdCriticos = currentEqs.filter(e => ['Urgente', 'Alta'].includes(e.prioridade) || e.atrasoSla > 0).length;
     const qtdSlaDentro = currentEqs.filter(e => e.atrasoSla === 0).length;
     const qtdSlaVencido = currentEqs.filter(e => e.atrasoSla > 0).length;
     
     const kpiHTML = `
-       <div class="ws-kpi" onclick="WorkshopModule.setFilter('alerta', '')">
-          <div class="ws-kpi-lbl">Equipamentos Oficina</div>
-          <div class="ws-kpi-val" style="color:#64B5F6;">${totalCurrent}</div>
+       <div class="ws-kpi ws-kpi-clickable" onclick="WorkshopModule.clearFilters()">
+          <div class="ws-kpi-lbl">Equipamentos na Oficina</div>
+          <div class="ws-kpi-val" style="color:#2563EB;">${totalCurrent}</div>
        </div>
        <div class="ws-kpi">
           <div class="ws-kpi-lbl">Tempo Médio (Dias)</div>
-          <div class="ws-kpi-val" style="color:var(--ws-text);">${avgDays}</div>
+          <div class="ws-kpi-val">${avgDays}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="mais90" onclick="WorkshopModule.setFilter('alerta', 'mais90')">
+       <div class="ws-kpi">
           <div class="ws-kpi-lbl">Maior Tempo (Dias)</div>
-          <div class="ws-kpi-val" style="color:${maxDays > 60 ? '#EF4444' : '#F59E0B'};">${maxDays}</div>
+          <div class="ws-kpi-val" style="color:#EF4444;">${maxDays}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="pecas" onclick="WorkshopModule.setFilter('alerta', 'pecas')">
+       <div class="ws-kpi ws-kpi-clickable" data-kpi-alert="pecas" onclick="WorkshopModule.setFilter('alerta', 'pecas')">
           <div class="ws-kpi-lbl">Aguardando Peças</div>
           <div class="ws-kpi-val" style="color:#F59E0B;">${qtdAguardandoPecas}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="em_manut" onclick="WorkshopModule.setFilter('alerta', 'em_manut')">
+       <div class="ws-kpi ws-kpi-clickable" onclick="WorkshopModule.setFilter('status', 'Em Manutenção')">
           <div class="ws-kpi-lbl">Em Manutenção</div>
-          <div class="ws-kpi-val" style="color:#10B981;">${qtdManutencao}</div>
+          <div class="ws-kpi-val" style="color:#10B981;">${qtdEmManutencao}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="em_teste" onclick="WorkshopModule.setFilter('alerta', 'em_teste')">
+       <div class="ws-kpi ws-kpi-clickable" onclick="WorkshopModule.setFilter('etapa', 'Teste')">
           <div class="ws-kpi-lbl">Em Teste</div>
-          <div class="ws-kpi-val" style="color:#3B82F6;">${qtdTeste}</div>
+          <div class="ws-kpi-val" style="color:#3B82F6;">${qtdEmTeste}</div>
        </div>
-       <div class="ws-kpi">
+       <div class="ws-kpi ws-kpi-clickable" onclick="WorkshopModule.setFilter('status', 'Liberado')">
           <div class="ws-kpi-lbl">Liberados Hoje</div>
           <div class="ws-kpi-val" style="color:#10B981;">${qtdLiberados}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="criticos" onclick="WorkshopModule.setFilter('alerta', 'criticos')">
+       <div class="ws-kpi ws-kpi-clickable" data-kpi-alert="criticos" onclick="WorkshopModule.setFilter('alerta', 'criticos')">
           <div class="ws-kpi-lbl">Eq. Críticos</div>
           <div class="ws-kpi-val" style="color:#EF4444;">${qtdCriticos}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="sla_ok" onclick="WorkshopModule.setFilter('alerta', 'sla_ok')">
+       <div class="ws-kpi ws-kpi-clickable" data-kpi-alert="sla_ok" onclick="WorkshopModule.setFilter('alerta', 'sla_ok')">
           <div class="ws-kpi-lbl">SLA no Prazo</div>
           <div class="ws-kpi-val" style="color:#10B981;">${qtdSlaDentro}</div>
        </div>
-       <div class="ws-kpi" data-kpi-alert="sla_vencido" style="border-bottom:3px solid #EF4444;" onclick="WorkshopModule.setFilter('alerta', 'sla_vencido')">
+       <div class="ws-kpi ws-kpi-clickable" data-kpi-alert="sla_vencido" style="border-bottom:3px solid #EF4444;" onclick="WorkshopModule.setFilter('alerta', 'sla_vencido')">
           <div class="ws-kpi-lbl" style="color:#EF4444;">SLA Vencido</div>
           <div class="ws-kpi-val" style="color:#EF4444;">${qtdSlaVencido}</div>
        </div>
@@ -555,9 +584,10 @@ window.WorkshopModule = (() => {
            --ws-muted: var(--text-secondary, #64748B);
            color: var(--ws-text);
         }
-        .ws-grid-kpi { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .ws-kpi { background: var(--ws-card); border: 1px solid var(--ws-border); border-radius: 12px; padding: 16px; cursor:pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .ws-kpi:hover { transform: translateY(-3px); border-color: #64B5F6; box-shadow: 0 8px 15px var(--bg-default, #F9FAFB); }
+        .ws-grid-kpi { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+        .ws-kpi { flex: 1 1 120px; min-width: 120px; background: var(--ws-card); border: 1px solid var(--ws-border); border-radius: 12px; padding: 16px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .ws-kpi-clickable { cursor:pointer; }
+        .ws-kpi-clickable:hover { transform: translateY(-3px); border-color: #64B5F6; box-shadow: 0 8px 15px var(--bg-default, #F9FAFB); }
         .ws-kpi.active-alert { border-color: #F59E0B; background: rgba(245,158,11,0.1); }
         .ws-kpi-val { font-size: 28px; font-weight: 900; margin: 8px 0 4px 0; }
         .ws-kpi-lbl { font-size: 11px; color: var(--ws-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
@@ -638,7 +668,7 @@ window.WorkshopModule = (() => {
                   </table>
                </div>
             </div>
-            <div class="ws-chart-card" style="height: auto;">
+            <div class="ws-chart-card" style="height: auto; align-self: start;">
                <h3>Quadro de Produtividade Diária (OS)</h3>
                <div class="ws-prod-grid" id="ws-produtividade" style="margin-top: 10px;"></div>
             </div>
@@ -649,8 +679,8 @@ window.WorkshopModule = (() => {
                <h3 style="margin:0; font-size:16px; font-weight:800; color:var(--ws-text);">Lista de Equipamentos (<span id="ws-table-count">0</span>)</h3>
                <div style="display:flex; gap: 8px; flex-wrap:wrap;">
                   <input type="text" id="ws-search" placeholder="Pesquisar equipamento..." style="padding:8px 16px; border-radius:30px; border:1px solid var(--ws-border); background:var(--bg-default, #F9FAFB); color:var(--ws-text); min-width: 250px; outline:none;">
-                  <button style="background:var(--ws-card); color:var(--ws-text); border:1px solid var(--ws-border); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="window.Toast&&window.Toast.info('Exportação','Recurso em desenvolvimento')">Exportar Excel</button>
-                  <button style="background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.3); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="WorkshopModule.setFilter('alerta',''); WorkshopModule.setFilter('etapa',''); WorkshopModule.setFilter('categoria','');">Limpar Filtros</button>
+                  <button style="background:var(--ws-card); color:var(--ws-text); border:1px solid var(--ws-border); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="WorkshopModule.exportToExcel()">Exportar Excel</button>
+                  <button style="background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.3); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="WorkshopModule.clearFilters()">Limpar Filtros</button>
                </div>
             </div>
             <div style="max-height: 600px; overflow-y: auto; overflow-x: auto;">
@@ -683,5 +713,5 @@ window.WorkshopModule = (() => {
     if (updateInterval) clearInterval(updateInterval);
   }
 
-  return { render, destroy, setFilter, forceRender: renderChartsAndTables };
+  return { render, destroy, setFilter, clearFilters, exportToExcel, forceRender: renderChartsAndTables };
 })();
