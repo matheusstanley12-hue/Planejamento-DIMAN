@@ -120,10 +120,16 @@ window.ExecutiveDashboard = (() => {
         </div>
 
         <div class="exec-grid-main">
-          <div class="exec-card">
-            <div class="exec-card-title">Planejado x Realizado (Anual)</div>
-            <div class="exec-chart-wrapper">
-              <canvas id="execChartMain"></canvas>
+          <div class="exec-card" style="flex:2;">
+            <div class="exec-card-title">Planejado x Realizado (Anual) por Setor</div>
+            <div class="exec-sectors-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Sondas de Pesquisas</div><canvas id="execChart_Sondas_de_Pesquisas"></canvas></div>
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Sondas Poços</div><canvas id="execChart_Sondas_Pocos"></canvas></div>
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Bombas de poços</div><canvas id="execChart_Bombas_de_pocos"></canvas></div>
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Bomba de pesquisa</div><canvas id="execChart_Bomba_de_pesquisa"></canvas></div>
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Subconjuntos</div><canvas id="execChart_Subconjuntos"></canvas></div>
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Programação de almoxarifado</div><canvas id="execChart_Programacao_de_almoxarifado"></canvas></div>
+              <div class="exec-chart-wrapper" style="height:220px;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Outros</div><canvas id="execChart_Outros"></canvas></div>
             </div>
           </div>
           
@@ -234,77 +240,85 @@ window.ExecutiveDashboard = (() => {
     Chart.defaults.color = '#8EACC8';
     Chart.defaults.font.family = "'Inter', sans-serif";
     
-    // 1. Chart Main (Anual) - Copiado do logic do mega-ch-ano
-    const ctxMain = document.getElementById('execChartMain');
-    if(ctxMain) {
-      const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-      const mP = Array(12).fill(0), mR = Array(12).fill(0);
-      eqs.forEach(e => {
-        if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-        if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
-      });
-      const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
-      
-      charts.main = new Chart(ctxMain, {
-        type: 'bar',
-        data: {
-          labels: mStr,
-          datasets: [
-            { 
-              type: 'line', 
-              label: 'Aderência (%)', 
-              data: adrArr, 
-              borderColor: '#EF4444', 
-              backgroundColor: '#EF4444', 
-              borderWidth: 2, 
-              yAxisID: 'y1'
-            },
-            { type: 'bar', label: 'Planejado', data: mP, backgroundColor: '#60A5FA', borderRadius: 8 },
-            { type: 'bar', label: 'Realizado', data: mR, backgroundColor: '#1E88E5', borderRadius: 8 }
-          ]
-        },
-        plugins: [{
-          id: 'customMixedLabels',
-          afterDatasetsDraw(chart) {
-            const ctx = chart.ctx;
-            ctx.save();
-            ctx.font = 'bold 11px Inter, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary') || '#333';
-            
-            chart.data.datasets.forEach((dataset, i) => {
-              const meta = chart.getDatasetMeta(i);
-              if (meta.hidden) return;
-              meta.data.forEach((element, index) => {
-                let value = dataset.data[index];
-                if (value === 0 || value == null || value === '') return;
-                
-                let valStr = String(value);
-                if (dataset.type === 'line') valStr += '%';
+    // 1. Chart Main (Anual) - Dividido por setor
+    const sectors = [
+      { id: 'Sondas_de_Pesquisas', name: 'Sondas de Pesquisas' },
+      { id: 'Sondas_Pocos', name: 'Sondas Poços' },
+      { id: 'Bombas_de_pocos', name: 'Bombas de poços' },
+      { id: 'Bomba_de_pesquisa', name: 'Bomba de pesquisa' },
+      { id: 'Subconjuntos', name: 'Subconjuntos' },
+      { id: 'Programacao_de_almoxarifado', name: 'Programação de almoxarifado' },
+      { id: 'Outros', name: 'Outros' }
+    ];
 
-                const position = element.tooltipPosition();
-                ctx.fillStyle = dataset.type === 'line' ? '#EF4444' : textColor;
-                ctx.fillText(valStr, position.x, position.y - 12);
-              });
-            });
-            ctx.restore();
+    sectors.forEach(sector => {
+      const ctxMain = document.getElementById(`execChart_${sector.id}`);
+      if(ctxMain) {
+        const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const mP = Array(12).fill(0), mR = Array(12).fill(0);
+        
+        eqs.forEach(e => {
+          let tipo = e.tipo || '';
+          if (sector.id === 'Outros') {
+            if (['Sondas de Pesquisas', 'Sondas Poços', 'Bombas de poços', 'Bomba de pesquisa', 'Subconjuntos', 'Programação de almoxarifado'].includes(tipo)) return;
+          } else {
+            if (tipo !== sector.name) return;
           }
-        }],
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { 
-            legend: { position: 'top', align: 'end' },
-            globalDataLabels: false // Disable global plugin
+
+          if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+        });
+        
+        const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
+        
+        charts[`main_${sector.id}`] = new Chart(ctxMain, {
+          type: 'bar',
+          data: {
+            labels: mStr,
+            datasets: [
+              { type: 'line', label: 'Ad (%)', data: adrArr, borderColor: '#EF4444', backgroundColor: '#EF4444', borderWidth: 1.5, yAxisID: 'y1' },
+              { type: 'bar', label: 'Plan', data: mP, backgroundColor: '#60A5FA', borderRadius: 4 },
+              { type: 'bar', label: 'Real', data: mR, backgroundColor: '#1E88E5', borderRadius: 4 }
+            ]
           },
-          scales: {
-            x: { grid: { display: false }, border: { display: false } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false } },
-            y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 120, border: { display: false } }
+          plugins: [{
+            id: 'customMixedLabels_' + sector.id,
+            afterDatasetsDraw(chart) {
+              const ctx = chart.ctx;
+              ctx.save();
+              ctx.font = 'bold 9px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary') || '#333';
+              
+              chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (meta.hidden) return;
+                meta.data.forEach((element, index) => {
+                  let value = dataset.data[index];
+                  if (value === 0 || value == null || value === '') return;
+                  let valStr = String(value);
+                  if (dataset.type === 'line') valStr += '%';
+                  const position = element.tooltipPosition();
+                  ctx.fillStyle = dataset.type === 'line' ? '#EF4444' : textColor;
+                  ctx.fillText(valStr, position.x, position.y - 8);
+                });
+              });
+              ctx.restore();
+            }
+          }],
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 9 } } }, globalDataLabels: false },
+            scales: {
+              x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 9 } } },
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { font: { size: 9 }, precision: 0 } },
+              y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 120, border: { display: false }, ticks: { font: { size: 9 } } }
+            }
           }
-        }
-      });
-    }
+        });
+      }
+    });
 
     // 2. Status Chart
     const ctxStatus = document.getElementById('execChartStatus');
