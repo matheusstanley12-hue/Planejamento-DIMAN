@@ -207,6 +207,86 @@ window.WorkshopModule = (() => {
 
     destroyCharts();
     
+    // Planejado x Realizado por Setor
+    const sectors = [
+      { id: 'Sondas_de_Pesquisas', name: 'Sondas de Pesquisas' },
+      { id: 'Sondas_Pocos', name: 'Sondas Poços' },
+      { id: 'Bombas_de_pocos', name: 'Bombas de poços' },
+      { id: 'Bomba_de_pesquisa', name: 'Bomba de pesquisa' },
+      { id: 'Subconjuntos', name: 'Subconjuntos' },
+      { id: 'Programacao_de_almoxarifado', name: 'Programação de almoxarifado' },
+      { id: 'Outros', name: 'Outros' }
+    ];
+
+    sectors.forEach(sector => {
+      const ctxSector = document.getElementById(`wsChart_${sector.id}`);
+      if(ctxSector) {
+        const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+        const mP = Array(12).fill(0), mR = Array(12).fill(0);
+        
+        rawEqs.forEach(e => {
+          let tipo = e.tipo || '';
+          if (sector.id === 'Outros') {
+            if (['Sondas de Pesquisas', 'Sondas Poços', 'Bombas de poços', 'Bomba de pesquisa', 'Subconjuntos', 'Programação de almoxarifado'].includes(tipo)) return;
+          } else {
+            if (tipo !== sector.name) return;
+          }
+
+          if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+        });
+        
+        const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
+        
+        charts.push(new Chart(ctxSector, {
+          type: 'bar',
+          data: {
+            labels: mStr,
+            datasets: [
+              { type: 'line', label: 'Ad (%)', data: adrArr, borderColor: '#EF4444', backgroundColor: '#EF4444', borderWidth: 1.5, yAxisID: 'y1' },
+              { type: 'bar', label: 'Plan', data: mP, backgroundColor: '#60A5FA', borderRadius: 4 },
+              { type: 'bar', label: 'Real', data: mR, backgroundColor: '#1E88E5', borderRadius: 4 }
+            ]
+          },
+          plugins: [{
+            id: 'customMixedLabels_' + sector.id,
+            afterDatasetsDraw(chart) {
+              const ctx = chart.ctx;
+              ctx.save();
+              ctx.font = 'bold 9px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary') || '#333';
+              
+              chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (meta.hidden) return;
+                meta.data.forEach((element, index) => {
+                  let value = dataset.data[index];
+                  if (value === 0 || value == null || value === '') return;
+                  let valStr = String(value);
+                  if (dataset.type === 'line') valStr += '%';
+                  const position = element.tooltipPosition();
+                  ctx.fillStyle = dataset.type === 'line' ? '#EF4444' : textColor;
+                  ctx.fillText(valStr, position.x, position.y - 8);
+                });
+              });
+              ctx.restore();
+            }
+          }],
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 9 } } }, globalDataLabels: false },
+            scales: {
+              x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 9 } } },
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { font: { size: 9 }, precision: 0 } },
+              y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 120, border: { display: false }, ticks: { font: { size: 9 } } }
+            }
+          }
+        }));
+      }
+    });
+
     // Configuração global para textos de gráficos herdarem o tema
     Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096';
     
@@ -626,6 +706,19 @@ window.WorkshopModule = (() => {
          </div>
          
          <div class="ws-grid-kpi" id="ws-kpis"></div>
+         
+         <div class="ws-chart-card" style="height: auto; margin-bottom: 24px;">
+            <h3>Planejado x Realizado (Anual) por Setor</h3>
+            <div class="ws-sectors-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Sondas de Pesquisas</div><canvas id="wsChart_Sondas_de_Pesquisas"></canvas></div>
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Sondas Poços</div><canvas id="wsChart_Sondas_Pocos"></canvas></div>
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Bombas de poços</div><canvas id="wsChart_Bombas_de_pocos"></canvas></div>
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Bomba de pesquisa</div><canvas id="wsChart_Bomba_de_pesquisa"></canvas></div>
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Subconjuntos</div><canvas id="wsChart_Subconjuntos"></canvas></div>
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Programação de almoxarifado</div><canvas id="wsChart_Programacao_de_almoxarifado"></canvas></div>
+              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Outros</div><canvas id="wsChart_Outros"></canvas></div>
+            </div>
+         </div>
          
          <div class="ws-charts-row" style="grid-template-columns: 2fr 1fr;">
             <div class="ws-chart-card">
