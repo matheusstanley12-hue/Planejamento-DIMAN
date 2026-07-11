@@ -7,7 +7,8 @@ window.ReleasedModule = (() => {
   }
 
   function render() {
-    const isAdmin = DB.currentUser && DB.currentUser.role === 'admin';
+    const session = localStorage.getItem('diman_session') ? JSON.parse(localStorage.getItem('diman_session')) : null;
+    const isAdmin = session && (session.perfil === 'Administrador' || session.perfil === 'Desenvolvedor');
     let eqs = DB.equipment.list().filter(e => e.status === 'Liberado');
     
     // Sort by most recent release date first
