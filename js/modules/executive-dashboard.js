@@ -179,8 +179,24 @@ window.ExecutiveDashboard = (() => {
   function renderSectors(eqs, currentMonthPrefix) {
     const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
     return catsFull.map(cat => {
-      const p = eqs.filter(e => (e.tipo||'') === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
-      const r = eqs.filter(e => (e.tipo||'') === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
+      const p = eqs.filter(e => {
+          let tipo = e.tipo || '';
+          const tipoLower = tipo.toLowerCase().trim();
+          if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços') tipo = 'Sondas Poços';
+          else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço') tipo = 'Bombas de poços';
+          else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa') tipo = 'Sondas de Pesquisas';
+          return tipo === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix);
+      }).length;
+      
+      const r = eqs.filter(e => {
+          let tipo = e.tipo || '';
+          const tipoLower = tipo.toLowerCase().trim();
+          if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços') tipo = 'Sondas Poços';
+          else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço') tipo = 'Bombas de poços';
+          else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa') tipo = 'Sondas de Pesquisas';
+          return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
+      }).length;
+
       const pct = p > 0 ? Math.round((r/p)*100) : 0;
       return renderSectorCard(cat, p, r, pct);
     }).join('');

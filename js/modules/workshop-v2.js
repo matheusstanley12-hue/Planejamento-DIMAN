@@ -226,6 +226,15 @@ window.WorkshopModule = (() => {
         
         rawEqs.forEach(e => {
           let tipo = e.tipo || '';
+          const tipoLower = tipo.toLowerCase().trim();
+          if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços') {
+              tipo = 'Sondas Poços';
+          } else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço') {
+              tipo = 'Bombas de poços';
+          } else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa') {
+              tipo = 'Sondas de Pesquisas';
+          }
+          
           if (sector.id === 'Outros') {
             if (['Sondas de Pesquisas', 'Sondas Poços', 'Bombas de poços', 'Bomba de pesquisa', 'Subconjuntos', 'Programação de almoxarifado'].includes(tipo)) return;
           } else {

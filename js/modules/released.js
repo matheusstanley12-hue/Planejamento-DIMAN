@@ -71,7 +71,18 @@ window.ReleasedModule = (() => {
             // Group by tipo
             const groups = {};
             eqs.forEach(e => {
-                const tipo = e.tipo || 'Outros Equipamentos';
+                let tipo = e.tipo || 'Outros Equipamentos';
+                
+                // Normaliza inconsistências comuns de digitação
+                const tipoLower = tipo.toLowerCase().trim();
+                if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços') {
+                    tipo = 'Sondas Poços';
+                } else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço') {
+                    tipo = 'Bombas de poços';
+                } else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa') {
+                    tipo = 'Sondas de Pesquisas';
+                }
+                
                 if (!groups[tipo]) groups[tipo] = [];
                 groups[tipo].push(e);
             });
