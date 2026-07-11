@@ -253,7 +253,7 @@ window.WorkshopModule = (() => {
             afterDatasetsDraw(chart) {
               const ctx = chart.ctx;
               ctx.save();
-              ctx.font = 'bold 9px Inter, sans-serif';
+              ctx.font = 'bold 12px Inter, sans-serif';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
               const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary') || '#333';
@@ -268,7 +268,7 @@ window.WorkshopModule = (() => {
                   if (dataset.type === 'line') valStr += '%';
                   const position = element.tooltipPosition();
                   ctx.fillStyle = dataset.type === 'line' ? '#EF4444' : textColor;
-                  ctx.fillText(valStr, position.x, position.y - 8);
+                  ctx.fillText(valStr, position.x, position.y - 12);
                 });
               });
               ctx.restore();
@@ -276,11 +276,11 @@ window.WorkshopModule = (() => {
           }],
           options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 9 } } }, globalDataLabels: false },
+            plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 12, font: { size: 12 } } }, globalDataLabels: false },
             scales: {
-              x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 9 } } },
-              y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { font: { size: 9 }, precision: 0 } },
-              y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 120, border: { display: false }, ticks: { font: { size: 9 } } }
+              x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11 } } },
+              y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { font: { size: 11 }, precision: 0 } },
+              y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 120, border: { display: false }, ticks: { font: { size: 11 } } }
             }
           }
         }));
@@ -709,14 +709,14 @@ window.WorkshopModule = (() => {
          
          <div class="ws-chart-card" style="height: auto; margin-bottom: 24px;">
             <h3>Planejado x Realizado (Anual) por Setor</h3>
-            <div class="ws-sectors-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Sondas de Pesquisas</div><canvas id="wsChart_Sondas_de_Pesquisas"></canvas></div>
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Sondas Poços</div><canvas id="wsChart_Sondas_Pocos"></canvas></div>
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Bombas de poços</div><canvas id="wsChart_Bombas_de_pocos"></canvas></div>
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Bomba de pesquisa</div><canvas id="wsChart_Bomba_de_pesquisa"></canvas></div>
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Subconjuntos</div><canvas id="wsChart_Subconjuntos"></canvas></div>
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Programação de almoxarifado</div><canvas id="wsChart_Programacao_de_almoxarifado"></canvas></div>
-              <div style="height:220px; position:relative;"><div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;text-align:center;">Outros</div><canvas id="wsChart_Outros"></canvas></div>
+            <div class="ws-sectors-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 32px; margin-top: 24px;">
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Sondas de Pesquisas</div><canvas id="wsChart_Sondas_de_Pesquisas"></canvas></div>
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Sondas Poços</div><canvas id="wsChart_Sondas_Pocos"></canvas></div>
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Bombas de poços</div><canvas id="wsChart_Bombas_de_pocos"></canvas></div>
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Bomba de pesquisa</div><canvas id="wsChart_Bomba_de_pesquisa"></canvas></div>
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Subconjuntos</div><canvas id="wsChart_Subconjuntos"></canvas></div>
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Programação de almoxarifado</div><canvas id="wsChart_Programacao_de_almoxarifado"></canvas></div>
+              <div style="height:350px; position:relative;"><div style="font-size:15px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;text-align:center;">Outros</div><canvas id="wsChart_Outros"></canvas></div>
             </div>
          </div>
          
