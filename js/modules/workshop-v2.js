@@ -400,43 +400,7 @@ window.WorkshopModule = (() => {
       }));
     }
 
-    // Etapas
-    const etapasMap = {};
-    currentEqs.forEach(e => { 
-       const et = e.etapa || 'Não Definido';
-       if(!etapasMap[et]) etapasMap[et] = { cnt: 0, eqs: [] };
-       etapasMap[et].cnt++;
-       etapasMap[et].eqs.push(e);
-    });
-    const ctxEtapa = document.getElementById('ws-chart-etapa');
-    if (ctxEtapa && Object.keys(etapasMap).length > 0) {
-      charts.push(new Chart(ctxEtapa, {
-        type: 'bar',
-        data: {
-          labels: Object.keys(etapasMap),
-          datasets: [{
-            label: 'Qtd Equipamentos',
-            data: Object.values(etapasMap).map(v => v.cnt),
-            backgroundColor: '#3B82F6',
-            borderRadius: 4
-          }]
-        },
-        options: { 
-           responsive: true, maintainAspectRatio: false,
-           plugins: { tooltip: { enabled: false }, legend: { display: false } },
-           scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } },
-           onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
-           onClick: (event, elements, chart) => {
-              if (elements[0]) {
-                 const i = elements[0].index;
-                 const label = chart.data.labels[i];
-                 if(etapasMap[label].eqs.length > 0) window.showEquipmentsModal('Etapa: ' + label, etapasMap[label].eqs);
-              }
-           }
-        }
-      }));
-    }
-    
+
     // Categorias
     const catMap = {};
     currentEqs.forEach(e => { 
@@ -816,14 +780,10 @@ window.WorkshopModule = (() => {
             </div>
          </div>
          
-         <div class="ws-charts-row" style="grid-template-columns: 2fr 1fr;">
+         <div class="ws-charts-row" style="grid-template-columns: 1fr;">
             <div class="ws-chart-card">
                <h3>Top 10 Maior Tempo (Dias)</h3>
                <div style="position:relative; height: 280px; width:100%;"><canvas id="ws-chart-top"></canvas></div>
-            </div>
-            <div class="ws-chart-card">
-               <h3>Distribuição por Etapa</h3>
-               <div style="position:relative; height: 280px; width:100%;"><canvas id="ws-chart-etapa"></canvas></div>
             </div>
          </div>
          
