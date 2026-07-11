@@ -194,17 +194,6 @@ window.WorkshopModule = (() => {
     const kpisDiv = document.getElementById('ws-kpis');
     if (kpisDiv) kpisDiv.innerHTML = kpiHTML;
 
-    const alertsHTML = `
-       <div class="ws-alert" data-alert="sla_vencido" onclick="WorkshopModule.setFilter('alerta','sla_vencido')">🔴 SLA Vencido (${qtdSlaVencido})</div>
-       <div class="ws-alert" data-alert="mais30" onclick="WorkshopModule.setFilter('alerta','mais30')">🟠 Acima de 30 dias (${currentEqs.filter(e => e.daysInWorkshop > 30).length})</div>
-       <div class="ws-alert" data-alert="mais60" onclick="WorkshopModule.setFilter('alerta','mais60')">🟠 Acima de 60 dias (${currentEqs.filter(e => e.daysInWorkshop > 60).length})</div>
-       <div class="ws-alert" data-alert="mais90" onclick="WorkshopModule.setFilter('alerta','mais90')">🔴 Acima de 90 dias (${currentEqs.filter(e => e.daysInWorkshop > 90).length})</div>
-       <div class="ws-alert" data-alert="sem_resp" onclick="WorkshopModule.setFilter('alerta','sem_resp')">🟠 Sem Responsável (${currentEqs.filter(e => !e.responsavel || e.responsavel === 'Não atribuído').length})</div>
-       <div class="ws-alert" data-alert="pecas" onclick="WorkshopModule.setFilter('alerta','pecas')">🟠 Aguardando Peças (${qtdAguardandoPecas})</div>
-    `;
-    const alertsDiv = document.getElementById('ws-alerts-container');
-    if (alertsDiv) alertsDiv.innerHTML = alertsHTML;
-
     destroyCharts();
     
     // Planejado x Realizado por Setor
@@ -224,6 +213,8 @@ window.WorkshopModule = (() => {
       if(ctxSector) {
         const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
         const mP = Array(12).fill(0), mR = Array(12).fill(0);
+        const eqListP = Array.from({length: 12}, () => []);
+        const eqListR = Array.from({length: 12}, () => []);
         
         rawEqs.forEach(e => {
           let tipo = e.tipo || '';
@@ -248,12 +239,15 @@ window.WorkshopModule = (() => {
             if (tipo !== sector.name) return;
           }
 
-          if(e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentYear)) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+          if(e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentYear)) { 
+              const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); 
+              if(m>=1&&m<=12) { mP[m-1]++; eqListP[m-1].push(e); } 
+          }
           if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataFim)) {
               const dt = e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataFim;
               if (dt.startsWith(currentYear)) {
                   const m = parseInt(dt.split('-')[1],10); 
-                  if(m>=1&&m<=12) mR[m-1]++; 
+                  if(m>=1&&m<=12) { mR[m-1]++; eqListR[m-1].push(e); } 
               }
           }
         });
@@ -302,6 +296,30 @@ window.WorkshopModule = (() => {
           }],
           options: {
             responsive: true, maintainAspectRatio: false,
+            onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+            onClick: (evt, elements, chart) => {
+              if (elements.length > 0) {
+                const datasetIndex = elements[0].datasetIndex;
+                const dataIndex = elements[0].index;
+                const datasetLabel = chart.data.datasets[datasetIndex].label;
+                
+                let eqsToShow = [];
+                let titlePrefix = '';
+                
+                if (datasetLabel === 'Plan') {
+                    eqsToShow = eqListP[dataIndex];
+                    titlePrefix = 'Equipamentos Planejados';
+                } else if (datasetLabel === 'Real') {
+                    eqsToShow = eqListR[dataIndex];
+                    titlePrefix = 'Equipamentos Liberados (Realizado)';
+                } else {
+                    return; 
+                }
+                
+                if (eqsToShow.length === 0) return;
+                window.showEquipmentsModal(`${titlePrefix} - ${sector.name} (${mStr[dataIndex]})`, eqsToShow);
+              }
+            },
             plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 14, font: { size: 14 } } }, globalDataLabels: false },
             scales: {
               x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 13 } } },
@@ -573,88 +591,6 @@ window.WorkshopModule = (() => {
          }]
        }));
     }
-
-    const criticosTbody = document.getElementById('ws-criticos-body');
-    if (criticosTbody) {
-       const criticosList = currentEqs.filter(e => ['Urgente','Alta'].includes(e.prioridade) || e.atrasoSla > 0).sort((a,b) => b.atrasoSla - a.atrasoSla);
-       let html = '';
-       if(criticosList.length === 0) html = '<tr><td colspan="6" style="text-align:center;color:#8EACC8;padding:16px;">Nenhum equipamento crítico.</td></tr>';
-       else {
-          html = criticosList.map(e => `
-             <tr class="ws-tr" onclick="WorkshopModule.setFilter('search', '${e.codigo}')" style="cursor:pointer;">
-                <td><span class="badge ${e.prioridade === 'Urgente' ? 'badge-danger' : 'badge-orange'}" style="background:${e.prioridade === 'Urgente' ? '#EF4444' : '#F59E0B'}; color:var(--ws-text); padding: 4px 8px; border-radius:4px;">${e.prioridade}</span></td>
-                <td><strong>${e.codigo}</strong><br><span style="font-size:11px;color:#8EACC8">${e.cliente||'-'}</span></td>
-                <td>${e.etapa}</td>
-                <td>${e.responsavel || '-'}</td>
-                <td>${formatDate(e.ePlan)}</td>
-                <td style="color:#EF4444;font-weight:bold;">${e.atrasoSla > 0 ? '+' + e.atrasoSla + ' dias' : '-'}</td>
-             </tr>
-          `).join('');
-       }
-       criticosTbody.innerHTML = html;
-    }
-
-    const prodDiv = document.getElementById('ws-produtividade');
-    if (prodDiv) {
-       const tasksToday = tasks.filter(t => t.dataPlanejadaTermino && t.dataPlanejadaTermino.startsWith(todayStr));
-       const tasksDoneToday = tasks.filter(t => t.status === 'Concluída' && t.dataRealTermino && t.dataRealTermino.startsWith(todayStr));
-       
-       prodDiv.innerHTML = `
-          <div class="ws-prod-card"><div>OS Agendadas (Hoje)</div><div class="val">${tasksToday.length}</div></div>
-          <div class="ws-prod-card"><div>OS Concluídas (Hoje)</div><div class="val" style="color:#10B981;">${tasksDoneToday.length}</div></div>
-          <div class="ws-prod-card"><div>Eficiência Diária</div><div class="val" style="color:#3B82F6;">${tasksToday.length > 0 ? Math.round((tasksDoneToday.length/tasksToday.length)*100) : 0}%</div></div>
-          <div class="ws-prod-card"><div>Backlog Total (OS)</div><div class="val">${tasks.filter(t => t.status !== 'Concluída').length} <span style="font-size:12px;">pendentes</span></div></div>
-       `;
-    }
-
-    const tableTbody = document.getElementById('ws-table-body');
-    if (tableTbody) {
-       let filtered = currentEqs;
-       
-       if (filterState.search) {
-          const q = filterState.search.toLowerCase();
-          filtered = filtered.filter(e => (e.codigo||'').toLowerCase().includes(q) || (e.cliente||'').toLowerCase().includes(q) || (e.nome||'').toLowerCase().includes(q));
-       }
-       if (filterState.etapa) filtered = filtered.filter(e => e.etapa === filterState.etapa);
-       if (filterState.categoria) filtered = filtered.filter(e => e.categoria === filterState.categoria);
-       
-       if (filterState.alerta) {
-          if (filterState.alerta === 'sla_vencido') filtered = filtered.filter(e => e.atrasoSla > 0);
-          if (filterState.alerta === 'sla_ok') filtered = filtered.filter(e => e.atrasoSla === 0);
-          if (filterState.alerta === 'mais30') filtered = filtered.filter(e => e.daysInWorkshop > 30);
-          if (filterState.alerta === 'mais60') filtered = filtered.filter(e => e.daysInWorkshop > 60);
-          if (filterState.alerta === 'mais90') filtered = filtered.filter(e => e.daysInWorkshop > 90);
-          if (filterState.alerta === 'sem_resp') filtered = filtered.filter(e => !e.responsavel || e.responsavel === 'Não atribuído');
-          if (filterState.alerta === 'pecas') filtered = filtered.filter(e => e.aguardandoPecas);
-          if (filterState.alerta === 'criticos') filtered = filtered.filter(e => ['Urgente','Alta'].includes(e.prioridade) || e.atrasoSla > 0);
-          if (filterState.alerta === 'em_manut') filtered = filtered.filter(e => e.status === 'Em Manutenção');
-          if (filterState.alerta === 'em_teste') filtered = filtered.filter(e => e.etapa === 'Teste');
-       }
-       
-       document.getElementById('ws-table-count').innerText = filtered.length;
-
-       let html = '';
-       if (filtered.length === 0) {
-          html = '<tr><td colspan="11" style="text-align:center;padding:32px;color:#8EACC8;">Nenhum equipamento encontrado com os filtros atuais.</td></tr>';
-       } else {
-          html = filtered.map(e => `
-             <tr class="ws-tr">
-                <td><span style="background:${e.prioridade === 'Urgente' ? '#EF4444' : (e.prioridade === 'Alta' ? '#F59E0B' : '#4B5563')}; color:var(--ws-text); padding: 2px 6px; border-radius:4px; font-size:11px;">${e.prioridade}</span></td>
-                <td><strong>${e.codigo}</strong><br><span style="font-size:10px;color:#8EACC8;">${e.nome||'-'}</span></td>
-                <td>${e.cliente||'-'}</td>
-                <td>${e.categoria}</td>
-                <td><span style="border:1px solid #1E88E5; color:#64B5F6; background:rgba(30,136,229,0.1); padding: 2px 6px; border-radius:4px; font-size:11px;">${e.status}</span></td>
-                <td>${e.etapa}</td>
-                <td>${e.responsavel || 'Não atribuído'}</td>
-                <td>${formatDate(e.dataEntrada)}</td>
-                <td style="color:${e.daysInWorkshop > 60 ? '#EF4444' : (e.daysInWorkshop > 30 ? '#F59E0B' : '#10B981')}; font-weight:bold;">${e.daysInWorkshop}</td>
-                <td>${formatDate(e.ePlan)}</td>
-                <td style="color:#EF4444; font-weight:bold;">${e.atrasoSla > 0 ? '+' + e.atrasoSla : '-'}</td>
-             </tr>
-          `).join('');
-       }
-       tableTbody.innerHTML = html;
-    }
     
     updateDOMFilterState();
     
@@ -666,6 +602,63 @@ window.WorkshopModule = (() => {
   }
 
   function render() {
+    
+    // Add global modal function if not exists
+    if (!window.showEquipmentsModal) {
+      window.showEquipmentsModal = function(title, eqs) {
+        const d = document.createElement('div');
+        d.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);z-index:99999;display:flex;justify-content:center;align-items:center;padding:16px;animation:fadeIn 0.2s;backdrop-filter:blur(3px);';
+        
+        const box = document.createElement('div');
+        box.style.cssText = 'background:var(--bg-base);width:100%;max-width:550px;max-height:85vh;border-radius:12px;box-shadow:0 15px 40px rgba(0,0,0,0.3);display:flex;flex-direction:column;overflow:hidden;animation:slideUp 0.3s ease;';
+        
+        const header = document.createElement('div');
+        header.style.cssText = 'padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);';
+        header.innerHTML = `<h3 style="margin:0;font-size:16px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:12px;">
+                              ${title} 
+                              <span style="background:var(--brand-primary);color:white;padding:2px 8px;border-radius:12px;font-size:12px;">${eqs.length}</span>
+                            </h3>
+                            <button style="background:transparent;border:none;font-size:24px;cursor:pointer;color:var(--text-secondary);">&times;</button>`;
+        header.querySelector('button').onclick = () => d.remove();
+        
+        const content = document.createElement('div');
+        content.style.cssText = 'padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px;';
+        
+        eqs.forEach(eq => {
+          const card = document.createElement('div');
+          card.style.cssText = 'padding:14px;background:var(--bg-elevated);border-radius:8px;border-left:4px solid var(--brand-primary);display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:transform 0.1s, box-shadow 0.1s;border:1px solid var(--border-light);';
+          card.onmouseover = () => { card.style.transform = 'translateY(-2px)'; card.style.boxShadow = 'var(--shadow-sm)'; };
+          card.onmouseout = () => { card.style.transform = 'none'; card.style.boxShadow = 'none'; };
+          card.onclick = () => { d.remove(); if(window.Router) window.Router.navigate('equipment-panel', {id: eq.id}); };
+          
+          const dtReal = eq.dataRealLiberacao || eq.dataLiberacaoAtual || eq.dataLiberacaoReal;
+          card.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong style="font-size:15px;color:var(--text-primary);">${eq.codigo}</strong>
+              <span style="font-size:11px;font-weight:600;text-transform:uppercase;padding:3px 8px;border-radius:12px;background:var(--bg-card);color:var(--text-secondary);">${eq.status}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-secondary);background:var(--bg-base);padding:8px;border-radius:6px;margin-top:4px;">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Planejado</span>
+                <span style="color:var(--text-primary);font-weight:500;">${eq.dataLiberacaoPlanejada ? window.formatDate(eq.dataLiberacaoPlanejada) : '-'}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;text-align:right;">
+                <span style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">Realizado</span>
+                <span style="color:var(--color-success);font-weight:600;">${dtReal ? window.formatDate(dtReal) : '-'}</span>
+              </div>
+            </div>
+          `;
+          content.appendChild(card);
+        });
+        
+        box.appendChild(header);
+        box.appendChild(content);
+        d.appendChild(box);
+        d.onclick = (e) => { if(e.target === d) d.remove(); };
+        document.body.appendChild(d);
+      };
+    }
+
     setTimeout(() => {
       renderChartsAndTables();
       if (updateInterval) clearInterval(updateInterval);
@@ -769,58 +762,6 @@ window.WorkshopModule = (() => {
             <div class="ws-chart-card">
                <h3>Lead Time por Etapa (Tarefas)</h3>
                <div style="position:relative; height: 280px; width:100%;"><canvas id="ws-chart-lead"></canvas></div>
-            </div>
-         </div>
-         
-         <h3 style="margin-bottom:16px; font-size:16px; font-weight:800; color:var(--ws-text);">Alertas Operacionais</h3>
-         <div class="ws-alerts" id="ws-alerts-container"></div>
-         
-         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 24px;">
-            <div class="ws-table-container" style="margin-bottom: 0;">
-               <div class="ws-table-header" style="background: rgba(239,68,68,0.1); border-bottom: 1px solid rgba(239,68,68,0.2);">
-                  <h3 style="margin:0; font-size:15px; font-weight:800; color: #EF4444;">🔴 Equipamentos Críticos (Atraso/Urgente)</h3>
-               </div>
-               <div style="max-height: 250px; overflow-y: auto;">
-                  <table class="ws-table">
-                     <thead><tr><th>Prioridade</th><th>Equipamento</th><th>Etapa</th><th>Responsável</th><th>Previsão</th><th>Atraso</th></tr></thead>
-                     <tbody id="ws-criticos-body"></tbody>
-                  </table>
-               </div>
-            </div>
-            <div class="ws-chart-card" style="height: auto; align-self: start;">
-               <h3>Quadro de Produtividade Diária (OS)</h3>
-               <div class="ws-prod-grid" id="ws-produtividade" style="margin-top: 10px;"></div>
-            </div>
-         </div>
-         
-         <div class="ws-table-container" id="ws-table-container">
-            <div class="ws-table-header">
-               <h3 style="margin:0; font-size:16px; font-weight:800; color:var(--ws-text);">Lista de Equipamentos (<span id="ws-table-count">0</span>)</h3>
-               <div style="display:flex; gap: 8px; flex-wrap:wrap;">
-                  <input type="text" id="ws-search" placeholder="Pesquisar equipamento..." style="padding:8px 16px; border-radius:30px; border:1px solid var(--ws-border); background:var(--bg-default, #F9FAFB); color:var(--ws-text); min-width: 250px; outline:none;">
-                  <button style="background:var(--ws-card); color:var(--ws-text); border:1px solid var(--ws-border); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="WorkshopModule.exportToExcel()">Exportar Excel</button>
-                  <button style="background:rgba(239,68,68,0.1); color:#EF4444; border:1px solid rgba(239,68,68,0.3); padding:8px 16px; border-radius:30px; font-weight:700; cursor:pointer;" onclick="WorkshopModule.clearFilters()">Limpar Filtros</button>
-               </div>
-            </div>
-            <div style="max-height: 600px; overflow-y: auto; overflow-x: auto;">
-               <table class="ws-table">
-                  <thead>
-                     <tr>
-                        <th>Prioridade</th>
-                        <th>Equipamento</th>
-                        <th>Cliente</th>
-                        <th>Categoria</th>
-                        <th>Status</th>
-                        <th>Etapa Atual</th>
-                        <th>Responsável</th>
-                        <th>Entrada</th>
-                        <th>Dias Oficina</th>
-                        <th>SLA (Prazo)</th>
-                        <th>Atraso</th>
-                     </tr>
-                  </thead>
-                  <tbody id="ws-table-body"></tbody>
-               </table>
             </div>
          </div>
       </div>
