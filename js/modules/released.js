@@ -12,15 +12,18 @@ window.ReleasedModule = (() => {
     let eqs = DB.equipment.list().filter(e => e.status === 'Liberado');
     
     // Sort by most recent release date first
-    eqs.sort((a,b) => ((b.dataRealLiberacao || b.dataLiberacaoAtual) || '').localeCompare((a.dataRealLiberacao || a.dataLiberacaoAtual) || ''));
+    eqs.sort((a,b) => {
+        const da = a.dataRealLiberacao || a.dataLiberacaoAtual || a.dataLiberacaoReal || '';
+        const db = b.dataRealLiberacao || b.dataLiberacaoAtual || b.dataLiberacaoReal || '';
+        return db.localeCompare(da);
+    });
 
     // Extract unique months for the dropdown
     const monthsSet = new Set();
     eqs.forEach(e => {
-        if (e.dataRealLiberacao) {
-            monthsSet.add(e.dataRealLiberacao.substring(0, 7)); // YYYY-MM
-        } else if (e.dataLiberacaoAtual) {
-            monthsSet.add(e.dataLiberacaoAtual.substring(0, 7)); // YYYY-MM
+        const d = e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal;
+        if (d) {
+            monthsSet.add(d.substring(0, 7)); // YYYY-MM
         }
     });
     
@@ -29,7 +32,7 @@ window.ReleasedModule = (() => {
     
     if (selectedMonth && selectedMonth !== 'all') {
         eqs = eqs.filter(e => {
-            const date = e.dataRealLiberacao || e.dataLiberacaoAtual || '';
+            const date = e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal || '';
             return date.startsWith(selectedMonth);
         });
     }
@@ -138,7 +141,7 @@ window.ReleasedModule = (() => {
                         </div>
                         <div>
                           <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">Data Real</strong>
-                          <span style="color:var(--color-success);font-weight:600;">${e.dataRealLiberacao ? window.formatDate(e.dataRealLiberacao) : (e.dataLiberacaoAtual ? window.formatDate(e.dataLiberacaoAtual) : '-')}</span>
+                          <span style="color:var(--color-success);font-weight:600;">${(e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal) ? window.formatDate(e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal) : '-'}</span>
                         </div>
                       </div>
                     </div>
