@@ -200,7 +200,7 @@ window.ExecutiveDashboard = (() => {
           else if (tipoLower === 'bomba pesquisa' || tipoLower === 'bombas de pesquisa' || tipoLower === 'bombas pesquisa') tipo = 'Bomba de pesquisa';
           else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
           else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
-          return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
+          return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
       }).length;
 
       const pct = p > 0 ? Math.round((r/p)*100) : 0;

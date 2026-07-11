@@ -249,8 +249,8 @@ window.WorkshopModule = (() => {
           }
 
           if(e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentYear)) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) {
-              const dt = e.dataLiberacaoAtual || e.dataFim;
+          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataFim)) {
+              const dt = e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataFim;
               if (dt.startsWith(currentYear)) {
                   const m = parseInt(dt.split('-')[1],10); 
                   if(m>=1&&m<=12) mR[m-1]++; 
