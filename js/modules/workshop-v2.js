@@ -356,7 +356,7 @@ window.WorkshopModule = (() => {
                 window.showEquipmentsModal(`${titlePrefix} - ${sector.name} (${mStr[dataIndex]})`, eqsToShow);
               }
             },
-            plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 14, font: { size: 14 } } }, globalDataLabels: false },
+            plugins: { tooltip: { enabled: false }, legend: { position: 'top', align: 'end', labels: { boxWidth: 14, font: { size: 14 } } }, globalDataLabels: false },
             scales: {
               x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 13 } } },
               y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { font: { size: 13 }, precision: 0 } },
@@ -387,12 +387,13 @@ window.WorkshopModule = (() => {
         },
         options: { 
            responsive: true, maintainAspectRatio: false, indexAxis: 'y', 
-           plugins: { legend: { display: false } },
+           plugins: { tooltip: { enabled: false }, legend: { display: false } },
            scales: { x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, y: { grid: { display: false } } },
+           onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
-                 WorkshopModule.setFilter('search', chart.data.labels[i]);
+                 window.showEquipmentsModal('Top 10: ' + chart.data.labels[i], [top10[i]]);
               }
            }
         }
@@ -401,7 +402,12 @@ window.WorkshopModule = (() => {
 
     // Etapas
     const etapasMap = {};
-    currentEqs.forEach(e => { etapasMap[e.etapa] = (etapasMap[e.etapa] || 0) + 1; });
+    currentEqs.forEach(e => { 
+       const et = e.etapa || 'Não Definido';
+       if(!etapasMap[et]) etapasMap[et] = { cnt: 0, eqs: [] };
+       etapasMap[et].cnt++;
+       etapasMap[et].eqs.push(e);
+    });
     const ctxEtapa = document.getElementById('ws-chart-etapa');
     if (ctxEtapa && Object.keys(etapasMap).length > 0) {
       charts.push(new Chart(ctxEtapa, {
@@ -410,19 +416,21 @@ window.WorkshopModule = (() => {
           labels: Object.keys(etapasMap),
           datasets: [{
             label: 'Qtd Equipamentos',
-            data: Object.values(etapasMap),
+            data: Object.values(etapasMap).map(v => v.cnt),
             backgroundColor: '#3B82F6',
             borderRadius: 4
           }]
         },
         options: { 
            responsive: true, maintainAspectRatio: false,
-           plugins: { legend: { display: false } },
+           plugins: { tooltip: { enabled: false }, legend: { display: false } },
            scales: { x: { ticks: { maxRotation: 45, minRotation: 45 } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } },
+           onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
-                 WorkshopModule.setFilter('etapa', chart.data.labels[i]);
+                 const label = chart.data.labels[i];
+                 if(etapasMap[label].eqs.length > 0) window.showEquipmentsModal('Etapa: ' + label, etapasMap[label].eqs);
               }
            }
         }
@@ -432,11 +440,25 @@ window.WorkshopModule = (() => {
     // Categorias
     const catMap = {};
     currentEqs.forEach(e => { 
-       const c = e.categoria;
-       if(!catMap[c]) catMap[c] = { sum:0, cnt:0 };
+       let c = e.categoria || '';
+       const cLower = c.toLowerCase().trim();
+       if (cLower === 'sonda de poços' || cLower === 'sondas de poços' || cLower === 'sonda poços' || cLower === 'sondas poços') c = 'Sondas Poços';
+       else if (cLower === 'bomba de poços' || cLower === 'bombas de poço' || cLower === 'bomba de poço' || cLower === 'bomba poços' || cLower === 'bombas poços') c = 'Bombas de poços';
+       else if (cLower === 'sonda de pesquisas' || cLower === 'sondas pesquisa' || cLower === 'sonda pesquisa' || cLower === 'sonda de pesquisa' || cLower === 'sondas de pesquisa') c = 'Sondas de Pesquisas';
+       else if (cLower === 'bomba pesquisa' || cLower === 'bombas de pesquisa' || cLower === 'bombas pesquisa') c = 'Bomba de pesquisa';
+       else if (cLower === 'subconjunto' || cLower === 'subconjuntos') c = 'Subconjuntos';
+       else if (cLower === 'serviço de almoxarifado' || cLower === 'servico de almoxarifado' || cLower === 'programação almoxarifado') c = 'Programação de almoxarifado';
+       else c = 'Outros Equipamentos';
+       
+       if(!catMap[c]) catMap[c] = { sum:0, cnt:0, eqs:[] };
        catMap[c].sum += e.daysInWorkshop;
        catMap[c].cnt++;
+       catMap[c].eqs.push(e);
     });
+    
+    // Remove empty ones just in case
+    Object.keys(catMap).forEach(k => { if(catMap[k].cnt === 0) delete catMap[k]; });
+
     const ctxCat = document.getElementById('ws-chart-cat');
     if (ctxCat && Object.keys(catMap).length > 0) {
       charts.push(new Chart(ctxCat, {
@@ -452,12 +474,14 @@ window.WorkshopModule = (() => {
         },
         options: { 
            responsive: true, maintainAspectRatio: false,
-           plugins: { legend: { display: false } },
+           plugins: { tooltip: { enabled: false }, legend: { display: false } },
            scales: { x: { ticks: { maxRotation: 45, minRotation: 45, autoSkip: false } }, y: { beginAtZero: true, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } },
+           onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
-                 WorkshopModule.setFilter('categoria', chart.data.labels[i]);
+                 const label = chart.data.labels[i];
+                 if(catMap[label] && catMap[label].eqs.length > 0) window.showEquipmentsModal('Categoria: ' + label, catMap[label].eqs);
               }
            }
         }
@@ -476,9 +500,11 @@ window.WorkshopModule = (() => {
     ];
 
     const allTasks = (window.DB && window.DB.tasks) ? window.DB.tasks.getAll() : [];
+    const allEqs = (window.DB && window.DB.equipments) ? window.DB.equipments.getAll() : currentEqs;
     const leadLabels = [];
     const leadRealData = [];
     const leadMetaData = [];
+    const leadEqsPerCat = [];
 
     leadCategories.forEach(cat => {
        leadLabels.push(cat.label);
@@ -490,17 +516,18 @@ window.WorkshopModule = (() => {
                sumMeta += (Number(t.horasPrevistas) || 0) / 8;
            });
            leadRealData.push(Math.round((sumReal / matched.length) * 10) / 10);
-           // Se a tarefa não tinha horas previstas, assume a mesma do realizado ou mínimo 1 dia
            const metaVal = sumMeta > 0 ? (sumMeta / matched.length) : ((sumReal / matched.length) * 0.8 || 1);
            leadMetaData.push(Math.round(metaVal * 10) / 10);
+           
+           const eqIds = [...new Set(matched.map(t => t.equipmentId))];
+           leadEqsPerCat.push(allEqs.filter(e => eqIds.includes(e.id)));
        } else {
-           // Se não tem dados reais para a etapa ainda, fica 0
            leadRealData.push(0);
            leadMetaData.push(0);
+           leadEqsPerCat.push([]);
        }
     });
 
-    // Fallback de demonstração caso o banco esteja completamente sem tarefas de oficina concluídas
     if (leadRealData.every(v => v === 0)) {
         leadRealData.splice(0, 7, 1, 4, 3, 12, 4, 2, 1);
         leadMetaData.splice(0, 7, 1, 2, 2, 7, 2, 1, 1);
@@ -522,28 +549,39 @@ window.WorkshopModule = (() => {
         options: { 
            responsive: true, maintainAspectRatio: false,
            layout: { padding: { top: 20 } },
-           plugins: { legend: { onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C', padding: 20 } } },
+           plugins: { tooltip: { enabled: false }, legend: { onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-primary') || '#1A202C', padding: 20 } } },
            scales: { 
              y: { beginAtZero: true, suggestedMax: maxVal + 4, grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, 
              x: { grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } } 
+           },
+           onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+           onClick: (event, elements, chart) => {
+              if (elements[0]) {
+                 const i = elements[0].index;
+                 const label = chart.data.labels[i];
+                 if(leadEqsPerCat[i] && leadEqsPerCat[i].length > 0) window.showEquipmentsModal('Equipamentos na Etapa: ' + label, leadEqsPerCat[i]);
+              }
            }
         }
       }));
     }
 
     // Motivos parada reais (Restrições e Status de Pendência)
-    const motivoMap = { 'Aguardando Peças': 0, 'Falta Mão de Obra': 0, 'Aguardando Cliente': 0, 'Outros': 0 };
+    const motivoMap = { 'Aguardando Peças': [], 'Falta Mão de Obra': [], 'Aguardando Cliente': [], 'Outros': [] };
     
     // 1. Peças (via flag no equipamento)
-    motivoMap['Aguardando Peças'] = currentEqs.filter(e => e.aguardandoPecas).length;
+    currentEqs.forEach(e => { if (e.aguardandoPecas) motivoMap['Aguardando Peças'].push(e); });
 
     // 2. Restrições ativas
     if (window.DB && window.DB.restrictions) {
        const openRestr = window.DB.restrictions.getAll().filter(r => r.status === 'Aberta' && currentEqs.some(e => e.id === r.equipmentId));
        openRestr.forEach(r => {
-          if (r.tipo === 'Falta de Mão de Obra' || (r.descricao && r.descricao.toLowerCase().includes('mão de obra'))) motivoMap['Falta Mão de Obra']++;
-          else if (r.tipo === 'Aguardando Aprovação' || (r.descricao && r.descricao.toLowerCase().includes('cliente'))) motivoMap['Aguardando Cliente']++;
-          else if (r.tipo !== 'Falta de Peça' && r.tipo !== 'Falta de Peças') motivoMap['Outros']++;
+          const eq = currentEqs.find(e => e.id === r.equipmentId);
+          if (eq) {
+             if (r.tipo === 'Falta de Mão de Obra' || (r.descricao && r.descricao.toLowerCase().includes('mão de obra'))) { if(!motivoMap['Falta Mão de Obra'].includes(eq)) motivoMap['Falta Mão de Obra'].push(eq); }
+             else if (r.tipo === 'Aguardando Aprovação' || (r.descricao && r.descricao.toLowerCase().includes('cliente'))) { if(!motivoMap['Aguardando Cliente'].includes(eq)) motivoMap['Aguardando Cliente'].push(eq); }
+             else if (r.tipo !== 'Falta de Peça' && r.tipo !== 'Falta de Peças') { if(!motivoMap['Outros'].includes(eq)) motivoMap['Outros'].push(eq); }
+          }
        });
     }
 
@@ -551,23 +589,24 @@ window.WorkshopModule = (() => {
     if (window.DB && window.DB.tasks) {
        const pendingTasks = window.DB.tasks.getAll().filter(t => currentEqs.some(e => e.id === t.equipmentId) && t.status !== 'Concluída');
        pendingTasks.forEach(t => {
-          if (t.status === 'Aguardando Recurso') motivoMap['Falta Mão de Obra']++;
-          // Aguardando peça normalmente reflete na flag aguardandoPecas do equipamento
+          const eq = currentEqs.find(e => e.id === t.equipmentId);
+          if (t.status === 'Aguardando Recurso' && eq && !motivoMap['Falta Mão de Obra'].includes(eq)) motivoMap['Falta Mão de Obra'].push(eq);
        });
     }
 
     const labelsMotivos = [];
     const dataMotivos = [];
     Object.keys(motivoMap).forEach(k => {
-       if (motivoMap[k] > 0) {
+       if (motivoMap[k].length > 0) {
           labelsMotivos.push(k);
-          dataMotivos.push(motivoMap[k]);
+          dataMotivos.push(motivoMap[k].length);
        }
     });
 
     if (dataMotivos.length === 0) {
        labelsMotivos.push('Fluxo Normal');
        dataMotivos.push(1);
+       motivoMap['Fluxo Normal'] = currentEqs; // O que sobrou
     }
     
     const colorMap = {
@@ -594,12 +633,14 @@ window.WorkshopModule = (() => {
          options: { 
             responsive: true, maintainAspectRatio: false, 
             plugins: { 
+               tooltip: { enabled: false },
                legend: { position: 'right', onClick: null, labels: { color: getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096' } }
             },
+            onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
             onClick: (event, elements, chart) => {
                if (elements[0]) {
                   const label = chart.data.labels[elements[0].index];
-                  WorkshopModule.setFilter('search', label);
+                  if(motivoMap[label] && motivoMap[label].length > 0) window.showEquipmentsModal('Motivo Parada: ' + label, motivoMap[label]);
                }
             }
          },
