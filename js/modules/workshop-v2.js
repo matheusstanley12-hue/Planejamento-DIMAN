@@ -268,7 +268,11 @@ window.WorkshopModule = (() => {
                   if (dataset.type === 'line') valStr += '%';
                   const position = element.tooltipPosition();
                   ctx.fillStyle = dataset.type === 'line' ? '#EF4444' : textColor;
-                  ctx.fillText(valStr, position.x, position.y - 12);
+                  
+                  // Se for linha (aderência), coloca o rótulo um pouco abaixo do ponto para não embolar com o número da barra
+                  const yOffset = dataset.type === 'line' ? 14 : -12;
+                  
+                  ctx.fillText(valStr, position.x, position.y + yOffset);
                 });
               });
               ctx.restore();
