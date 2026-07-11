@@ -7,6 +7,7 @@ window.ReleasedModule = (() => {
   }
 
   function render() {
+    const isAdmin = DB.currentUser && DB.currentUser.role === 'admin';
     let eqs = DB.equipment.list().filter(e => e.status === 'Liberado');
     
     // Sort by most recent release date first
@@ -101,7 +102,18 @@ window.ReleasedModule = (() => {
                           <div style="font-size:1.4rem;font-weight:900;">${e.codigo}</div>
                           <div style="color:var(--text-secondary);font-size:var(--text-sm);">${e.nome || 'Sem Nome'}</div>
                         </div>
-                        <span class="badge badge-success">Liberado</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <span class="badge badge-success">Liberado</span>
+                          ${isAdmin ? `
+                            <button class="btn-premium-edit" 
+                                    title="Editar Equipamento"
+                                    onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                              </svg>
+                            </button>
+                          ` : ''}
+                        </div>
                       </div>
                       
                       <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size:var(--text-xs); color:var(--text-muted); background: var(--bg-body, #f8fafc); padding: 8px; border-radius: 6px; margin-top: 4px;">
