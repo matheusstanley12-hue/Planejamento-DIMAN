@@ -76,12 +76,18 @@ window.ReleasedModule = (() => {
                 
                 // Normaliza inconsistências comuns de digitação
                 const tipoLower = tipo.toLowerCase().trim();
-                if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços') {
+                if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços' || tipoLower === 'sondas poços') {
                     tipo = 'Sondas Poços';
-                } else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço') {
+                } else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço' || tipoLower === 'bomba poços' || tipoLower === 'bombas poços') {
                     tipo = 'Bombas de poços';
-                } else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa') {
+                } else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa' || tipoLower === 'sonda de pesquisa' || tipoLower === 'sondas de pesquisa') {
                     tipo = 'Sondas de Pesquisas';
+                } else if (tipoLower === 'bomba pesquisa' || tipoLower === 'bombas de pesquisa' || tipoLower === 'bombas pesquisa') {
+                    tipo = 'Bomba de pesquisa';
+                } else if (tipoLower === 'subconjunto') {
+                    tipo = 'Subconjuntos';
+                } else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') {
+                    tipo = 'Programação de almoxarifado';
                 }
                 
                 if (!groups[tipo]) groups[tipo] = [];
