@@ -219,6 +219,7 @@ window.WorkshopModule = (() => {
     ];
 
     sectors.forEach(sector => {
+      const currentYear = new Date().getFullYear().toString();
       const ctxSector = document.getElementById(`wsChart_${sector.id}`);
       if(ctxSector) {
         const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -241,8 +242,14 @@ window.WorkshopModule = (() => {
             if (tipo !== sector.name) return;
           }
 
-          if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+          if(e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentYear)) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+          if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) {
+              const dt = e.dataLiberacaoAtual || e.dataFim;
+              if (dt.startsWith(currentYear)) {
+                  const m = parseInt(dt.split('-')[1],10); 
+                  if(m>=1&&m<=12) mR[m-1]++; 
+              }
+          }
         });
         
         const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
@@ -293,7 +300,7 @@ window.WorkshopModule = (() => {
             scales: {
               x: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 13 } } },
               y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { font: { size: 13 }, precision: 0 } },
-              y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, max: 120, border: { display: false }, ticks: { font: { size: 13 } } }
+              y1: { type: 'linear', position: 'right', grid: { display: false }, min: 0, suggestedMax: 120, border: { display: false }, ticks: { font: { size: 13 } } }
             }
           }
         }));
