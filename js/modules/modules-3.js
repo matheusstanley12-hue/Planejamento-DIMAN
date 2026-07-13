@@ -1872,7 +1872,13 @@ window.ReportsModule = (() => {
     }
     else if (type === 'equipamentos') {
       const eqs = DB.equipment.list();
-      const filteredEqs = globalFilterEqId ? eqs.filter(e => e.id === globalFilterEqId) : eqs;
+      let filteredEqs = globalFilterEqId ? eqs.filter(e => e.id === globalFilterEqId) : eqs;
+      
+      const typeSelect = document.getElementById('report-eq-type');
+      if (typeSelect && typeSelect.value !== 'ALL') {
+        const selectedType = typeSelect.value.toLowerCase();
+        filteredEqs = filteredEqs.filter(e => e.tipo && e.tipo.toLowerCase() === selectedType);
+      }
       const allTasks = DB.tasks.getAll();
       const restrictions = DB.restrictions.getAll();
       
