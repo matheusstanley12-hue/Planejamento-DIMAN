@@ -196,6 +196,17 @@ window.HomeModule = (() => {
             </div>
           </div>
           
+          ${e.replanning && e.replanning.length > 0 ? `
+            <div style="margin-top:12px; padding:8px; background:var(--bg-elevated); border-radius:6px; font-size:11px; border:1px solid var(--border-card);">
+              <div style="color:var(--text-secondary); font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between;">
+                 <span>Replanejamentos (${e.replanning.length})</span>
+              </div>
+              <ul style="margin:0; padding-left:14px; color:var(--color-warning);">
+                ${e.replanning.map(r => `<li>Para <strong>${formatDate(r.novaData).substring(0,5)}</strong> - <span style="color:var(--text-muted)">${r.motivo.substring(0, 30)}${r.motivo.length > 30 ? '...' : ''}</span></li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          
           <div class="premium-footer">
             <div style="display:flex;align-items:center;gap:6px;">
               ${iconDate} Prev. ${dtPrev ? formatDate(dtPrev).substring(0,5) : '—'}
