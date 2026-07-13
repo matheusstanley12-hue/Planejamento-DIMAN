@@ -1346,13 +1346,14 @@ window.EquipmentPanel = (() => {
     else if (!checked) t.dataRealTermino = '';
     window.DB.tasks.update(taskId, t);
     
-    if (checked && !t.parentId) {
+    if (!t.parentId) {
        const subs = window.DB.tasks.getAll().filter(st => st.equipmentId === t.equipmentId && st.parentId === t.id);
        subs.forEach(st => {
-         st.status = 'Concluída';
-         st.pctExecutado = 100;
-         if(!st.dataRealInicio) st.dataRealInicio = new Date().toISOString().slice(0, 10);
-         if(!st.dataRealTermino) st.dataRealTermino = new Date().toISOString().slice(0, 10);
+         st.status = checked ? 'Concluída' : 'Não Iniciada';
+         st.pctExecutado = checked ? 100 : 0;
+         if (checked && !st.dataRealInicio) st.dataRealInicio = new Date().toISOString().slice(0, 10);
+         if (checked && !st.dataRealTermino) st.dataRealTermino = new Date().toISOString().slice(0, 10);
+         else if (!checked) st.dataRealTermino = '';
          window.DB.tasks.update(st.id, st);
        });
     }
