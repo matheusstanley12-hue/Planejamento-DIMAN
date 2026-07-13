@@ -1363,8 +1363,7 @@ window.EquipmentPanel = (() => {
        if (window.updateParentTaskProgress) window.updateParentTaskProgress(t.id);
     }
 
-    window.EquipmentPanel.renderTasks(t.disciplina);
-    if (window.updateGlobalProgress) window.updateGlobalProgress();
+    render();
   }
 
   async function deleteTask(eqId, id) {
