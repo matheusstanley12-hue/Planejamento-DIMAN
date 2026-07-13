@@ -77,17 +77,19 @@ window.HomeModule = (() => {
       const bucketId = getBucketId(e);
       const pct = e.pctAvanco || 0;
       const dtPlan = e.dataLiberacaoPlanejada || '';
-      const dtPrev = e.dataLiberacaoAtual || dtPlan;
+      
+      let ePlan = e.dataLiberacaoPlanejada;
+      if (e.replanning && e.replanning.length > 0) {
+        ePlan = e.replanning[e.replanning.length - 1].novaData;
+      }
+
+      const dtPrev = ePlan || dtPlan;
       let desvio = 0;
       if (dtPlan && dtPrev) {
         desvio = daysBetween(dtPlan, dtPrev);
       }
       
       const isManutencao = e.status !== 'Liberado' ? '1' : '0';
-      let ePlan = e.dataLiberacaoPlanejada;
-      if (e.replanning && e.replanning.length > 0) {
-        ePlan = e.replanning[e.replanning.length - 1].novaData;
-      }
       const isAtrasado = (e.status !== 'Liberado' && ePlan && daysBetween(today, ePlan) < 0) ? '1' : '0';
       const isLib7 = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) >= 0 && daysBetween(today, e.dataLiberacaoAtual) <= 7) ? '1' : '0';
       const hasRestr = restrictions.some(r => r.equipmentId === e.id && r.status === 'Aberta') ? '1' : '0';

@@ -967,7 +967,13 @@ window.EquipmentModule = (() => {
 
   async function save() {
     const id = document.getElementById('eq-editing-id').value;
+    const existingEq = id ? DB.equipment.get(id) : null;
+    let computedLiberacaoAtual = document.getElementById('eq-data-plan') ? document.getElementById('eq-data-plan').value : '';
+    if (existingEq && existingEq.replanning && existingEq.replanning.length > 0) {
+      computedLiberacaoAtual = existingEq.replanning[existingEq.replanning.length - 1].novaData;
+    }
     const data = {
+      dataLiberacaoAtual: computedLiberacaoAtual,
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       nome: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       os: document.getElementById('eq-os').value.trim(),
