@@ -889,8 +889,15 @@ window.EquipmentModule = (() => {
             <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${canEditPlan ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} />
             ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
+          ${eq && eq.replanning && eq.replanning.length > 0 ? `
+          <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
+             <strong style="color:var(--text-primary);">Histórico de Replanejamento:</strong>
+             <ul style="margin:4px 0 0 16px; padding:0; color:#F59E0B; list-style-type: disc;">
+                ${eq.replanning.map(r => `<li><span style="color:var(--text-secondary)">Para</span> <strong>${window.formatDate(r.novaData)}</strong> <span style="color:var(--text-muted)">- ${r.motivo}</span></li>`).join('')}
+             </ul>
+          </div>` : ''}
         </div>
-        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
+        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoReal)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
@@ -973,7 +980,7 @@ window.EquipmentModule = (() => {
       numeroSerie: '',
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
-      dataLiberacaoAtual: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
+      dataLiberacaoReal: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
       status: document.getElementById('eq-status').value,
       etapaAtual: document.getElementById('eq-etapa-atual').value,
       pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
