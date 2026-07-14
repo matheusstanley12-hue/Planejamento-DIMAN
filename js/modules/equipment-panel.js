@@ -1364,7 +1364,11 @@ window.EquipmentPanel = (() => {
        if (window.updateParentTaskProgress) window.updateParentTaskProgress(t.id);
     }
 
-    render();
+    if (window.Router) {
+      window.Router.navigate('equipment-panel', { id: t.equipmentId, force: true });
+    } else {
+      render({ id: t.equipmentId });
+    }
   }
 
   async function deleteTask(eqId, id) {
