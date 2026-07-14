@@ -2285,7 +2285,7 @@ window.UsersModule = (() => {
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
-        const perfis = ['Desenvolvedor', 'Administrador', 'Gerente', 'Planejador', 'Coordenador', 'Supervisor', 'Encarregado', 'Executante', 'Cliente'];
+        const perfis = ['Desenvolvedor', 'Gerente', 'Cordenador', 'Encarregado', 'Planejador', 'Planejador compras', 'Executante'];
         const modalHtml = `
           <div class="modal-overlay" id="modal-user-form">
             <div class="modal">
