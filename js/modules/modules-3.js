@@ -2281,7 +2281,12 @@ window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
     let users = window.Auth ? window.Auth.listUsers() : [];
-    users.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    users.sort((a, b) => {
+      const pA = a.perfil || '';
+      const pB = b.perfil || '';
+      if (pA !== pB) return pA.localeCompare(pB);
+      return (a.nome || '').localeCompare(b.nome || '');
+    });
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
@@ -2349,22 +2354,32 @@ window.UsersModule = (() => {
       <div class="table-wrap"><table>
         <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
-          ${users.map(u=>`<tr onclick="document.querySelectorAll('.selected-row').forEach(el=>el.classList.remove('selected-row')); this.classList.add('selected-row');">
-            <td style="font-family:var(--font-mono)">${u.matricula}</td>
-            <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
-            <td><span class="badge badge-primary">${u.perfil}</span></td>
-            <td>${u.disciplina ? `<span class="badge badge-ghost" style="color:var(--text-secondary)">${u.disciplina}</span>` : '—'}</td>
-            <td>${statusBadge(u.status||'Ativo')}</td>
-            <td>
-              <div class="table-actions">
-                ${u.id !== 'u-superadmin' ? `
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.openEditUser('${u.id}')">Editar</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
-                  <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); UsersModule.deleteUser('${u.id}')">Excluir</button>
-                ` : ''}
-              </div>
-            </td>
-          </tr>`).join('')}
+          ${(() => {
+            let currentPerfil = null;
+            return users.map(u => {
+              let groupHeader = '';
+              if (u.perfil !== currentPerfil) {
+                currentPerfil = u.perfil;
+                groupHeader = `<tr style="background:var(--bg-elevated);border-top:1px solid var(--border-card);"><td colspan="6" style="font-weight:700;color:var(--text-primary);text-transform:uppercase;padding:var(--space-3);letter-spacing:0.5px;font-size:var(--text-sm);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:8px;display:inline-block;vertical-align:text-bottom;color:var(--color-primary);"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg> NÍVEL: ${currentPerfil || 'NÃO DEFINIDO'}</td></tr>`;
+              }
+              return groupHeader + `<tr onclick="document.querySelectorAll('.selected-row').forEach(el=>el.classList.remove('selected-row')); this.classList.add('selected-row');">
+                <td style="font-family:var(--font-mono)">${u.matricula}</td>
+                <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
+                <td><span class="badge badge-primary">${u.perfil}</span></td>
+                <td>${u.disciplina ? `<span class="badge badge-ghost" style="color:var(--text-secondary)">${u.disciplina}</span>` : '—'}</td>
+                <td>${statusBadge(u.status||'Ativo')}</td>
+                <td>
+                  <div class="table-actions">
+                    ${u.id !== 'u-superadmin' ? `
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.openEditUser('${u.id}')">Editar</button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
+                      <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); UsersModule.deleteUser('${u.id}')">Excluir</button>
+                    ` : ''}
+                  </div>
+                </td>
+              </tr>`;
+            }).join('');
+          })()}
         </tbody>
       </table></div>
     </div>`;
