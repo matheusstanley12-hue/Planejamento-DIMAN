@@ -1879,6 +1879,10 @@ window.ReportsModule = (() => {
         const selectedType = typeSelect.value.toLowerCase();
         filteredEqs = filteredEqs.filter(e => e.tipo && e.tipo.toLowerCase() === selectedType);
       }
+      
+      // Filter out released equipment since this is an "Em Manutenção" report
+      filteredEqs = filteredEqs.filter(e => e.status !== 'Liberado');
+
       const allTasks = DB.tasks.getAll();
       const restrictions = DB.restrictions.getAll();
       
