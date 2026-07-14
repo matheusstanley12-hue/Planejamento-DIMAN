@@ -1919,13 +1919,19 @@ window.ReportsModule = (() => {
       const rows = filteredEqs.map(e => {
         const eqTasks = allTasks.filter(t => t.equipmentId === e.id);
         const eqRestr = restrictions.filter(r => r.equipmentId === e.id && r.status === 'Aberta').length;
+        
+        let ePlan = e.dataLiberacaoPlanejada;
+        if (e.replanning && e.replanning.length > 0) {
+          ePlan = e.replanning[e.replanning.length - 1].novaData;
+        }
+
         return [
           e.codigo,
           e.nome || '—',
           e.cliente || '—',
           `${e.pctAvanco || 0}%`,
           e.status,
-          formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada),
+          formatDate(ePlan),
           `${eqTasks.filter(t=>t.status==='Concluída').length}/${eqTasks.length}`,
           `${eqRestr}`
         ];
