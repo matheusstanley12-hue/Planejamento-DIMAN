@@ -1880,17 +1880,18 @@ window.ReportsModule = (() => {
         filteredEqs = filteredEqs.filter(e => e.tipo && e.tipo.toLowerCase() === selectedType);
       }
       
-      // Filter out released equipment since this is an "Em Manutenção" report
-      filteredEqs = filteredEqs.filter(e => e.status !== 'Liberado');
-
       const allTasks = DB.tasks.getAll();
       const restrictions = DB.restrictions.getAll();
       
+      // Calculate KPIs using ALL equipments of the selected type (including Liberado)
       const total = filteredEqs.length;
       const emManutencao = filteredEqs.filter(e => e.status === 'Em Manutenção').length;
       const liberados = filteredEqs.filter(e => e.status === 'Liberado').length;
       const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra').length;
       const avgProgress = total > 0 ? Math.round(filteredEqs.reduce((s, e) => s + (e.pctAvanco || 0), 0) / total) : 0;
+
+      // Now filter out 'Liberado' so the TABLE only shows equipments currently in maintenance
+      const tableEqs = filteredEqs.filter(e => e.status !== 'Liberado');
 
       addHeader("Relatório de Equipamentos em Manutenção");
 
@@ -1920,7 +1921,7 @@ window.ReportsModule = (() => {
 
       // Equipments Table
       const columns = ['Código', 'Nome / Descrição', 'Cliente', 'Avanço', 'Status', 'Previsão Lib.', 'Atividades', 'Restr. Abertas'];
-      const rows = filteredEqs.map(e => {
+      const rows = tableEqs.map(e => {
         const eqTasks = allTasks.filter(t => t.equipmentId === e.id);
         const eqRestr = restrictions.filter(r => r.equipmentId === e.id && r.status === 'Aberta').length;
         
