@@ -1877,7 +1877,15 @@ window.ReportsModule = (() => {
       const typeSelect = document.getElementById('report-eq-type');
       if (typeSelect && typeSelect.value !== 'ALL') {
         const selectedType = typeSelect.value.toLowerCase();
-        filteredEqs = filteredEqs.filter(e => e.tipo && e.tipo.toLowerCase() === selectedType);
+        filteredEqs = filteredEqs.filter(e => {
+          let g = e.tipo || 'outros equipamentos';
+          if (g === 'Sondas de Pesquisas') g = 'Sonda de pesquisa';
+          else if (g === 'Sondas Poços') g = 'Sonda de poços';
+          else if (g === 'Bombas de poços') g = 'Bomba poços';
+          else if (g === 'Subconjuntos') g = 'Subconjunto';
+          else if (g === 'Programação de almoxarifado') g = 'Serviço de almoxarifado';
+          return g.toLowerCase() === selectedType;
+        });
       }
       
       const allTasks = DB.tasks.getAll();
