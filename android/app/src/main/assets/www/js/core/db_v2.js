@@ -178,36 +178,53 @@ window.DB = (() => {
     catch { return {}; }
   }
   const syncTimeouts = {};
-  async function syncToSupabase(collection, data) {
-    // Marcar IMEDIATAMENTE como não sincronizado para evitar perda de dados se o usuário der F5 antes do debounce terminar
+  async function syncToSupabase(collection, explicitData) {
     localStorage.setItem('diman_unsynced', 'true');
-    
     if (!supabaseClient) return;
     
-    // Debounce sync requests to prevent data loss race conditions during batch updates
+    if (Array.isArray(explicitData)) {
+        const explicitIds = explicitData.filter(Boolean).map(i => i.id).filter(Boolean);
+        if (explicitIds.length > 0) {
+            try {
+                const queueKey = `diman_dirty_${collection}`;
+                const queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+                const newQueue = Array.from(new Set([...queue, ...explicitIds]));
+                localStorage.setItem(queueKey, JSON.stringify(newQueue));
+            } catch(e) {}
+        }
+    }
+    
     if (syncTimeouts[collection]) clearTimeout(syncTimeouts[collection]);
     
     syncTimeouts[collection] = setTimeout(async () => {
       try {
         let upsertPayload = [];
-        if (Array.isArray(data) && data.length > 0 && data[0] && data[0].id) {
-           upsertPayload = data.filter(Boolean).map(item => ({ collection: collection, key: item.id, data: item, updated_at: new Date().toISOString() }));
-           // Clear out legacy 'all' key to prevent deleted items from coming back
-           upsertPayload.push({ collection: collection, key: 'all', data: [], updated_at: new Date().toISOString() });
-        } else {
-           upsertPayload = { collection: collection, key: 'all', data: data, updated_at: new Date().toISOString() };
-        }
+        let dirtyIdsToClear = [];
+        
+        try {
+            const queueKey = `diman_dirty_${collection}`;
+            const queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+            if (queue.length > 0) {
+                const allData = get(collection) || [];
+                const queueSet = new Set(queue);
+                const itemsToPush = allData.filter(item => item && queueSet.has(item.id));
+                upsertPayload = itemsToPush.map(item => ({ collection: collection, key: item.id, data: item, updated_at: new Date().toISOString() }));
+                dirtyIdsToClear = queue;
+            }
+        } catch(e) {}
          
-        // Anexar tombstones (itens deletados) ao payload para garantir que não voltem
         try {
            const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
            const colTomb = tombstones.filter(t => t.collection === collection);
            colTomb.forEach(t => {
-              if (Array.isArray(upsertPayload)) {
-                 upsertPayload.push({ collection: collection, key: t.key, data: { id: t.key, _deleted: true }, updated_at: new Date().toISOString() });
-              }
+              upsertPayload.push({ collection: collection, key: t.key, data: { id: t.key, _deleted: true }, updated_at: new Date().toISOString() });
            });
         } catch(e) {}
+        
+        if (upsertPayload.length === 0) {
+            if (Object.values(syncTimeouts).length <= 1) localStorage.setItem('diman_unsynced', 'false');
+            return;
+        }
 
         const { error } = await supabaseClient.from('diman_store')
           .upsert(upsertPayload, { onConflict: 'collection,key' });
@@ -216,16 +233,28 @@ window.DB = (() => {
           console.error('Supabase Sync Error:', error);
           localStorage.setItem('diman_unsynced', 'true');
         } else {
-          // If no other pending syncs exist, we can mark as fully synced
+          try {
+              if (dirtyIdsToClear.length > 0) {
+                  const queueKey = `diman_dirty_${collection}`;
+                  const currentQueue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+                  const newQueue = currentQueue.filter(id => !dirtyIdsToClear.includes(id));
+                  localStorage.setItem(queueKey, JSON.stringify(newQueue));
+              }
+              const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
+              const remainingTombstones = tombstones.filter(t => t.collection !== collection);
+              if (tombstones.length !== remainingTombstones.length) {
+                  localStorage.setItem('diman_tombstones', JSON.stringify(remainingTombstones));
+              }
+          } catch(e) {}
+
           if (Object.values(syncTimeouts).length <= 1 || localStorage.getItem('diman_unsynced') !== 'true') {
-             localStorage.setItem('diman_unsynced', 'false');
+            localStorage.setItem('diman_unsynced', 'false');
           }
         }
       } catch (err) {
         console.error('Supabase Sync Exception:', err);
         localStorage.setItem('diman_unsynced', 'true');
       }
-      delete syncTimeouts[collection];
     }, 1000);
   }
 
@@ -256,15 +285,33 @@ window.DB = (() => {
      }
   }
   function set(key, data) { 
+    if (typeof data === 'undefined') return;
     let oldData = [];
     try { oldData = JSON.parse(localStorage.getItem(key)) || []; } catch(e){}
+    
+    let changedItems = [];
+    let hasDeletions = false;
     
     if (Array.isArray(oldData) && Array.isArray(data)) {
        const newIds = new Set(data.filter(Boolean).map(i => i.id).filter(Boolean));
        const deletedItems = oldData.filter(i => i && i.id && !newIds.has(i.id));
        deletedItems.forEach(item => {
+           hasDeletions = true;
            deleteFromSupabase(key, item.id);
        });
+       
+       const oldMap = new Map(oldData.filter(Boolean).map(i => [i.id, i]));
+       data.forEach(item => {
+           if (!item || !item.id) return;
+           const old = oldMap.get(item.id);
+           const oldTime = old && old.updatedAt ? new Date(old.updatedAt).getTime() : 0;
+           const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+           if (!old || newTime > oldTime || JSON.stringify(old) !== JSON.stringify(item)) {
+               changedItems.push(item);
+           }
+       });
+    } else {
+       changedItems = Array.isArray(data) ? data : [data];
     }
 
     let localDataToSave = data;
@@ -305,7 +352,9 @@ window.DB = (() => {
       throw err;
     }
     
-    syncToSupabase(key, data);
+    if (changedItems.length > 0 || hasDeletions) {
+        syncToSupabase(key, changedItems);
+    }
     return true;
   }
   function uid(prefix = 'id') { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
@@ -423,7 +472,6 @@ window.DB = (() => {
           try { localTombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]'); } catch(e){}
 
           const allKeys = new Set([...Object.keys(allData), ...Object.keys(groupedData), ...Object.values(KEYS)]);
-          let hasLocalChangesToPush = false;
 
           for (const collection of allKeys) {
             let localArr = [];
@@ -451,14 +499,14 @@ window.DB = (() => {
                         if (existStatusTime > newStatusTime) {
                            item.status = existing.status;
                            item._statusUpdatedAt = existing._statusUpdatedAt;
-                           hasLocalChangesToPush = true;
+                           syncToSupabase(collection, [item]);
                         }
                     }
                     
                    if (!existing || newTime > existTime) {
                       mergedMap.set(item.id, item);
                    } else if (existTime > newTime) {
-                      hasLocalChangesToPush = true; // Local é mais novo, força push corretivo
+                      syncToSupabase(collection, [existing]);
                    }
                }
             });
@@ -481,14 +529,14 @@ window.DB = (() => {
                     if (existStatusTime > newStatusTime) {
                        item.status = existing.status;
                        item._statusUpdatedAt = existing._statusUpdatedAt;
-                       hasLocalChangesToPush = true;
+                       syncToSupabase(collection, [item]);
                     }
                 }
                 
                 if (!existing || newTime >= existTime) {
                   mergedMap.set(item.id, item);
                 } else if (existTime > newTime) {
-                  hasLocalChangesToPush = true;
+                  syncToSupabase(collection, [existing]);
                 }
               }
             });
@@ -498,7 +546,7 @@ window.DB = (() => {
             colTomb.forEach(t => {
                if (mergedMap.has(t.key)) {
                   mergedMap.delete(t.key);
-                  hasLocalChangesToPush = true;
+                  syncToSupabase(collection, []);
                }
             });
             
@@ -515,12 +563,6 @@ window.DB = (() => {
             }
             
             try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
-          }
-
-          if (hasLocalChangesToPush) {
-             console.log('[DIMAN] Dados locais são mais recentes que a nuvem. Forçando sync para corrigir a nuvem.');
-             localStorage.setItem('diman_unsynced', 'true');
-             setTimeout(forceSyncAll, 1000);
           }
       }
 
