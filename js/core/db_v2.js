@@ -407,11 +407,6 @@ window.DB = (() => {
       }
       const data = allFetchedData;
       if (data && data.length > 0) {
-        const hasUnsynced = localStorage.getItem('diman_unsynced') === 'true';
-        if (hasUnsynced) {
-          console.log('[DIMAN] Existem alterações locais não sincronizadas. O pull inicial foi cancelado e faremos o push local agora.');
-          await forceSyncAll();
-        } else {
           const groupedData = {};
           const allData = {};
           
@@ -522,7 +517,6 @@ window.DB = (() => {
              localStorage.setItem('diman_unsynced', 'true');
              setTimeout(forceSyncAll, 1000);
           }
-        }
       }
 
       // 2. Real-time subscription (DESATIVADO PARA ECONOMIA DE BANCO DE DADOS)
