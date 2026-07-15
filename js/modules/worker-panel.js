@@ -39,7 +39,7 @@ window.WorkerPanel = (() => {
 
   function getMyEquipments(session) {
     const eqs = window.DB.equipment.list();
-    const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+    const isManager = session && session.perfil !== 'Executante';
     if (isAdminMode || isManager) return eqs;
 
     const myWorker = getMyWorker(session);
@@ -249,7 +249,7 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('include-myself');
     if (includeMyself && includeMyself.checked) {
-      const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+      const isManager = session && session.perfil !== 'Executante';
       if (!myWorker && isManager) {
         // Auto-create real worker for the admin
         const workers = DB.workforce.list();
@@ -658,7 +658,7 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('resume-include-myself');
     if (includeMyself && includeMyself.checked) {
-      const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+      const isManager = session && session.perfil !== 'Executante';
       if (!myWorker && isManager) {
         const workers = DB.workforce.list();
         let existingAdminWorker = workers.find(w => w.nome === session.nome);
@@ -1216,7 +1216,7 @@ window.WorkerPanel = (() => {
     if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     window.GlobalEqFilter = '';
-    const isManager = ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+    const isManager = session && session.perfil !== 'Executante';
     let myWorker = getMyWorker(session);
     
     if (!myWorker && isManager) {
