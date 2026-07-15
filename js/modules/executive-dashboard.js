@@ -177,7 +177,7 @@ window.ExecutiveDashboard = (() => {
   }
 
   function renderSectors(eqs, currentMonthPrefix) {
-    const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+    const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Compressor'];
     return catsFull.map(cat => {
       const p = eqs.filter(e => {
           let tipo = e.tipo || '';
@@ -188,6 +188,7 @@ window.ExecutiveDashboard = (() => {
           else if (tipoLower === 'bomba pesquisa' || tipoLower === 'bombas de pesquisa' || tipoLower === 'bombas pesquisa') tipo = 'Bomba de pesquisa';
           else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
           else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
+          else if (tipoLower === 'compressor' || tipoLower === 'compressores') tipo = 'Compressor';
           return tipo === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix);
       }).length;
       
@@ -200,6 +201,7 @@ window.ExecutiveDashboard = (() => {
           else if (tipoLower === 'bomba pesquisa' || tipoLower === 'bombas de pesquisa' || tipoLower === 'bombas pesquisa') tipo = 'Bomba de pesquisa';
           else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
           else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
+          else if (tipoLower === 'compressor' || tipoLower === 'compressores') tipo = 'Compressor';
           return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
       }).length;
 

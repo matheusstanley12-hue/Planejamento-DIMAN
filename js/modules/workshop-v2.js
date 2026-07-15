@@ -204,6 +204,7 @@ window.WorkshopModule = (() => {
       { id: 'Bomba_de_pesquisa', name: 'Bomba de pesquisa' },
       { id: 'Subconjuntos', name: 'Subconjuntos' },
       { id: 'Programacao_de_almoxarifado', name: 'Programação de almoxarifado' },
+      { id: 'Compressor', name: 'Compressor' },
       { id: 'Outros', name: 'Outros' }
     ];
 
@@ -231,10 +232,12 @@ window.WorkshopModule = (() => {
               tipo = 'Subconjuntos';
           } else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') {
               tipo = 'Programação de almoxarifado';
+          } else if (tipoLower === 'compressor' || tipoLower === 'compressores') {
+              tipo = 'Compressor';
           }
           
           if (sector.id === 'Outros') {
-            if (['Sondas de Pesquisas', 'Sondas Poços', 'Bombas de poços', 'Bomba de pesquisa', 'Subconjuntos', 'Programação de almoxarifado'].includes(tipo)) return;
+            if (['Sondas de Pesquisas', 'Sondas Poços', 'Bombas de poços', 'Bomba de pesquisa', 'Subconjuntos', 'Programação de almoxarifado', 'Compressor'].includes(tipo)) return;
           } else {
             if (tipo !== sector.name) return;
           }
@@ -412,6 +415,7 @@ window.WorkshopModule = (() => {
        else if (cLower === 'bomba pesquisa' || cLower === 'bombas de pesquisa' || cLower === 'bombas pesquisa') c = 'Bomba de pesquisa';
        else if (cLower === 'subconjunto' || cLower === 'subconjuntos') c = 'Subconjuntos';
        else if (cLower === 'serviço de almoxarifado' || cLower === 'servico de almoxarifado' || cLower === 'programação almoxarifado') c = 'Programação de almoxarifado';
+       else if (cLower === 'compressor' || cLower === 'compressores') c = 'Compressor';
        else c = 'Outros Equipamentos';
        
        if(!catMap[c]) catMap[c] = { sum:0, cnt:0, eqs:[] };
@@ -776,6 +780,7 @@ window.WorkshopModule = (() => {
               <div style="height:450px; position:relative; border: 1px solid var(--ws-border); padding: 24px; border-radius: 12px; background: var(--bg-default, #F9FAFB); box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><div style="font-size:16px;font-weight:800;color:var(--text-secondary);margin-bottom:16px;text-align:center;text-transform:uppercase;">Bomba de pesquisa</div><canvas id="wsChart_Bomba_de_pesquisa"></canvas></div>
               <div style="height:450px; position:relative; border: 1px solid var(--ws-border); padding: 24px; border-radius: 12px; background: var(--bg-default, #F9FAFB); box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><div style="font-size:16px;font-weight:800;color:var(--text-secondary);margin-bottom:16px;text-align:center;text-transform:uppercase;">Subconjuntos</div><canvas id="wsChart_Subconjuntos"></canvas></div>
               <div style="height:450px; position:relative; border: 1px solid var(--ws-border); padding: 24px; border-radius: 12px; background: var(--bg-default, #F9FAFB); box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><div style="font-size:16px;font-weight:800;color:var(--text-secondary);margin-bottom:16px;text-align:center;text-transform:uppercase;">Programação de almoxarifado</div><canvas id="wsChart_Programacao_de_almoxarifado"></canvas></div>
+              <div style="height:450px; position:relative; border: 1px solid var(--ws-border); padding: 24px; border-radius: 12px; background: var(--bg-default, #F9FAFB); box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><div style="font-size:16px;font-weight:800;color:var(--text-secondary);margin-bottom:16px;text-align:center;text-transform:uppercase;">Compressor</div><canvas id="wsChart_Compressor"></canvas></div>
               <div style="height:450px; position:relative; border: 1px solid var(--ws-border); padding: 24px; border-radius: 12px; background: var(--bg-default, #F9FAFB); box-shadow: 0 4px 6px rgba(0,0,0,0.05);"><div style="font-size:16px;font-weight:800;color:var(--text-secondary);margin-bottom:16px;text-align:center;text-transform:uppercase;">Outros</div><canvas id="wsChart_Outros"></canvas></div>
             </div>
          </div>

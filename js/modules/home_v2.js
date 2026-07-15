@@ -6,6 +6,7 @@ window.HomeModule = (() => {
     { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 11V6a2 2 0 0 0-2-2h-1M10 4h4" /><circle cx="8" cy="13" r="4" /><circle cx="8" cy="13" r="1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 13h5v4h2M4 17h14" /></svg>` },
     { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` },
     { id: 'prog-almoxarifado', name: 'Programação de almox.', color: 'var(--color-info)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 17V8h4v9M8 12h5l2 2v3h1v-1h3" /><circle cx="6" cy="17" r="2" /><circle cx="14" cy="17" r="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M19 16v2h3" /></svg>` },
+    { id: 'compressor', name: 'Compressor', color: 'var(--color-warning)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>` },
     { id: 'aguardando-manutencao', name: 'Aguardando Manut.', color: 'var(--color-danger)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>` },
     { id: 'outros', name: 'Outros Equipamentos', color: 'var(--text-muted)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>` }
   ];
@@ -21,6 +22,7 @@ window.HomeModule = (() => {
     if (t.includes('bomba') && (t.includes('poço') || t.includes('poco') || t.includes('pocos') || t.includes('poços'))) return 'bombas-pocos';
     if (t.includes('subconjunto')) return 'subconjuntos';
     if (t.includes('almoxarifado') || t.includes('programação') || t.includes('programacao')) return 'prog-almoxarifado';
+    if (t.includes('compressor')) return 'compressor';
     return 'outros';
   }
 
@@ -69,6 +71,7 @@ window.HomeModule = (() => {
       'bombas-pocos': [],
       'subconjuntos': [],
       'prog-almoxarifado': [],
+      'compressor': [],
       'aguardando-manutencao': [],
       'outros': []
     };
