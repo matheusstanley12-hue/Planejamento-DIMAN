@@ -451,6 +451,7 @@ window.DB = (() => {
                         if (existStatusTime > newStatusTime) {
                            item.status = existing.status;
                            item._statusUpdatedAt = existing._statusUpdatedAt;
+                           hasLocalChangesToPush = true;
                         }
                     }
                     
@@ -480,6 +481,7 @@ window.DB = (() => {
                     if (existStatusTime > newStatusTime) {
                        item.status = existing.status;
                        item._statusUpdatedAt = existing._statusUpdatedAt;
+                       hasLocalChangesToPush = true;
                     }
                 }
                 
@@ -494,7 +496,10 @@ window.DB = (() => {
             // 4. Aplicar tombstones locais (Garante que exclusões feitas offline ou não sincronizadas NUNCA voltem)
             const colTomb = localTombstones.filter(t => t.collection === collection);
             colTomb.forEach(t => {
-               mergedMap.delete(t.key);
+               if (mergedMap.has(t.key)) {
+                  mergedMap.delete(t.key);
+                  hasLocalChangesToPush = true;
+               }
             });
             
             let finalArray = Array.from(mergedMap.values());
