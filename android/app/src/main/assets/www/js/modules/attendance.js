@@ -33,6 +33,7 @@ window.AttendanceModule = (() => {
 
     const workers = DB.workforce.list().sort((a,b) => a.nome.localeCompare(b.nome));
     const vList = window.DB && DB.vacations ? DB.vacations.list() : [];
+    const allTimesheets = window.DB && DB.timesheets ? DB.timesheets.list() : [];
     const tIso = new Date().toISOString().slice(0, 10);
 
     let rowsHtml = '';
@@ -54,11 +55,25 @@ window.AttendanceModule = (() => {
         feriasBadge = `<span class="badge" style="margin-left:10px;background:rgba(0,0,0,0.05);color:var(--text-muted);">Agendado: ${w.feriasInicio.split('-').reverse().join('/')}</span>`;
       }
 
+      const workerOccurrences = allTimesheets.filter(t => t.workerId === w.id && ['Falta', 'Atraso', 'Atestado'].includes(t.tipo));
+      const faltas = workerOccurrences.filter(t => t.tipo === 'Falta').length;
+      const atrasos = workerOccurrences.filter(t => t.tipo === 'Atraso').length;
+      const atestados = workerOccurrences.filter(t => t.tipo === 'Atestado').length;
+
+      let historyBadges = '';
+      if (faltas > 0) historyBadges += `<span class="badge" style="background:var(--color-danger-bg);color:var(--color-danger);margin-left:8px;font-size:10px;">${faltas} Falta${faltas > 1 ? 's' : ''}</span>`;
+      if (atrasos > 0) historyBadges += `<span class="badge" style="background:var(--color-warning-bg);color:var(--color-warning);margin-left:8px;font-size:10px;">${atrasos} Atraso${atrasos > 1 ? 's' : ''}</span>`;
+      if (atestados > 0) historyBadges += `<span class="badge" style="background:var(--brand-primary-light);color:var(--brand-primary);margin-left:8px;font-size:10px;">${atestados} Atestado${atestados > 1 ? 's' : ''}</span>`;
+
       rowsHtml += `
         <tr style="border-bottom:1px solid var(--border-card); ${feriasStyle}">
           <td style="padding:15px;">
             <div style="font-weight:bold;color:var(--text-primary);">${w.nome}</div>
-            <div style="font-size:12px;color:var(--text-muted);">${w.matricula || 'Sem Matrícula'} | ${w.disciplina || 'Sem Setor'} ${feriasBadge}</div>
+            <div style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:2px;">
+              ${w.matricula || 'Sem Matrícula'} | ${w.disciplina || 'Sem Setor'} 
+              ${feriasBadge}
+              ${historyBadges}
+            </div>
           </td>
           <td style="padding:15px;text-align:right;">
             <div style="display:flex;gap:5px;justify-content:flex-end;">

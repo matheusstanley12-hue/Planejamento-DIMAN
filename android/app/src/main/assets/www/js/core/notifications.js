@@ -263,11 +263,14 @@ function toDateInput(iso) {
   if (!iso) return '';
   return iso.slice(0, 10);
 }
-function daysBetween(a, b) {
-  if (!a || !b) return 0;
-  const diff = new Date(b) - new Date(a);
-  return Math.round(diff / (1000 * 60 * 60 * 24));
-}
+  function daysBetween(a, b) {
+    if (!a || !b) return 0;
+    const d1 = new Date(a + (a.length === 10 ? 'T00:00:00' : ''));
+    const d2 = new Date(b + (b.length === 10 ? 'T00:00:00' : ''));
+    d1.setHours(0, 0, 0, 0);
+    d2.setHours(0, 0, 0, 0);
+    return Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+  }
 function addDays(iso, days) {
   const d = new Date(iso);
   d.setDate(d.getDate() + days);

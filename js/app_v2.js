@@ -686,8 +686,11 @@ function renderShell(session) {
     'Gerente': ['*'],
     'Desenvolvedor': ['*'],
     'Cordenador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Coordenador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Supervisor': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
     'Encarregado': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
     'Planejador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'equipment', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator'],
+    'Planejamento': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'equipment', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator'],
     'Planejador compras': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'followup', 'lessons', 'ai', 'action-plans'],
     'Executante': ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'qrview']
   };

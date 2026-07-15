@@ -80,24 +80,10 @@ window.DB = (() => {
   }
 
   const INITIAL_DATA = {
-    [KEYS.equipment]: [
-      { id: 'eq-ssm-288', nome: 'SSM-288', codigo: 'SSM-288', tipo: 'Sondas de Pesquisas', status: 'Em Manutenção', os: 'OS-88220', cliente: 'COMISA', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-bhz-001', nome: 'BHZ-001', codigo: 'BHZ-001', tipo: 'Sondas Poços', status: 'Em Manutenção', os: 'OS-99100', cliente: 'GEOSOL', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-bms-101', nome: 'BMS-101', codigo: 'BMS-101', tipo: 'Bomba de pesquisa', status: 'Liberado', os: 'OS-77110', cliente: 'VALE', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-bmp-202', nome: 'BMP-202', codigo: 'BMP-202', tipo: 'Bombas de poços', status: 'Em Manutenção', os: 'OS-66330', cliente: 'ANGLO', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-sub-501', nome: 'SUB-501', codigo: 'SUB-501', tipo: 'Subconjuntos', status: 'Em Manutenção', os: 'OS-55440', cliente: 'GEOSOL', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() }
-    ],
-    [KEYS.tasks]: [
-      { id: 'tk-test-1', equipmentId: 'eq-ssm-288', descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false, createdAt: now(), updatedAt: now() },
-      { id: 'tk-test-2', equipmentId: 'eq-ssm-288', descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true, createdAt: now(), updatedAt: now() },
-      { id: 'tk-test-3', equipmentId: 'eq-bhz-001', descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true, createdAt: now(), updatedAt: now() }
-    ],
-    [KEYS.restrictions]: [
-      { id: 'rs-test-1', equipmentId: 'eq-ssm-288', descricao: 'Aguardando liberação de área', impacto: 'Alto', status: 'Aberta', createdAt: now(), updatedAt: now() }
-    ],
-    [KEYS.parts]: [
-      { id: 'pt-test-1', equipmentId: 'eq-bhz-001', descricao: 'Mangueira de Alta Pressão 3/4', pn: 'PN-98765', qtd: 2, status: 'Solicitada', createdAt: now(), updatedAt: now() }
-    ],
+    [KEYS.equipment]: [],
+    [KEYS.tasks]: [],
+    [KEYS.restrictions]: [],
+    [KEYS.parts]: [],
     [KEYS.kpiCache]: {},
     [KEYS.solicitacoes]: [],
     [KEYS.workforce]: [
@@ -290,6 +276,29 @@ window.DB = (() => {
       localStorage.setItem(key, JSON.stringify(localDataToSave)); 
     } catch(err) {
       if (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        if (key === KEYS.tasks && Array.isArray(localDataToSave)) {
+            // Limpeza de emergência: Remove TODAS as fotos de tarefas concluídas para salvar a atual
+            let emergencyData = localDataToSave.map(t => {
+                if (t && t.status === 'Concluída') {
+                    if (t.fotoComprovacao || (t.anexos && t.anexos.length)) {
+                        const copy = { ...t };
+                        delete copy.fotoComprovacao;
+                        delete copy.anexos;
+                        return copy;
+                    }
+                }
+                return t;
+            });
+            try {
+               localStorage.setItem(key, JSON.stringify(emergencyData));
+               if (window.Toast) window.Toast.info('Memória Otimizada', 'Foi necessário otimizar a memória removendo fotos antigas para concluir esta tarefa.', 5000);
+               syncToSupabase(key, emergencyData);
+               return true;
+            } catch(e2) {
+               if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos do sistema.', 8000);
+               return false;
+            }
+        }
         if (window.Toast) window.Toast.error('Memória Cheia', 'O limite de armazenamento do navegador foi atingido. Apague alguns arquivos ou use links.', 8000);
         return false;
       }
@@ -331,6 +340,20 @@ window.DB = (() => {
         }
       }
     }
+
+    try {
+       const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
+       if (tombstones.length > 0) {
+           const tbPayload = tombstones.map(t => ({
+              collection: t.collection,
+              key: t.key,
+              data: { id: t.key, _deleted: true },
+              updated_at: new Date().toISOString()
+           }));
+           await supabaseClient.from('diman_store').upsert(tbPayload, { onConflict: 'collection,key' });
+       }
+    } catch(e) {}
+
     localStorage.setItem('diman_unsynced', 'false');
     if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem.');
   }
@@ -384,11 +407,6 @@ window.DB = (() => {
       }
       const data = allFetchedData;
       if (data && data.length > 0) {
-        const hasUnsynced = localStorage.getItem('diman_unsynced') === 'true';
-        if (hasUnsynced) {
-          console.log('[DIMAN] Existem alterações locais não sincronizadas. O pull inicial foi cancelado e faremos o push local agora.');
-          await forceSyncAll();
-        } else {
           const groupedData = {};
           const allData = {};
           
@@ -426,6 +444,17 @@ window.DB = (() => {
                    const existing = mergedMap.get(item.id);
                    const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                    const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                   
+                   if (existing && existing.status !== item.status) {
+                        const existStatusTime = existing._statusUpdatedAt ? new Date(existing._statusUpdatedAt).getTime() : 0;
+                        const newStatusTime = item._statusUpdatedAt ? new Date(item._statusUpdatedAt).getTime() : 0;
+                        if (existStatusTime > newStatusTime) {
+                           item.status = existing.status;
+                           item._statusUpdatedAt = existing._statusUpdatedAt;
+                           hasLocalChangesToPush = true;
+                        }
+                    }
+                    
                    if (!existing || newTime > existTime) {
                       mergedMap.set(item.id, item);
                    } else if (existTime > newTime) {
@@ -446,6 +475,16 @@ window.DB = (() => {
                 const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                 const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
                 
+                if (existing && existing.status !== item.status) {
+                    const existStatusTime = existing._statusUpdatedAt ? new Date(existing._statusUpdatedAt).getTime() : 0;
+                    const newStatusTime = item._statusUpdatedAt ? new Date(item._statusUpdatedAt).getTime() : 0;
+                    if (existStatusTime > newStatusTime) {
+                       item.status = existing.status;
+                       item._statusUpdatedAt = existing._statusUpdatedAt;
+                       hasLocalChangesToPush = true;
+                    }
+                }
+                
                 if (!existing || newTime >= existTime) {
                   mergedMap.set(item.id, item);
                 } else if (existTime > newTime) {
@@ -457,7 +496,10 @@ window.DB = (() => {
             // 4. Aplicar tombstones locais (Garante que exclusões feitas offline ou não sincronizadas NUNCA voltem)
             const colTomb = localTombstones.filter(t => t.collection === collection);
             colTomb.forEach(t => {
-               mergedMap.delete(t.key);
+               if (mergedMap.has(t.key)) {
+                  mergedMap.delete(t.key);
+                  hasLocalChangesToPush = true;
+               }
             });
             
             let finalArray = Array.from(mergedMap.values());
@@ -480,128 +522,17 @@ window.DB = (() => {
              localStorage.setItem('diman_unsynced', 'true');
              setTimeout(forceSyncAll, 1000);
           }
-        }
       }
 
-      // 2. Real-time subscription
+      // 2. Real-time subscription (DESATIVADO PARA ECONOMIA DE BANCO DE DADOS)
+      /*
       supabaseClient
         .channel('diman-sync')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'diman_store' }, payload => {
-          if (localStorage.getItem('diman_unsynced') === 'true') {
-            console.log('[DIMAN] Ignorando atualização em tempo real (dados locais em sincronização pendente).');
-            return;
-          }
-
-          if (payload.eventType === 'DELETE' && payload.old) {
-            const row = payload.old;
-            if (row.key === 'all') return;
-            let localArr = [];
-            try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
-            if (Array.isArray(localArr)) {
-               localArr = localArr.filter(i => i && i.id !== row.key);
-               localStorage.setItem(row.collection, JSON.stringify(localArr));
-            }
-          } else if (payload.new) {
-            const row = payload.new;
-            if (row.collection && row.collection.startsWith('photo_')) return;
-            
-            if (row.key === 'all') {
-              if (Array.isArray(row.data) && row.data.length > 0 && row.data[0] && row.data[0].id) {
-                 let localArr = [];
-                 try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
-                 if (!Array.isArray(localArr)) localArr = [];
-                 const mergedMap = new Map();
-                 localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
-                 row.data.forEach(item => {
-                    if (item && item.id) {
-                       if (item._deleted) {
-                          mergedMap.delete(item.id);
-                       } else {
-                          const existing = mergedMap.get(item.id);
-                          const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-                          const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
-                          
-                          if (!existing || newTime > existTime) {
-                             mergedMap.set(item.id, item);
-                          }
-                       }
-                    }
-                 });
-                 
-                 let finalArray = Array.from(mergedMap.values());
-                 finalArray = stripLargeFields(row.collection, finalArray);
-                 try { localStorage.setItem(row.collection, JSON.stringify(finalArray)); } catch(e) {}
-              } else if (Array.isArray(row.data) && row.data.length === 0) {
-                 // Clear legacy 'all' key from local storage if the server sends an empty array (from new clients)
-                 // Wait, we don't want to clear the local array if it's already using individual keys!
-                 // So do nothing if it's an empty array sent to clear legacy data
-                 if (!localStorage.getItem(row.collection)) {
-                    localStorage.setItem(row.collection, '[]');
-                 }
-              } else {
-                 localStorage.setItem(row.collection, JSON.stringify(row.data));
-              }
-            } else {
-              // Individual row updated
-              let localArr = [];
-              try { localArr = JSON.parse(localStorage.getItem(row.collection)) || []; } catch(e){}
-              if (!Array.isArray(localArr)) localArr = [];
-              
-              const idx = localArr.findIndex(i => i && i.id === row.key);
-              
-              let itemToSave = row.data;
-              if (row.collection === KEYS.tasks && itemToSave.status === 'Concluída' && itemToSave.updatedAt) {
-                  const diffDays = (new Date() - new Date(itemToSave.updatedAt)) / (1000 * 60 * 60 * 24);
-                  if (diffDays > 3) {
-                     itemToSave = { ...itemToSave };
-                     delete itemToSave.fotoComprovacao;
-                     delete itemToSave.anexos;
-                  }
-              }
-
-              if (idx !== -1) {
-                 if (itemToSave._deleted) {
-                    localArr.splice(idx, 1);
-                 } else {
-                    const existTime = localArr[idx].updatedAt ? new Date(localArr[idx].updatedAt).getTime() : 0;
-                    const newTime = itemToSave.updatedAt ? new Date(itemToSave.updatedAt).getTime() : 0;
-                    
-                    // Enforce: once finalized, never reverts
-                    if (localArr[idx].status === 'Concluída' && itemToSave.status !== 'Concluída') {
-                       itemToSave.status = 'Concluída';
-                       itemToSave.pctExecutado = 100;
-                       if (localArr[idx].dataRealTermino && !itemToSave.dataRealTermino) itemToSave.dataRealTermino = localArr[idx].dataRealTermino;
-                    }
-
-                    if (newTime >= existTime) {
-                       localArr[idx] = itemToSave;
-                    }
-                 }
-              } else {
-                 if (!itemToSave._deleted) {
-                    localArr.push(itemToSave);
-                 }
-              }
-              try { localStorage.setItem(row.collection, JSON.stringify(localArr)); } catch(e) {}
-            }
-          }
-
-          if (window.Router) {
-            const current = window.Router.getCurrent();
-            const liveViews = ['dashboard', 'manager-dashboard', 'workforce-time', 'tasks-ongoing', 'home', 'equipment', 'services', 'planning', 'meetings'];
-            if (current && liveViews.includes(current)) {
-              const hasOpenModal = document.querySelector('.modal-overlay.open, .modal.open');
-              if (!hasOpenModal) {
-                if (window._syncRenderTimeout) clearTimeout(window._syncRenderTimeout);
-                window._syncRenderTimeout = setTimeout(() => {
-                  window.Router.navigate(current, { force: true });
-                }, 3000);
-              }
-            }
-          }
+           // Lógica de tempo real removida para evitar consumo de conexões e reads
         })
         .subscribe();
-
+      */
     } catch(e) {
       console.error('Failed to init Supabase:', e);
     }
@@ -696,6 +627,11 @@ window.DB = (() => {
       const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
+      
+      if (data.status !== undefined && data.status !== before.status) {
+        data._statusUpdatedAt = now();
+      }
+      
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.equipment, items);
 
@@ -1203,6 +1139,7 @@ window.DB = (() => {
       
       if (items[idx].status !== status) {
         items[idx].status = status;
+        items[idx]._statusUpdatedAt = now();
         changed = true;
       }
 

@@ -177,10 +177,34 @@ window.ExecutiveDashboard = (() => {
   }
 
   function renderSectors(eqs, currentMonthPrefix) {
-    const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado'];
+    const catsFull = ['Sondas de Pesquisas', 'Bomba de pesquisa', 'Sondas Poços', 'Bombas de poços', 'Subconjuntos', 'Programação de almoxarifado', 'Compressor'];
     return catsFull.map(cat => {
-      const p = eqs.filter(e => (e.tipo||'') === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
-      const r = eqs.filter(e => (e.tipo||'') === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
+      const p = eqs.filter(e => {
+          let tipo = e.tipo || '';
+          const tipoLower = tipo.toLowerCase().trim();
+          if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços' || tipoLower === 'sondas poços') tipo = 'Sondas Poços';
+          else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço' || tipoLower === 'bomba poços' || tipoLower === 'bombas poços') tipo = 'Bombas de poços';
+          else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa' || tipoLower === 'sonda de pesquisa' || tipoLower === 'sondas de pesquisa') tipo = 'Sondas de Pesquisas';
+          else if (tipoLower === 'bomba pesquisa' || tipoLower === 'bombas de pesquisa' || tipoLower === 'bombas pesquisa') tipo = 'Bomba de pesquisa';
+          else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
+          else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
+          else if (tipoLower === 'compressor' || tipoLower === 'compressores') tipo = 'Compressor';
+          return tipo === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix);
+      }).length;
+      
+      const r = eqs.filter(e => {
+          let tipo = e.tipo || '';
+          const tipoLower = tipo.toLowerCase().trim();
+          if (tipoLower === 'sonda de poços' || tipoLower === 'sondas de poços' || tipoLower === 'sonda poços' || tipoLower === 'sondas poços') tipo = 'Sondas Poços';
+          else if (tipoLower === 'bomba de poços' || tipoLower === 'bombas de poço' || tipoLower === 'bomba de poço' || tipoLower === 'bomba poços' || tipoLower === 'bombas poços') tipo = 'Bombas de poços';
+          else if (tipoLower === 'sonda de pesquisas' || tipoLower === 'sondas pesquisa' || tipoLower === 'sonda pesquisa' || tipoLower === 'sonda de pesquisa' || tipoLower === 'sondas de pesquisa') tipo = 'Sondas de Pesquisas';
+          else if (tipoLower === 'bomba pesquisa' || tipoLower === 'bombas de pesquisa' || tipoLower === 'bombas pesquisa') tipo = 'Bomba de pesquisa';
+          else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
+          else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
+          else if (tipoLower === 'compressor' || tipoLower === 'compressores') tipo = 'Compressor';
+          return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
+      }).length;
+
       const pct = p > 0 ? Math.round((r/p)*100) : 0;
       return renderSectorCard(cat, p, r, pct);
     }).join('');
@@ -268,24 +292,62 @@ window.ExecutiveDashboard = (() => {
           afterDatasetsDraw(chart) {
             const ctx = chart.ctx;
             ctx.save();
-            ctx.font = 'bold 11px Inter, sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-primary') || '#333';
             
+            // 1. Bar labels
+            ctx.font = 'bold 12px Inter, sans-serif';
+            ctx.fillStyle = textColor;
             chart.data.datasets.forEach((dataset, i) => {
+              if (dataset.type === 'line') return;
               const meta = chart.getDatasetMeta(i);
               if (meta.hidden) return;
               meta.data.forEach((element, index) => {
                 let value = dataset.data[index];
                 if (value === 0 || value == null || value === '') return;
-                
-                let valStr = String(value);
-                if (dataset.type === 'line') valStr += '%';
+                ctx.fillText(String(value), element.tooltipPosition().x, element.tooltipPosition().y - 12);
+              });
+            });
 
+            // 2. Line labels (Adherence)
+            const metaPlan = chart.getDatasetMeta(1);
+            const metaReal = chart.getDatasetMeta(2);
+            
+            chart.data.datasets.forEach((dataset, i) => {
+              if (dataset.type !== 'line') return;
+              const meta = chart.getDatasetMeta(i);
+              if (meta.hidden) return;
+              
+              ctx.font = 'bold 11px Inter, sans-serif';
+              meta.data.forEach((element, index) => {
+                let value = dataset.data[index];
+                if (value === 0 || value == null || value === '') return;
+                
+                const valStr = String(value) + '%';
                 const position = element.tooltipPosition();
-                ctx.fillStyle = dataset.type === 'line' ? '#EF4444' : textColor;
-                ctx.fillText(valStr, position.x, position.y - 12);
+                
+                let planY = (metaPlan.data[index] && !metaPlan.hidden) ? metaPlan.data[index].y : 9999;
+                let realY = (metaReal.data[index] && !metaReal.hidden) ? metaReal.data[index].y : 9999;
+                let highestBarY = Math.min(planY, realY);
+                if (highestBarY === 9999) highestBarY = position.y;
+                
+                // Dynamic offset to avoid collision with bar labels
+                let yOffset = (position.y < highestBarY - 12) ? -18 : 22;
+                let labelY = position.y + yOffset;
+                
+                const textWidth = ctx.measureText(valStr).width;
+                const w = textWidth + 12;
+                const h = 20;
+                
+                ctx.fillStyle = '#EF4444';
+                ctx.beginPath();
+                if (ctx.roundRect) ctx.roundRect(position.x - w/2, labelY - h/2, w, h, 6);
+                else ctx.rect(position.x - w/2, labelY - h/2, w, h);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(valStr, position.x, labelY);
               });
             });
             ctx.restore();
@@ -294,6 +356,7 @@ window.ExecutiveDashboard = (() => {
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { 
+            tooltip: { enabled: false },
             legend: { position: 'top', align: 'end' },
             globalDataLabels: false // Disable global plugin
           },

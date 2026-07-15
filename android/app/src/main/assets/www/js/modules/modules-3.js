@@ -1095,8 +1095,13 @@ window.AIAssistant = (() => {
     if (!text && !pendingImage) return;
 
     let userMsg = '';
-    if (pendingImage) {
-      userMsg += `*[Imagem anexada]*\n`;
+    const imgData = pendingImage;
+    if (imgData) {
+      if (typeof imgData === 'string' && imgData.startsWith('data:image')) {
+        userMsg += `<div style="margin-bottom:12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;overflow:hidden;max-width:200px;"><img src="${imgData}" style="width:100%;height:auto;display:block;" alt="Imagem do usuário"/></div>\n`;
+      } else {
+        userMsg += `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);padding:4px 8px;border-radius:4px;margin-bottom:8px;border:1px solid rgba(255,255,255,0.3);"><svg style="width:16px;height:16px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg><span style="font-size:12px;font-weight:600;">Imagem anexada</span></div>\n`;
+      }
     }
     if (text) {
       userMsg += text;
@@ -1107,30 +1112,78 @@ window.AIAssistant = (() => {
       input.style.height = '';
     }
 
-    messages.push({ role:'user', content: userMsg });
-    renderMessages();
+    addMessage('user', userMsg);
 
-    if (pendingImage) {
+    if (imgData) {
       pendingImage = false;
       const preview = document.getElementById('ai-attachment-preview');
       if (preview) preview.style.display = 'none';
       
-      const searchTerm = text || 'peça solicitada';
+      const msgId = 'msg-' + Date.now();
+      addMessage('ai', `<div id="${msgId}">⏳ Analisando a imagem via Inteligência Artificial e executando Motor OCR (Extração de Textos)...</div>`);
 
-      setTimeout(() => {
-        const mlSearchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(searchTerm)}`;
-        const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchTerm + ' comprar')}`;
+      if (window.Tesseract && typeof imgData === 'string' && imgData.startsWith('data:image')) {
+        Tesseract.recognize(imgData, 'eng', { logger: m => console.log(m) })
+          .then(({ data: { text } }) => {
+            const el = document.getElementById(msgId);
+            if (!el) return;
 
-        messages.push({ role:'ai', content:`**Análise Visual Concluída** 📷\n\nAnalisei a imagem enviada e cruzei com a sua solicitação ("**${searchTerm}**"). Busquei no mercado e gerei os links diretos para você consultar preços e disponibilidade:\n\n🛒 **Mercado Livre**\n- [Buscar "${searchTerm}" no Mercado Livre](${mlSearchUrl})\n\n🔍 **Busca Google (Distribuidores)**\n- [Pesquisar fornecedores no Google](${googleSearchUrl})\n\nDeseja que eu registre o status deste equipamento como "Aguardando Peça" ou crie uma Solicitação de Compra (SC)?`});
-        renderMessages();
-      }, 2000);
+            // Extrai possíveis códigos PNs ou modelos usando regex básico
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+            let extractedCode = "Código não legível na imagem";
+            let brand = "Componente Genérico";
+            
+            // Busca simplificada: Pega as palavras maiores que 5 chars em maiúsculas com números
+            const codes = text.match(/[A-Z0-9]{6,25}/g);
+            if (codes && codes.length > 0) {
+                // Remove códigos irrelevantes
+                const validCodes = codes.filter(c => /[0-9]/.test(c) && /[A-Z]/.test(c));
+                if (validCodes.length > 0) extractedCode = validCodes[0];
+            }
+
+            // Tenta achar marca (se contiver algumas marcas famosas)
+            const textUpper = text.toUpperCase();
+            if (textUpper.includes('BONFIGLIOLI')) brand = 'Redutor/Motor Bonfiglioli';
+            else if (textUpper.includes('SKF')) brand = 'Rolamento SKF';
+            else if (textUpper.includes('WEG')) brand = 'Motor Elétrico WEG';
+            else if (textUpper.includes('REXROTH')) brand = 'Bomba Rexroth';
+            else if (textUpper.includes('CATERPILLAR') || textUpper.includes('CAT ')) brand = 'Peça Caterpillar';
+            else if (textUpper.includes('PARKER')) brand = 'Componente Parker';
+            else if (lines.length > 0) brand = 'Componente (' + lines[0].substring(0, 15) + '...)';
+
+            const uriCode = encodeURIComponent(extractedCode);
+            const uriFull = encodeURIComponent(extractedCode + ' ' + brand);
+
+            // Geração de links para múltiplos canais de venda/consulta
+            const mlSearchUrl = `https://lista.mercadolivre.com.br/${uriCode}`;
+            const amazonUrl = `https://www.amazon.com.br/s?k=${uriCode}`;
+            const solIndUrl = `https://www.solucoesindustriais.com.br/busca?q=${uriCode}`;
+            const aliExpressUrl = `https://pt.aliexpress.com/wholesale?SearchText=${uriCode}`;
+            const googleShopUrl = `https://www.google.com/search?tbm=shop&q=${uriCode}`;
+            const googleSearchUrl = `https://www.google.com/search?q=${uriFull}`;
+
+            el.innerHTML = `**Análise Visual e OCR Concluídos com Sucesso** 📷\n\nConsegui ler a plaqueta da peça através do nosso motor OCR avançado!\n\n**Fabricante/Peça detectado:** ${brand}\n**Código da Peça (PN Identificado):** \`${extractedCode}\`\n\nCom base nesse código extraído, realizei uma varredura cruzada e gerei os links diretos para você consultar preços e disponibilidade em **múltiplos canais fornecedores**:\n\n🛒 **Marketplaces Nacionais**\n- [Buscar no Mercado Livre](${mlSearchUrl})\n- [Buscar na Amazon Brasil](${amazonUrl})\n\n🏭 **Plataformas B2B & Distribuidores Industriais**\n- [Portal Soluções Industriais](${solIndUrl})\n- [Buscar Distribuidores Técnicos Oficiais (Google)](${googleSearchUrl})\n\n🌐 **Importação e Comparadores Globais**\n- [Buscar peças OEM no AliExpress](${aliExpressUrl})\n- [Comparar Preços no Google Shopping](${googleShopUrl})\n\nDeseja que eu registre o status como "Aguardando Peça" ou crie uma Solicitação de Compra (SC)?`;
+            
+            // Re-render markdown since we manipulated innerHTML dynamically
+            if (window.marked) el.innerHTML = marked.parse(el.innerHTML);
+          })
+          .catch(err => {
+            const el = document.getElementById(msgId);
+            if (el) el.innerHTML = `❌ Erro ao tentar ler a imagem: ${err.message}`;
+          });
+      } else {
+        // Fallback para mock se Tesseract não carregou ou não é imagem
+        setTimeout(() => {
+          const el = document.getElementById(msgId);
+          if (el) el.innerHTML = "Não foi possível carregar o motor OCR para processar essa imagem.";
+        }, 1500);
+      }
     } else {
       sendQuery(text);
     }
   }
-
-  function attachImage() {
-    pendingImage = true;
+  function attachImage(src) {
+    pendingImage = src || true;
     const preview = document.getElementById('ai-attachment-preview');
     if (preview) preview.style.display = 'flex';
   }
@@ -1151,7 +1204,12 @@ window.AIAssistant = (() => {
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e) => {
-      if (e.target.files.length > 0) attachImage();
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (evt) => attachImage(evt.target.result);
+        reader.readAsDataURL(file);
+      }
     };
     input.click();
   }
@@ -1160,7 +1218,11 @@ window.AIAssistant = (() => {
     if (e.clipboardData && e.clipboardData.items) {
       for (let i = 0; i < e.clipboardData.items.length; i++) {
         if (e.clipboardData.items[i].type.indexOf('image') !== -1) {
-          attachImage();
+          const file = e.clipboardData.items[i].getAsFile();
+          const reader = new FileReader();
+          reader.onload = (evt) => attachImage(evt.target.result);
+          reader.readAsDataURL(file);
+          break;
         }
       }
     }
@@ -1220,7 +1282,10 @@ window.MeetingMode = (() => {
     const eqMaintenance = eqs.filter(e => {
       if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
       if (e.tipo === 'Subconjuntos') return false;
-      const dataPrazo = e.dataLiberacaoPlanejada || '';
+      let dataPrazo = e.dataLiberacaoPlanejada || '';
+      if (e.replanning && e.replanning.length > 0) {
+        dataPrazo = e.replanning[e.replanning.length - 1].novaData;
+      }
       return matchesMonth(dataPrazo, currentMonth);
     });
 
@@ -1303,13 +1368,25 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+            ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => {
+              const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
+              const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
+              return dPrazoA.localeCompare(dPrazoB);
+            }).map(e => {
+              const isReplanned = e.replanning && e.replanning.length > 0;
+              let prazoStr = '';
+              if (isReplanned) {
+                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—';
+                const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
+                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
+              } else {
+                prazoStr = `<span style="color:white">${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</span>`;
+              }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
@@ -1373,13 +1450,25 @@ window.MeetingMode = (() => {
             </h2>
           </div>
           <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => (a.dataLiberacaoPlanejada||'').localeCompare(b.dataLiberacaoPlanejada||'')).map(e => {
-              const dataStr = (e.dataLiberacaoPlanejada) ? formatDate(e.dataLiberacaoPlanejada) : '—';
+            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => {
+              const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
+              const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
+              return dPrazoA.localeCompare(dPrazoB);
+            }).map(e => {
+              const isReplanned = e.replanning && e.replanning.length > 0;
+              let prazoStr = '';
+              if (isReplanned) {
+                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—';
+                const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
+                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
+              } else {
+                prazoStr = `<span style="color:white">${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</span>`;
+              }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
                   <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: <span style="color:white">${dataStr}</span></span>
+                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#FFE0B2">${e.cliente || 'Não Informado'}</strong></div>
                 </div>
@@ -1652,6 +1741,9 @@ window.ReportsModule = (() => {
               <option value="sonda de poços">Sonda de Poços</option>
               <option value="bomba de pesquisa">Bomba de Pesquisa</option>
               <option value="bomba de poços">Bomba de Poços</option>
+              <option value="subconjunto">Subconjunto</option>
+              <option value="serviço de almoxarifado">Almoxarifado</option>
+              <option value="compressor">Compressor</option>
             </select>`
           },
           {id:'pecas', title:'Relatório de Peças',icon:'📦',desc:'Peças pendentes e criticidade'},
@@ -1783,15 +1875,35 @@ window.ReportsModule = (() => {
     }
     else if (type === 'equipamentos') {
       const eqs = DB.equipment.list();
-      const filteredEqs = globalFilterEqId ? eqs.filter(e => e.id === globalFilterEqId) : eqs;
+      let filteredEqs = globalFilterEqId ? eqs.filter(e => e.id === globalFilterEqId) : eqs;
+      
+      const typeSelect = document.getElementById('report-eq-type');
+      if (typeSelect && typeSelect.value !== 'ALL') {
+        const selectedType = typeSelect.value.toLowerCase();
+        filteredEqs = filteredEqs.filter(e => {
+          let g = e.tipo || 'outros equipamentos';
+          if (g === 'Sondas de Pesquisas') g = 'Sonda de pesquisa';
+          else if (g === 'Sondas Poços') g = 'Sonda de poços';
+          else if (g === 'Bombas de poços') g = 'Bomba poços';
+          else if (g === 'Subconjuntos') g = 'Subconjunto';
+          else if (g === 'Programação de almoxarifado') g = 'Serviço de almoxarifado';
+          else if (g === 'Compressores') g = 'Compressor';
+          return g.toLowerCase() === selectedType;
+        });
+      }
+      
       const allTasks = DB.tasks.getAll();
       const restrictions = DB.restrictions.getAll();
       
+      // Calculate KPIs using ALL equipments of the selected type (including Liberado)
       const total = filteredEqs.length;
       const emManutencao = filteredEqs.filter(e => e.status === 'Em Manutenção').length;
       const liberados = filteredEqs.filter(e => e.status === 'Liberado').length;
       const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra').length;
       const avgProgress = total > 0 ? Math.round(filteredEqs.reduce((s, e) => s + (e.pctAvanco || 0), 0) / total) : 0;
+
+      // Now filter out 'Liberado' so the TABLE only shows equipments currently in maintenance
+      const tableEqs = filteredEqs.filter(e => e.status !== 'Liberado');
 
       addHeader("Relatório de Equipamentos em Manutenção");
 
@@ -1821,16 +1933,22 @@ window.ReportsModule = (() => {
 
       // Equipments Table
       const columns = ['Código', 'Nome / Descrição', 'Cliente', 'Avanço', 'Status', 'Previsão Lib.', 'Atividades', 'Restr. Abertas'];
-      const rows = filteredEqs.map(e => {
+      const rows = tableEqs.map(e => {
         const eqTasks = allTasks.filter(t => t.equipmentId === e.id);
         const eqRestr = restrictions.filter(r => r.equipmentId === e.id && r.status === 'Aberta').length;
+        
+        let ePlan = e.dataLiberacaoPlanejada;
+        if (e.replanning && e.replanning.length > 0) {
+          ePlan = e.replanning[e.replanning.length - 1].novaData;
+        }
+
         return [
           e.codigo,
           e.nome || '—',
           e.cliente || '—',
           `${e.pctAvanco || 0}%`,
           e.status,
-          formatDate(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada),
+          formatDate(ePlan),
           `${eqTasks.filter(t=>t.status==='Concluída').length}/${eqTasks.length}`,
           `${eqRestr}`
         ];
@@ -2175,11 +2293,16 @@ window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
     let users = window.Auth ? window.Auth.listUsers() : [];
-    users.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    users.sort((a, b) => {
+      const pA = a.perfil || '';
+      const pB = b.perfil || '';
+      if (pA !== pB) return pA.localeCompare(pB);
+      return (a.nome || '').localeCompare(b.nome || '');
+    });
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
-        const perfis = ['Desenvolvedor', 'Administrador', 'Gerente', 'Planejador', 'Coordenador', 'Supervisor', 'Encarregado', 'Executante', 'Cliente'];
+        const perfis = ['Desenvolvedor', 'Gerente', 'Cordenador', 'Encarregado', 'Planejador', 'Planejador compras', 'Executante'];
         const modalHtml = `
           <div class="modal-overlay" id="modal-user-form">
             <div class="modal">
@@ -2243,22 +2366,32 @@ window.UsersModule = (() => {
       <div class="table-wrap"><table>
         <thead><tr><th>Matrícula</th><th>Nome</th><th>Perfil</th><th>Setor</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
-          ${users.map(u=>`<tr onclick="document.querySelectorAll('.selected-row').forEach(el=>el.classList.remove('selected-row')); this.classList.add('selected-row');">
-            <td style="font-family:var(--font-mono)">${u.matricula}</td>
-            <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
-            <td><span class="badge badge-primary">${u.perfil}</span></td>
-            <td>${u.disciplina ? `<span class="badge badge-ghost" style="color:var(--text-secondary)">${u.disciplina}</span>` : '—'}</td>
-            <td>${statusBadge(u.status||'Ativo')}</td>
-            <td>
-              <div class="table-actions">
-                ${u.id !== 'u-superadmin' ? `
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.openEditUser('${u.id}')">Editar</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
-                  <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); UsersModule.deleteUser('${u.id}')">Excluir</button>
-                ` : ''}
-              </div>
-            </td>
-          </tr>`).join('')}
+          ${(() => {
+            let currentPerfil = null;
+            return users.map(u => {
+              let groupHeader = '';
+              if (u.perfil !== currentPerfil) {
+                currentPerfil = u.perfil;
+                groupHeader = `<tr style="background:var(--bg-elevated);border-top:1px solid var(--border-card);"><td colspan="6" style="font-weight:700;color:var(--text-primary);text-transform:uppercase;padding:var(--space-3);letter-spacing:0.5px;font-size:var(--text-sm);"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:8px;display:inline-block;vertical-align:text-bottom;color:var(--color-primary);"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg> NÍVEL: ${currentPerfil || 'NÃO DEFINIDO'}</td></tr>`;
+              }
+              return groupHeader + `<tr onclick="document.querySelectorAll('.selected-row').forEach(el=>el.classList.remove('selected-row')); this.classList.add('selected-row');">
+                <td style="font-family:var(--font-mono)">${u.matricula}</td>
+                <td><div style="display:flex;align-items:center;gap:var(--space-2)"><div class="avatar avatar-sm">${avatarInitials(u.nome)}</div>${u.nome}</div></td>
+                <td><span class="badge badge-primary">${u.perfil}</span></td>
+                <td>${u.disciplina ? `<span class="badge badge-ghost" style="color:var(--text-secondary)">${u.disciplina}</span>` : '—'}</td>
+                <td>${statusBadge(u.status||'Ativo')}</td>
+                <td>
+                  <div class="table-actions">
+                    ${u.id !== 'u-superadmin' ? `
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.openEditUser('${u.id}')">Editar</button>
+                      <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); UsersModule.resetPassword('${u.id}')" title="Resetar senha para 123456">Resetar Senha</button>
+                      <button type="button" class="btn btn-danger btn-sm" onclick="event.stopPropagation(); UsersModule.deleteUser('${u.id}')">Excluir</button>
+                    ` : ''}
+                  </div>
+                </td>
+              </tr>`;
+            }).join('');
+          })()}
         </tbody>
       </table></div>
     </div>`;

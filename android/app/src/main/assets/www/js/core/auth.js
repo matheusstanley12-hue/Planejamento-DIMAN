@@ -298,7 +298,7 @@ window.Auth = (() => {
     }
     const hashed = await hashPassword(data.senhaInicial || '123456');
     const user = {
-      id: 'u-' + Date.now(),
+      id: 'u-' + data.matricula,
       matricula: data.matricula,
       nome: data.nome,
       email: data.email || '',

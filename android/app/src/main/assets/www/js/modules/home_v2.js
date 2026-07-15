@@ -1,11 +1,12 @@
 window.HomeModule = (() => {
   const BUCKETS = [
-    { id: 'sondas-pesquisas', name: 'Sondas de Pesquisas', color: 'var(--brand-primary)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` },
-    { id: 'bomba-pesquisa', name: 'Bomba de pesquisa', color: 'var(--color-orange)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>` },
-    { id: 'sondas-pocos', name: 'Sondas Poços', color: 'var(--color-success)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20m-6-10h12m-6-10V2m0 20v2M5.636 5.636l14.142 14.142M18.364 5.636L4.222 19.778" /></svg>` },
-    { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>` },
-    { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" /></svg>` },
-    { id: 'prog-almoxarifado', name: 'Programação de almoxarifado', color: 'var(--color-info)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>` },
+    { id: 'sondas-pesquisas', name: 'Sondas de Pesquisas', color: 'var(--brand-primary)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><rect x="4" y="16" width="14" height="4" rx="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="18" r="1" /><circle cx="11" cy="18" r="1" /><circle cx="15" cy="18" r="1" /><path stroke-linecap="round" stroke-linejoin="round" d="M5 16v-4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v4" /><path stroke-linecap="round" stroke-linejoin="round" d="M13 16V3l4 1v12M13 6h4M13 10h4M13 14h4" /></svg>` },
+    { id: 'bomba-pesquisa', name: 'Bomba de pesquisa', color: 'var(--color-orange)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 11V6a2 2 0 0 0-2-2h-1M10 4h4" /><circle cx="8" cy="13" r="4" /><circle cx="8" cy="13" r="1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 13h5v4h2M4 17h14" /></svg>` },
+    { id: 'sondas-pocos', name: 'Sondas Poços', color: 'var(--color-success)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16h16v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v-3a2 2 0 0 1 2-2h3v5" /><circle cx="7.5" cy="18" r="1.5" /><circle cx="16.5" cy="18" r="1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 11L16.5 2.5l2 1L14 12" /><path stroke-linecap="round" stroke-linejoin="round" d="M11 11v5" /></svg>` },
+    { id: 'bombas-pocos', name: 'Bombas de poços', color: 'var(--brand-primary-light)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 11V6a2 2 0 0 0-2-2h-1M10 4h4" /><circle cx="8" cy="13" r="4" /><circle cx="8" cy="13" r="1.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 13h5v4h2M4 17h14" /></svg>` },
+    { id: 'subconjuntos', name: 'Subconjuntos', color: 'var(--color-purple)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` },
+    { id: 'prog-almoxarifado', name: 'Programação de almox.', color: 'var(--color-info)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 17V8h4v9M8 12h5l2 2v3h1v-1h3" /><circle cx="6" cy="17" r="2" /><circle cx="14" cy="17" r="2" /><path stroke-linecap="round" stroke-linejoin="round" d="M19 16v2h3" /></svg>` },
+    { id: 'compressor', name: 'Compressor', color: 'var(--color-warning)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>` },
     { id: 'aguardando-manutencao', name: 'Aguardando Manut.', color: 'var(--color-danger)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>` },
     { id: 'outros', name: 'Outros Equipamentos', color: 'var(--text-muted)', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>` }
   ];
@@ -21,6 +22,7 @@ window.HomeModule = (() => {
     if (t.includes('bomba') && (t.includes('poço') || t.includes('poco') || t.includes('pocos') || t.includes('poços'))) return 'bombas-pocos';
     if (t.includes('subconjunto')) return 'subconjuntos';
     if (t.includes('almoxarifado') || t.includes('programação') || t.includes('programacao')) return 'prog-almoxarifado';
+    if (t.includes('compressor')) return 'compressor';
     return 'outros';
   }
 
@@ -69,6 +71,7 @@ window.HomeModule = (() => {
       'bombas-pocos': [],
       'subconjuntos': [],
       'prog-almoxarifado': [],
+      'compressor': [],
       'aguardando-manutencao': [],
       'outros': []
     };
@@ -77,17 +80,19 @@ window.HomeModule = (() => {
       const bucketId = getBucketId(e);
       const pct = e.pctAvanco || 0;
       const dtPlan = e.dataLiberacaoPlanejada || '';
-      const dtPrev = e.dataLiberacaoAtual || dtPlan;
+      
+      let ePlan = e.dataLiberacaoPlanejada;
+      if (e.replanning && e.replanning.length > 0) {
+        ePlan = e.replanning[e.replanning.length - 1].novaData;
+      }
+
+      const dtPrev = ePlan || dtPlan;
       let desvio = 0;
       if (dtPlan && dtPrev) {
         desvio = daysBetween(dtPlan, dtPrev);
       }
       
       const isManutencao = e.status !== 'Liberado' ? '1' : '0';
-      let ePlan = e.dataLiberacaoPlanejada;
-      if (e.replanning && e.replanning.length > 0) {
-        ePlan = e.replanning[e.replanning.length - 1].novaData;
-      }
       const isAtrasado = (e.status !== 'Liberado' && ePlan && daysBetween(today, ePlan) < 0) ? '1' : '0';
       const isLib7 = (e.status !== 'Liberado' && e.dataLiberacaoAtual && daysBetween(today, e.dataLiberacaoAtual) >= 0 && daysBetween(today, e.dataLiberacaoAtual) <= 7) ? '1' : '0';
       const hasRestr = restrictions.some(r => r.equipmentId === e.id && r.status === 'Aberta') ? '1' : '0';
@@ -131,7 +136,7 @@ window.HomeModule = (() => {
            draggable="true"
            ondragstart="window.HomeModule.drag(event, '${e.id}')"
            ondragend="window.HomeModule.dragEnd(event)"
-           data-search="${e.codigo.toLowerCase()} ${e.nome.toLowerCase()}" 
+           data-search="${(e.codigo||'').toLowerCase()} ${(e.nome||'').toLowerCase()}" 
            data-manutencao="${isManutencao}" 
            data-atrasado="${isAtrasado}" 
            data-lib7="${isLib7}" 
@@ -153,21 +158,31 @@ window.HomeModule = (() => {
               </div>
             </div>
             
-            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-              <div style="display:flex; gap:6px; color:var(--color-danger);">
-                ${hasPecas === '1' ? `<span title="Aguardando Peças">${iconBox}</span>` : ''}
-                ${hasRestr === '1' || isAtrasado === '1' ? `<span title="${isAtrasado==='1'?'Atrasado':'Restrição Aberta'}">${iconAlert}</span>` : ''}
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                <div style="display:flex; gap:6px; color:var(--color-danger);">
+                  ${hasPecas === '1' ? `<span title="Aguardando Peças">${iconBox}</span>` : ''}
+                  ${hasRestr === '1' || isAtrasado === '1' ? `<span title="${isAtrasado==='1'?'Atrasado':'Restrição Aberta'}">${iconAlert}</span>` : ''}
+                </div>
+                ${isAdmin ? `
+                  <div style="display:flex; gap: 4px;">
+                    <button class="btn-premium-edit" 
+                            style="background:rgba(16,185,129,0.1); color:#10B981; border:1px solid rgba(16,185,129,0.2);"
+                            title="Liberar Equipamento (Remover do Painel)"
+                            onclick="event.stopPropagation(); if(confirm('Deseja liberar este equipamento? Ele sairá deste painel.')) window.HomeModule.updateEquipmentStatus('${e.id}', 'Liberado')">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    </button>
+                    <button class="btn-premium-edit" 
+                            title="Editar Equipamento"
+                            onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                    </button>
+                  </div>
+                ` : ''}
               </div>
-              ${isAdmin ? `
-                <button class="btn-premium-edit" 
-                        title="Editar Equipamento"
-                        onclick="event.stopPropagation(); window.EquipmentModule.openEdit('${e.id}')">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.83 20.04a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                  </svg>
-                </button>
-              ` : ''}
-            </div>
           </div>
           
           <div style="margin-top:12px;">
@@ -523,7 +538,7 @@ window.HomeModule = (() => {
           visibleCount++;
         }
       });
-      const countEl = column.querySelector('.column-count');
+      const countEl = column.querySelector('.pch-count');
       if (countEl) {
         countEl.textContent = visibleCount + ' Equipamento' + (visibleCount !== 1 ? 's' : '');
       }

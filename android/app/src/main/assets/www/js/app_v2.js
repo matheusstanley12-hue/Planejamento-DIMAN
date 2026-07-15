@@ -24,6 +24,17 @@ window.Router = (() => {
     document.body.style.overflow = '';
     
     if (window.closeMobileSidebar) window.closeMobileSidebar();
+    
+    if (window.canAccessRoute && !window.canAccessRoute(name) && name !== 'qrview' && name !== 'presentation') {
+      if (window.Toast) window.Toast.error('Acesso Negado', 'Seu perfil não tem permissão para acessar esta tela.');
+      const fallback = (window.Auth && window.Auth.getSession()?.perfil === 'Executante') ? 'worker-panel' : 'home';
+      if (name !== fallback && window.canAccessRoute(fallback)) {
+        name = fallback;
+      } else {
+        return;
+      }
+    }
+
     if (current === name && !params.force) return;
 
     // destroy previous
@@ -671,18 +682,42 @@ function renderShell(session) {
     return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">${p}</svg>`;
   }
 
+  const roleAccess = {
+    'Gerente': ['*'],
+    'Desenvolvedor': ['*'],
+    'Cordenador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Coordenador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Supervisor': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Encarregado': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Planejador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'equipment', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator'],
+    'Planejamento': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'equipment', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator'],
+    'Planejador compras': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'followup', 'lessons', 'ai', 'action-plans'],
+    'Executante': ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'qrview']
+  };
+
+  window.canAccessRoute = function(route) {
+    if (!session) return false;
+    const perfil = session.perfil || '';
+    
+    // STRICT RULE: Only Executante can see worker- routes
+    const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'admin-worker-panel'];
+    if (workerRoutes.includes(route)) {
+      if (perfil !== 'Executante') return false;
+    }
+
+    if (perfil === 'Administrador' || perfil === 'Desenvolvedor' || perfil === 'Gerente') return true;
+    const allowed = roleAccess[perfil];
+    if (!allowed) return false;
+    if (allowed.includes('*')) return true;
+    return allowed.includes(route);
+  };
+
   function buildNav() {
     const isExecutante = session?.perfil === 'Executante';
     let html = '';
     let lastSection = '';
     navItems.forEach(item => {
-      if (isExecutante) {
-        if (!['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'].includes(item.route)) return;
-      } else {
-        if (['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'].includes(item.route)) return;
-      }
-      
-      if (!Auth.hasPermission(item.perm)) return;
+      if (!window.canAccessRoute(item.route)) return;
       if (item.section && item.section !== lastSection) {
         html += `<div class="sidebar-section-label">${item.section}</div>`;
         lastSection = item.section;

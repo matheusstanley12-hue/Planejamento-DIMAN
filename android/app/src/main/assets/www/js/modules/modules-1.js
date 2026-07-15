@@ -184,8 +184,8 @@ window.Dashboard = (() => {
         // 5. Gráficos Setores Plan x Real (Column Bar)
         const ctxCat = document.getElementById('mega-ch-cat');
         if (ctxCat) {
-          const catsFull = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado'];
-          const catsLabels = ['Sonda Pesq', 'Bomba Pesq', 'Sonda Poço', 'Bomba Poço', 'Subconjuntos', 'Almoxarifado'];
+          const catsFull = ['Sonda de pesquisa', 'Bomba de pesquisa', 'Sonda de poços', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor'];
+          const catsLabels = ['Sonda Pesq', 'Bomba Pesq', 'Sonda Poço', 'Bomba Poço', 'Subconjuntos', 'Almoxarifado', 'Compressor'];
           const cP = catsFull.map(c => eqs.filter(e => {
              let t = e.tipo || '';
              if (t === 'Sondas de Pesquisas') t = 'Sonda de pesquisa';
@@ -193,6 +193,7 @@ window.Dashboard = (() => {
              else if (t === 'Bombas de poços') t = 'Bomba poços';
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
+             else if (t === 'Compressores') t = 'Compressor';
              return t === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix);
           }).length);
           const cR = catsFull.map(c => eqs.filter(e => {
@@ -202,6 +203,7 @@ window.Dashboard = (() => {
              else if (t === 'Bombas de poços') t = 'Bomba poços';
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
+             else if (t === 'Compressores') t = 'Compressor';
              return t === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix);
           }).length);
           charts.cat = new Chart(ctxCat, {
@@ -503,6 +505,9 @@ window.WorkshopModule = (() => {
 window.EquipmentModule = (() => {
   let showLiberados = false;
   function render() {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+
     let eqs = DB.equipment.list();
     if (!showLiberados) {
       eqs = eqs.filter(e => e.status !== 'Liberado');
@@ -519,17 +524,11 @@ window.EquipmentModule = (() => {
         </div>
         <div style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;">
           <input type="text" id="eq-search" placeholder="Buscar equipamento..." class="input" style="padding: 6px 12px; width: 250px; font-size:13px;" onkeyup="EquipmentModule.filterList(this.value)">
-          <button class="btn btn-outline" style="border-color:var(--border-hover);color:var(--text-secondary);" onclick="EquipmentModule.toggleLiberados()">
-            ${showLiberados ? 'Esconder Liberados' : 'Mostrar Liberados'}
-          </button>
-          <button class="btn btn-outline" style="border-color:var(--color-danger);color:var(--color-danger);" onclick="EquipmentModule.openTrash()">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-            Lixeira
-          </button>
-          <button class="btn btn-primary" onclick="EquipmentModule.openCreate()">
+          <button class="btn btn-outline" onclick="EquipmentModule.toggleLiberados()" style="margin-left:auto;">${showLiberados ? 'Ocultar Liberados' : 'Mostrar Liberados'}</button>
+          ${canEditEq ? `<button class="btn btn-primary" onclick="EquipmentModule.openCreate()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             Novo Equipamento
-          </button>
+          </button>` : ''}
         </div>
       </div>
       <div class="card" style="padding:0; overflow-x:auto;">
@@ -549,7 +548,7 @@ window.EquipmentModule = (() => {
             ${(() => {
               if (eqs.length === 0) return `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>`;
               
-              const seq = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Outros Equipamentos'];
+              const seq = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor', 'Outros Equipamentos'];
               const groups = {};
               eqs.forEach(e => {
                  let groupName = e.tipo || 'Outros Equipamentos';
@@ -558,6 +557,7 @@ window.EquipmentModule = (() => {
                  else if (groupName === 'Bombas de poços') groupName = 'Bomba poços';
                  else if (groupName === 'Subconjuntos') groupName = 'Subconjunto';
                  else if (groupName === 'Programação de almoxarifado') groupName = 'Serviço de almoxarifado';
+                 else if (groupName === 'Compressores') groupName = 'Compressor';
                  
                  if (!seq.includes(groupName)) groupName = 'Outros Equipamentos';
                  
@@ -631,12 +631,14 @@ window.EquipmentModule = (() => {
                         </div>
                       </td>
                       <td style="padding:var(--space-3); text-align:right;">
+                        ${canEditEq ? `
                         <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();EquipmentModule.openEdit('${e.id}')" title="Editar">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg>
                         </button>
                         <button class="btn btn-ghost btn-sm" style="color:var(--color-danger);" onclick="event.stopPropagation();EquipmentModule.confirmDelete('${e.id}','${e.nome}')" title="Excluir">
                           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397" /></svg>
                         </button>
+                        ` : ''}
                       </td>
                     </tr>
                   `;
@@ -675,16 +677,6 @@ window.EquipmentModule = (() => {
         </div>
         <div class="modal-body" id="eq-detail-body"></div>
       </div>
-    </div>
-    <!-- Modal Lixeira -->
-    <div class="modal-overlay" id="modal-trash">
-      <div class="modal modal-lg">
-        <div class="modal-header">
-          <div class="modal-title">Lixeira de Equipamentos</div>
-          <button class="modal-close" onclick="closeModal('modal-trash')"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
-        </div>
-        <div class="modal-body" id="trash-body"></div>
-      </div>
     </div>`;
   }
 
@@ -719,6 +711,12 @@ window.EquipmentModule = (() => {
   }
 
   function openCreate() {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    if (!canEditEq) {
+      if (window.Toast) Toast.error('Acesso Negado', 'Você não tem permissão para criar equipamentos.');
+      return;
+    }
     ensureModalExists();
     document.getElementById('eq-modal-title').textContent = 'Novo Equipamento';
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(null);
@@ -727,14 +725,19 @@ window.EquipmentModule = (() => {
   }
 
   function openEdit(id) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    if (!canEditEq) {
+      if (window.Toast) Toast.error('Acesso Negado', 'Você não tem permissão para editar equipamentos.');
+      return;
+    }
     ensureModalExists();
     const eq = DB.equipment.get(id);
     document.getElementById('eq-modal-title').textContent = `Editar — ${eq.codigo}`;
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(eq);
     
-    // Adiciona botão Excluir se for admin
-    const session = window.Auth ? window.Auth.getSession() : null;
-    if (session && (session.perfil === 'Administrador' || session.perfil === 'Desenvolvedor')) {
+    // Adiciona botão Excluir se for admin, gerente ou planejador
+    if (session && ['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
       document.getElementById('eq-modal-footer-left').innerHTML = `<button class="btn btn-icon" style="background:var(--color-danger); color:#fff; border:none; padding:8px 16px; width:auto; border-radius:6px; font-weight:600;" onclick="EquipmentModule.confirmDelete('${id}', '${eq.codigo}')">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px; height:16px; margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg> Excluir
       </button>`;
@@ -884,7 +887,8 @@ window.EquipmentModule = (() => {
                else if (currentTipo === 'Bombas de poços') currentTipo = 'Bomba poços';
                else if (currentTipo === 'Subconjuntos') currentTipo = 'Subconjunto';
                else if (currentTipo === 'Programação de almoxarifado') currentTipo = 'Serviço de almoxarifado';
-               return ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Outros Equipamentos'].map(t => `<option value="${t}" ${currentTipo === t ? 'selected' : ''}>${t}</option>`).join('');
+               else if (currentTipo === 'Compressores') currentTipo = 'Compressor';
+               return ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor', 'Outros Equipamentos'].map(t => `<option value="${t}" ${currentTipo === t ? 'selected' : ''}>${t}</option>`).join('');
             })()}
         </select></div>
       </div>
@@ -905,8 +909,15 @@ window.EquipmentModule = (() => {
             <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${canEditPlan ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} />
             ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
+          ${eq && eq.replanning && eq.replanning.length > 0 ? `
+          <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
+             <strong style="color:var(--text-primary);">Histórico de Replanejamento:</strong>
+             <ul style="margin:4px 0 0 16px; padding:0; color:#F59E0B; list-style-type: disc;">
+                ${eq.replanning.map(r => `<li><span style="color:var(--text-secondary)">Para</span> <strong>${window.formatDate(r.novaData)}</strong> <span style="color:var(--text-muted)">- ${r.motivo}</span></li>`).join('')}
+             </ul>
+          </div>` : ''}
         </div>
-        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoAtual)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
+        <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoReal)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
@@ -975,8 +986,21 @@ window.EquipmentModule = (() => {
   }
 
   async function save() {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    if (!canEditEq) {
+      if (window.Toast) Toast.error('Acesso Negado', 'Você não tem permissão para editar equipamentos.');
+      return;
+    }
+
     const id = document.getElementById('eq-editing-id').value;
+    const existingEq = id ? DB.equipment.get(id) : null;
+    let computedLiberacaoAtual = document.getElementById('eq-data-plan') ? document.getElementById('eq-data-plan').value : '';
+    if (existingEq && existingEq.replanning && existingEq.replanning.length > 0) {
+      computedLiberacaoAtual = existingEq.replanning[existingEq.replanning.length - 1].novaData;
+    }
     const data = {
+      dataLiberacaoAtual: computedLiberacaoAtual,
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       nome: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       os: document.getElementById('eq-os').value.trim(),
@@ -989,7 +1013,7 @@ window.EquipmentModule = (() => {
       numeroSerie: '',
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
-      dataLiberacaoAtual: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
+      dataLiberacaoReal: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
       status: document.getElementById('eq-status').value,
       etapaAtual: document.getElementById('eq-etapa-atual').value,
       pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
@@ -1095,6 +1119,11 @@ window.EquipmentModule = (() => {
   }
 
   function addReplanning(eqId) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
+      return;
+    }
     const eq = DB.equipment.get(eqId);
     closeModal('modal-eq-detail');
     const overlay = document.createElement('div');
@@ -1116,6 +1145,11 @@ window.EquipmentModule = (() => {
   }
 
   function saveReplanning(eqId, btn) {
+    const session = window.Auth ? window.Auth.getSession() : null;
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
+      return;
+    }
     const motivo = document.getElementById('rp-motivo').value.trim();
     const novaData = document.getElementById('rp-nova-data').value;
     const resp = document.getElementById('rp-resp').value.trim();
@@ -1137,31 +1171,16 @@ window.EquipmentModule = (() => {
 
   function confirmDelete(id, nome) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir equipamentos.');
+    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas administradores, gerentes ou planejadores podem excluir equipamentos.');
       return;
     }
-    confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? O equipamento e suas tarefas serão movidos para a Lixeira.`, () => {
+    confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Esta ação apagará permanentemente o equipamento e todas as tarefas e históricos associados.`, () => {
       try {
-        const eq = DB.equipment.get(id);
         const eqTasks = DB.tasks.list(id);
         const ts = DB.timesheets.list().filter(t => t.equipmentId === id);
         const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
         const rest = DB.restrictions ? DB.restrictions.list(id) : [];
-        
-        const trashBundle = {
-          deletedAt: new Date().toISOString(),
-          deletedBy: session.nome,
-          equipment: eq,
-          tasks: eqTasks,
-          timesheets: ts,
-          replannings: re,
-          restrictions: rest
-        };
-        
-        let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
-        trash.push(trashBundle);
-        localStorage.setItem('diman_lixeira', JSON.stringify(trash));
 
         window.DB.equipment.delete(id);
         eqTasks.forEach(t => DB.tasks.delete(t.id));
@@ -1172,7 +1191,7 @@ window.EquipmentModule = (() => {
         if (typeof closeModal === 'function') closeModal('modal-equipment');
         const route = (window.Router && window.Router.currentRoute) ? window.Router.currentRoute : 'home';
         window.Router.navigate(route, { force: true });
-        window.Toast.success('Movido para a Lixeira', nome);
+        window.Toast.success('Excluído', 'O equipamento foi apagado permanentemente do sistema.');
       } catch(e) {
         alert('Erro ao excluir: ' + e.message);
       }
@@ -1253,83 +1272,7 @@ window.EquipmentModule = (() => {
     }, 100);
   }
 
-  function openTrash() {
-    let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
-    const body = document.getElementById('trash-body');
-    if (!body) return;
-    
-    if (trash.length === 0) {
-      body.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:var(--space-6);">A Lixeira está vazia.</div>';
-    } else {
-      body.innerHTML = `
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Equipamento</th><th>Excluído por</th><th>Data</th><th>Tarefas</th><th>Ações</th></tr></thead>
-            <tbody>
-              ${trash.map((t, index) => `
-                <tr>
-                  <td><strong>${t.equipment.codigo}</strong> - ${t.equipment.nome}</td>
-                  <td>${t.deletedBy || '—'}</td>
-                  <td>${formatDate(t.deletedAt)}</td>
-                  <td><span class="badge badge-warning">${t.tasks.length} tarefas</span></td>
-                  <td><button class="btn btn-secondary btn-sm" onclick="EquipmentModule.restoreTrash(${index})">Restaurar</button></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      `;
-    }
-    openModal('modal-trash');
-  }
 
-  function restoreTrash(index) {
-    let trash = JSON.parse(localStorage.getItem('diman_lixeira')||'[]');
-    if (!trash[index]) return;
-    
-    const bundle = trash[index];
-    
-    // Restore equipment
-    let eqs = JSON.parse(localStorage.getItem('diman_equipment')||'[]');
-    if (!eqs.find(e => e.id === bundle.equipment.id)) {
-      eqs.push(bundle.equipment);
-      localStorage.setItem('diman_equipment', JSON.stringify(eqs));
-      if (window.events && window.events.emit) window.events.emit('equipment:created', bundle.equipment);
-    }
-    
-    // Restore tasks
-    let tasks = JSON.parse(localStorage.getItem('diman_tasks')||'[]');
-    bundle.tasks.forEach(t => {
-      if (!tasks.find(tk => tk.id === t.id)) tasks.push(t);
-    });
-    localStorage.setItem('diman_tasks', JSON.stringify(tasks));
-    
-    // Restore timesheets
-    let ts = JSON.parse(localStorage.getItem('diman_timesheets')||'[]');
-    bundle.timesheets.forEach(t => {
-      if (!ts.find(tk => tk.id === t.id)) ts.push(t);
-    });
-    localStorage.setItem('diman_timesheets', JSON.stringify(ts));
-    
-    // Restore replannings and restrictions if they exist
-    if (bundle.replannings && bundle.replannings.length > 0) {
-      let rpl = JSON.parse(localStorage.getItem('diman_replannings')||'[]');
-      bundle.replannings.forEach(r => { if (!rpl.find(rk => rk.id === r.id)) rpl.push(r); });
-      localStorage.setItem('diman_replannings', JSON.stringify(rpl));
-    }
-    if (bundle.restrictions && bundle.restrictions.length > 0) {
-      let rst = JSON.parse(localStorage.getItem('diman_restrictions')||'[]');
-      bundle.restrictions.forEach(r => { if (!rst.find(rk => rk.id === r.id)) rst.push(r); });
-      localStorage.setItem('diman_restrictions', JSON.stringify(rst));
-    }
-    
-    trash.splice(index, 1);
-    localStorage.setItem('diman_lixeira', JSON.stringify(trash));
-    
-    closeModal('modal-trash');
-    window.Router.navigate('equipment', { force: true });
-    window.Toast.success('Restaurado!', `Equipamento ${bundle.equipment.codigo} foi restaurado.`);
-  }
   function filterList(term) {
     const rows = document.querySelectorAll('.eq-row');
     const lowerTerm = term.toLowerCase().trim();
@@ -1343,7 +1286,7 @@ window.EquipmentModule = (() => {
     });
   }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, openTrash, restoreTrash, filterList };
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, filterList };
 })();
 
 // ================================================================
@@ -1404,7 +1347,7 @@ window.TasksModule = (() => {
     eqs.forEach(e => { equipMap[e.id] = e; });
 
     if (!eqFilter) {
-      const catsFull = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado'];
+      const catsFull = ['Sonda de pesquisa', 'Bomba de pesquisa', 'Sonda de poços', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor'];
       
       let filteredEqs = eqs.map(e => {
         let n = {...e};
@@ -1413,6 +1356,7 @@ window.TasksModule = (() => {
         else if (n.tipo === 'Bombas de poços') n.tipo = 'Bomba poços';
         else if (n.tipo === 'Subconjuntos') n.tipo = 'Subconjunto';
         else if (n.tipo === 'Programação de almoxarifado') n.tipo = 'Serviço de almoxarifado';
+        else if (n.tipo === 'Compressores') n.tipo = 'Compressor';
         return n;
       });
 

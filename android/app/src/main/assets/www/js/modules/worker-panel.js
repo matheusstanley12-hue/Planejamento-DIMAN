@@ -39,7 +39,7 @@ window.WorkerPanel = (() => {
 
   function getMyEquipments(session) {
     const eqs = window.DB.equipment.list();
-    const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+    const isManager = session && session.perfil !== 'Executante';
     if (isAdminMode || isManager) return eqs;
 
     const myWorker = getMyWorker(session);
@@ -249,7 +249,7 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('include-myself');
     if (includeMyself && includeMyself.checked) {
-      const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+      const isManager = session && session.perfil !== 'Executante';
       if (!myWorker && isManager) {
         // Auto-create real worker for the admin
         const workers = DB.workforce.list();
@@ -658,7 +658,7 @@ window.WorkerPanel = (() => {
     
     const includeMyself = document.getElementById('resume-include-myself');
     if (includeMyself && includeMyself.checked) {
-      const isManager = session && ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+      const isManager = session && session.perfil !== 'Executante';
       if (!myWorker && isManager) {
         const workers = DB.workforce.list();
         let existingAdminWorker = workers.find(w => w.nome === session.nome);
@@ -1216,7 +1216,7 @@ window.WorkerPanel = (() => {
     if (!session) { setTimeout(() => { if (window.Router) window.Router.navigate('login', {force:true}); }, 50); return `<div class="page-container"><div style="padding:var(--space-4);text-align:center;color:var(--text-muted);">Sessão expirada. Redirecionando...</div></div>`; }
 
     window.GlobalEqFilter = '';
-    const isManager = ['Administrador', 'Gerente', 'Desenvolvedor', 'Planejador'].includes(session.perfil);
+    const isManager = session && session.perfil !== 'Executante';
     let myWorker = getMyWorker(session);
     
     if (!myWorker && isManager) {
@@ -1322,7 +1322,7 @@ window.WorkerPanel = (() => {
                 `<div class="task-timer live-timer-wp" data-worker-id="${w.id}" data-start-time="${w.currentActionStartTime}" data-accumulated="${accSecs}">${formatTimeDiff(w.currentActionStartTime, accSecs)}</div>`
               }
               <div class="task-desc">${currentT ? currentT.descricao : 'Tarefa desconhecida'}</div>
-              <div class="task-meta">${eq ? eq.codigo : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
+              <div class="task-meta">${eq ? eq.codigo : ''}${eq && eq.os ? ` (OS: ${eq.os})` : ''} &bull; ${currentT ? currentT.disciplina : ''}</div>
               ${currentT && currentT.fotoPeca ? `
                 <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;" onclick="WorkerPanel.openTaskDetail('${currentT.id}')">
                   <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
@@ -1364,7 +1364,7 @@ window.WorkerPanel = (() => {
                 `<div class="task-timer" style="color:var(--text-muted); font-size:12px; font-weight:600; padding:4px 8px; background:var(--bg-elevated); border-radius:4px; display:inline-block;">Tarefa Pausada</div>`
               }
               <div class="task-desc">${currentT ? currentT.descricao : ''}</div>
-              <div class="task-meta">${eq ? eq.codigo : ''} &bull; Aguardando retomada</div>
+              <div class="task-meta">${eq ? eq.codigo : ''}${eq && eq.os ? ` (OS: ${eq.os})` : ''} &bull; Aguardando retomada</div>
               ${currentT && currentT.fotoPeca ? `
                 <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);cursor:pointer;position:relative;" onclick="WorkerPanel.openTaskDetail('${currentT.id}')">
                   <img src="${currentT.fotoPeca}" style="width:100%;height:80px;object-fit:cover;display:block;" />
@@ -1425,7 +1425,8 @@ window.WorkerPanel = (() => {
     sortedPrefixes.forEach(prefix => {
        eqOptionsHtml += `<optgroup label="${prefix}">`;
        groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
-           eqOptionsHtml += `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)</option>`;
+           const osText = e.os ? ` - OS: ${e.os}` : '';
+           eqOptionsHtml += `<option value="${e.id}" ${eqFilter === e.id ? 'selected' : ''}>${e.codigo} (${e.pctAvanco || 0}%)${osText}</option>`;
        });
        eqOptionsHtml += `</optgroup>`;
     });

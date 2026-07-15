@@ -638,11 +638,16 @@ window.EquipmentPanel = (() => {
                   <tr style="${isChecked?'opacity:0.7;':''} ${isTaskCritico?'background:rgba(244,67,54,0.03);':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${t.disciplina}', '${t.id}')" class="task-row-main" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background=''">
                     <td style="text-align:center;">${toggleBtn}</td>
                     <td>
-                      <div style="font-weight:600;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
-                      <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;">
+                      <div style="display:flex; align-items:flex-start; gap:8px;">
+                        ${canEdit ? `<input type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); window.EquipmentPanel.toggleTaskComplete('${t.id}', this.checked)" style="margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:var(--color-success);" title="Marcar como Concluída">` : ''}
+                        <div>
+                          <div style="font-weight:600;color:var(--text-primary);${isChecked?'text-decoration:line-through;':''}">${t.descricao}</div>
+                          <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;">
                         ${isTaskCritico?'<span style="font-size:9px;background:var(--color-danger);color:white;padding:1px 4px;border-radius:2px;font-weight:bold;display:inline-block;">CRÍTICO</span>':''}
                         ${predsHtml}
                         ${hasSubs ? `<span style="font-size:9px;background:var(--bg-card);color:var(--text-secondary);padding:1px 4px;border-radius:2px;border:1px solid var(--border-hover);display:inline-block;">${subTasks.length} SUBTAREFAS</span>` : ''}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td style="font-size:var(--text-xs);color:var(--text-muted);">${t.dataPlanejadaInicio ? `${formatDate(t.dataPlanejadaInicio)} → ${formatDate(t.dataPlanejadaTermino)}` : '—'}</td>
@@ -671,7 +676,10 @@ window.EquipmentPanel = (() => {
                       <tr style="${stChecked?'opacity:0.7;':''} cursor:pointer;" onclick="window.EquipmentPanel.openTaskModal('${st.disciplina}', '${st.id}')" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background=''">
                         <td style="border-left:2px solid var(--brand-primary-light);"></td>
                         <td style="padding-left:var(--space-6);">
-                          <div style="font-weight:500;color:var(--text-secondary);${stChecked?'text-decoration:line-through;':''}"><span style="color:var(--text-muted);margin-right:4px;">└</span>${st.descricao}</div>
+                          <div style="display:flex;align-items:center;gap:8px;">
+                            ${canEdit ? `<input type="checkbox" ${stChecked ? 'checked' : ''} onclick="event.stopPropagation(); window.EquipmentPanel.toggleTaskComplete('${st.id}', this.checked)" style="cursor:pointer;width:14px;height:14px;accent-color:var(--color-success);" title="Marcar como Concluída">` : ''}
+                            <div style="font-weight:500;color:var(--text-secondary);${stChecked?'text-decoration:line-through;':''}"><span style="color:var(--text-muted);margin-right:4px;">└</span>${st.descricao}</div>
+                          </div>
                         </td>
                         <td style="font-size:var(--text-xs);color:var(--text-muted);">${st.dataPlanejadaInicio ? `${formatDate(st.dataPlanejadaInicio)} → ${formatDate(st.dataPlanejadaTermino)}` : '—'}</td>
                         <td style="font-size:var(--text-xs);color:var(--brand-primary-light);font-weight:600;">${st.dataReplanejada ? formatDate(st.dataReplanejada) : '—'}</td>
@@ -1326,6 +1334,41 @@ window.EquipmentPanel = (() => {
     
     closeModal('eq-task-modal');
     Router.navigate('equipment-panel', { id: eqId || currentEqId, force: true });
+  }
+
+  function toggleTaskComplete(taskId, checked) {
+    const t = window.DB.tasks.get(taskId);
+    if (!t) return;
+    t.status = checked ? 'Concluída' : 'Não Iniciada';
+    t.pctExecutado = checked ? 100 : 0;
+    if (checked && !t.dataRealInicio) t.dataRealInicio = new Date().toISOString().slice(0, 10);
+    if (checked && !t.dataRealTermino) t.dataRealTermino = new Date().toISOString().slice(0, 10);
+    else if (!checked) t.dataRealTermino = '';
+    window.DB.tasks.update(taskId, t);
+    
+    if (!t.parentId) {
+       const subs = window.DB.tasks.getAll().filter(st => st.equipmentId === t.equipmentId && st.parentId === t.id);
+       subs.forEach(st => {
+         st.status = checked ? 'Concluída' : 'Não Iniciada';
+         st.pctExecutado = checked ? 100 : 0;
+         if (checked && !st.dataRealInicio) st.dataRealInicio = new Date().toISOString().slice(0, 10);
+         if (checked && !st.dataRealTermino) st.dataRealTermino = new Date().toISOString().slice(0, 10);
+         else if (!checked) st.dataRealTermino = '';
+         window.DB.tasks.update(st.id, st);
+       });
+    }
+
+    if (t.parentId) {
+       if (window.updateParentTaskProgress) window.updateParentTaskProgress(t.parentId);
+    } else {
+       if (window.updateParentTaskProgress) window.updateParentTaskProgress(t.id);
+    }
+
+    if (window.Router) {
+      window.Router.navigate('equipment-panel', { id: t.equipmentId, force: true });
+    } else {
+      render({ id: t.equipmentId });
+    }
   }
 
   async function deleteTask(eqId, id) {
@@ -2073,7 +2116,7 @@ window.EquipmentPanel = (() => {
   return { 
     render, toggleAccordion, addFollowUp, openTaskModal, saveTask, deleteTask, deleteTaskFromModal,
     updateTaskStatus, updateTaskField, openPartModal, savePart, deletePart, 
-    exportTasksPDF, exportTasksCSV, deleteEquipment, toggleTaskExpand, addComment, editComment, 
+    exportTasksPDF, exportTasksCSV, deleteEquipment, toggleTaskExpand, toggleTaskComplete, addComment, editComment, 
     cancelCommentEdit, saveCommentEdit, deleteComment, renderComments,
     togglePartEntregue, onStatusFormChange, onEntregueFormChange,
     getEditingTaskId: () => editingTaskId,
