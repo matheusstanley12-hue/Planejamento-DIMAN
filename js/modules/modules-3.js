@@ -1741,6 +1741,9 @@ window.ReportsModule = (() => {
               <option value="sonda de poços">Sonda de Poços</option>
               <option value="bomba de pesquisa">Bomba de Pesquisa</option>
               <option value="bomba de poços">Bomba de Poços</option>
+              <option value="subconjunto">Subconjunto</option>
+              <option value="serviço de almoxarifado">Almoxarifado</option>
+              <option value="compressor">Compressor</option>
             </select>`
           },
           {id:'pecas', title:'Relatório de Peças',icon:'📦',desc:'Peças pendentes e criticidade'},
@@ -1884,6 +1887,7 @@ window.ReportsModule = (() => {
           else if (g === 'Bombas de poços') g = 'Bomba poços';
           else if (g === 'Subconjuntos') g = 'Subconjunto';
           else if (g === 'Programação de almoxarifado') g = 'Serviço de almoxarifado';
+          else if (g === 'Compressores') g = 'Compressor';
           return g.toLowerCase() === selectedType;
         });
       }

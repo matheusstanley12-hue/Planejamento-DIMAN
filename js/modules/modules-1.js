@@ -184,8 +184,8 @@ window.Dashboard = (() => {
         // 5. Gráficos Setores Plan x Real (Column Bar)
         const ctxCat = document.getElementById('mega-ch-cat');
         if (ctxCat) {
-          const catsFull = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado'];
-          const catsLabels = ['Sonda Pesq', 'Bomba Pesq', 'Sonda Poço', 'Bomba Poço', 'Subconjuntos', 'Almoxarifado'];
+          const catsFull = ['Sonda de pesquisa', 'Bomba de pesquisa', 'Sonda de poços', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor'];
+          const catsLabels = ['Sonda Pesq', 'Bomba Pesq', 'Sonda Poço', 'Bomba Poço', 'Subconjuntos', 'Almoxarifado', 'Compressor'];
           const cP = catsFull.map(c => eqs.filter(e => {
              let t = e.tipo || '';
              if (t === 'Sondas de Pesquisas') t = 'Sonda de pesquisa';
@@ -193,6 +193,7 @@ window.Dashboard = (() => {
              else if (t === 'Bombas de poços') t = 'Bomba poços';
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
+             else if (t === 'Compressores') t = 'Compressor';
              return t === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix);
           }).length);
           const cR = catsFull.map(c => eqs.filter(e => {
@@ -202,6 +203,7 @@ window.Dashboard = (() => {
              else if (t === 'Bombas de poços') t = 'Bomba poços';
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
+             else if (t === 'Compressores') t = 'Compressor';
              return t === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix);
           }).length);
           charts.cat = new Chart(ctxCat, {
@@ -546,7 +548,7 @@ window.EquipmentModule = (() => {
             ${(() => {
               if (eqs.length === 0) return `<tr><td colspan="7" style="padding:var(--space-5); text-align:center;"><div class="empty-state" style="margin:0;"><div class="empty-state-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877"/></svg></div><h3>Nenhum equipamento cadastrado</h3><p>Clique em "Novo Equipamento" para começar</p></div></td></tr>`;
               
-              const seq = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Outros Equipamentos'];
+              const seq = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor', 'Outros Equipamentos'];
               const groups = {};
               eqs.forEach(e => {
                  let groupName = e.tipo || 'Outros Equipamentos';
@@ -555,6 +557,7 @@ window.EquipmentModule = (() => {
                  else if (groupName === 'Bombas de poços') groupName = 'Bomba poços';
                  else if (groupName === 'Subconjuntos') groupName = 'Subconjunto';
                  else if (groupName === 'Programação de almoxarifado') groupName = 'Serviço de almoxarifado';
+                 else if (groupName === 'Compressores') groupName = 'Compressor';
                  
                  if (!seq.includes(groupName)) groupName = 'Outros Equipamentos';
                  
@@ -884,7 +887,8 @@ window.EquipmentModule = (() => {
                else if (currentTipo === 'Bombas de poços') currentTipo = 'Bomba poços';
                else if (currentTipo === 'Subconjuntos') currentTipo = 'Subconjunto';
                else if (currentTipo === 'Programação de almoxarifado') currentTipo = 'Serviço de almoxarifado';
-               return ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Outros Equipamentos'].map(t => `<option value="${t}" ${currentTipo === t ? 'selected' : ''}>${t}</option>`).join('');
+               else if (currentTipo === 'Compressores') currentTipo = 'Compressor';
+               return ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor', 'Outros Equipamentos'].map(t => `<option value="${t}" ${currentTipo === t ? 'selected' : ''}>${t}</option>`).join('');
             })()}
         </select></div>
       </div>
@@ -1343,7 +1347,7 @@ window.TasksModule = (() => {
     eqs.forEach(e => { equipMap[e.id] = e; });
 
     if (!eqFilter) {
-      const catsFull = ['Sonda de pesquisa', 'Sonda de poços', 'Bomba de pesquisa', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado'];
+      const catsFull = ['Sonda de pesquisa', 'Bomba de pesquisa', 'Sonda de poços', 'Bomba poços', 'Subconjunto', 'Serviço de almoxarifado', 'Compressor'];
       
       let filteredEqs = eqs.map(e => {
         let n = {...e};
@@ -1352,6 +1356,7 @@ window.TasksModule = (() => {
         else if (n.tipo === 'Bombas de poços') n.tipo = 'Bomba poços';
         else if (n.tipo === 'Subconjuntos') n.tipo = 'Subconjunto';
         else if (n.tipo === 'Programação de almoxarifado') n.tipo = 'Serviço de almoxarifado';
+        else if (n.tipo === 'Compressores') n.tipo = 'Compressor';
         return n;
       });
 
