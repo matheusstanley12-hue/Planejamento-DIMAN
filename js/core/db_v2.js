@@ -463,6 +463,16 @@ window.DB = (() => {
                    const existing = mergedMap.get(item.id);
                    const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                    const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                   
+                   if (existing && existing.status !== item.status) {
+                        const existStatusTime = existing._statusUpdatedAt ? new Date(existing._statusUpdatedAt).getTime() : 0;
+                        const newStatusTime = item._statusUpdatedAt ? new Date(item._statusUpdatedAt).getTime() : 0;
+                        if (existStatusTime > newStatusTime) {
+                           item.status = existing.status;
+                           item._statusUpdatedAt = existing._statusUpdatedAt;
+                        }
+                    }
+                    
                    if (!existing || newTime > existTime) {
                       mergedMap.set(item.id, item);
                    } else if (existTime > newTime) {
@@ -482,6 +492,15 @@ window.DB = (() => {
                 const existing = mergedMap.get(item.id);
                 const existTime = existing && existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
                 const newTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+                
+                if (existing && existing.status !== item.status) {
+                    const existStatusTime = existing._statusUpdatedAt ? new Date(existing._statusUpdatedAt).getTime() : 0;
+                    const newStatusTime = item._statusUpdatedAt ? new Date(item._statusUpdatedAt).getTime() : 0;
+                    if (existStatusTime > newStatusTime) {
+                       item.status = existing.status;
+                       item._statusUpdatedAt = existing._statusUpdatedAt;
+                    }
+                }
                 
                 if (!existing || newTime >= existTime) {
                   mergedMap.set(item.id, item);
@@ -623,6 +642,11 @@ window.DB = (() => {
       const idx = items.findIndex(e => String(e.id) === String(id));
       if (idx === -1) return null;
       const before = { ...items[idx] };
+      
+      if (data.status !== undefined && data.status !== before.status) {
+        data._statusUpdatedAt = now();
+      }
+      
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
       set(KEYS.equipment, items);
 
@@ -1130,6 +1154,7 @@ window.DB = (() => {
       
       if (items[idx].status !== status) {
         items[idx].status = status;
+        items[idx]._statusUpdatedAt = now();
         changed = true;
       }
 
