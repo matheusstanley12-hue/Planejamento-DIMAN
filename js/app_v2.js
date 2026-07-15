@@ -685,9 +685,9 @@ function renderShell(session) {
   const roleAccess = {
     'Gerente': ['*'],
     'Desenvolvedor': ['*'],
-    'Cordenador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance', 'admin-worker-panel'],
-    'Encarregado': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance', 'admin-worker-panel'],
-    'Planejador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'equipment', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'admin-worker-panel'],
+    'Cordenador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Encarregado': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator', 'bonus', 'vacations', 'attendance'],
+    'Planejador': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'services', 'equipment', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'manuals', 'meetings', 'followup', 'lessons', 'ai', 'action-plans', 'simulator', 'qr-generator'],
     'Planejador compras': ['home', 'dashboard', 'd-panel', 'workshop', 'tasks', 'released', 'parts', 'planning', 'workforce', 'workforce-time', 'timeline', 'impacts', 'reports', 'checklists', 'followup', 'lessons', 'ai', 'action-plans'],
     'Executante': ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'qrview']
   };
@@ -695,6 +695,13 @@ function renderShell(session) {
   window.canAccessRoute = function(route) {
     if (!session) return false;
     const perfil = session.perfil || '';
+    
+    // STRICT RULE: Only Executante can see worker- routes
+    const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'admin-worker-panel'];
+    if (workerRoutes.includes(route)) {
+      if (perfil !== 'Executante') return false;
+    }
+
     if (perfil === 'Administrador' || perfil === 'Desenvolvedor' || perfil === 'Gerente') return true;
     const allowed = roleAccess[perfil];
     if (!allowed) return false;
