@@ -80,24 +80,10 @@ window.DB = (() => {
   }
 
   const INITIAL_DATA = {
-    [KEYS.equipment]: [
-      { id: 'eq-ssm-288', nome: 'SSM-288', codigo: 'SSM-288', tipo: 'Sondas de Pesquisas', status: 'Em Manutenção', os: 'OS-88220', cliente: 'COMISA', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-bhz-001', nome: 'BHZ-001', codigo: 'BHZ-001', tipo: 'Sondas Poços', status: 'Em Manutenção', os: 'OS-99100', cliente: 'GEOSOL', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-bms-101', nome: 'BMS-101', codigo: 'BMS-101', tipo: 'Bomba de pesquisa', status: 'Liberado', os: 'OS-77110', cliente: 'VALE', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-bmp-202', nome: 'BMP-202', codigo: 'BMP-202', tipo: 'Bombas de poços', status: 'Em Manutenção', os: 'OS-66330', cliente: 'ANGLO', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() },
-      { id: 'eq-sub-501', nome: 'SUB-501', codigo: 'SUB-501', tipo: 'Subconjuntos', status: 'Em Manutenção', os: 'OS-55440', cliente: 'GEOSOL', dataEntrada: now(), dataLiberacaoPlanejada: now(), dataLiberacaoAtual: now(), timeline: [], replanning: [], createdAt: now(), updatedAt: now() }
-    ],
-    [KEYS.tasks]: [
-      { id: 'tk-test-1', equipmentId: 'eq-ssm-288', descricao: 'Troca de Óleo do Motor', disciplina: 'Mecânica', horasPlanejadas: 2, status: 'Concluída', pctExecutado: 100, critico: false, createdAt: now(), updatedAt: now() },
-      { id: 'tk-test-2', equipmentId: 'eq-ssm-288', descricao: 'Revisão dos Freios', disciplina: 'Mecânica', horasPlanejadas: 4, status: 'Em Andamento', pctExecutado: 50, critico: true, createdAt: now(), updatedAt: now() },
-      { id: 'tk-test-3', equipmentId: 'eq-bhz-001', descricao: 'Substituição de Mangueira Hidráulica', disciplina: 'Mecânica', horasPlanejadas: 1.5, status: 'Não Iniciada', pctExecutado: 0, critico: true, createdAt: now(), updatedAt: now() }
-    ],
-    [KEYS.restrictions]: [
-      { id: 'rs-test-1', equipmentId: 'eq-ssm-288', descricao: 'Aguardando liberação de área', impacto: 'Alto', status: 'Aberta', createdAt: now(), updatedAt: now() }
-    ],
-    [KEYS.parts]: [
-      { id: 'pt-test-1', equipmentId: 'eq-bhz-001', descricao: 'Mangueira de Alta Pressão 3/4', pn: 'PN-98765', qtd: 2, status: 'Solicitada', createdAt: now(), updatedAt: now() }
-    ],
+    [KEYS.equipment]: [],
+    [KEYS.tasks]: [],
+    [KEYS.restrictions]: [],
+    [KEYS.parts]: [],
     [KEYS.kpiCache]: {},
     [KEYS.solicitacoes]: [],
     [KEYS.workforce]: [
