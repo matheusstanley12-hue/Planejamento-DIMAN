@@ -244,11 +244,21 @@ window.Auth = (() => {
     try {
       const s = JSON.parse(sessionStorage.getItem(SESSION_KEY));
       if (s) {
+        let changed = false;
         if (s.perfil === 'Administrador' || s.perfil === 'administrador') {
           s.perfil = 'Desenvolvedor';
-          if (s.cargo && s.cargo.includes('Administrador')) {
-             s.cargo = s.cargo.replace(/Administrador/g, 'Desenvolvedor');
-          }
+          changed = true;
+        }
+        if (s.cargo && s.cargo.includes('Administrador')) {
+           s.cargo = s.cargo.replace(/Administrador/g, 'Desenvolvedor');
+           changed = true;
+        }
+        if (s.nome && s.nome.includes('Administrador')) {
+           s.nome = s.nome.replace(/Administrador/g, 'Desenvolvedor');
+           changed = true;
+        }
+        
+        if (changed) {
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
           
           // Also update the user in the database
@@ -256,6 +266,8 @@ window.Auth = (() => {
           const uIndex = users.findIndex(u => u.id === s.userId);
           if (uIndex !== -1) {
             users[uIndex].perfil = 'Desenvolvedor';
+            if (users[uIndex].cargo) users[uIndex].cargo = users[uIndex].cargo.replace(/Administrador/g, 'Desenvolvedor');
+            if (users[uIndex].nome) users[uIndex].nome = users[uIndex].nome.replace(/Administrador/g, 'Desenvolvedor');
             saveUsers(users);
           }
         }
