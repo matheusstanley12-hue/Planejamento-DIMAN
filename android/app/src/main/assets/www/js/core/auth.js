@@ -242,13 +242,31 @@ window.Auth = (() => {
 
   function getSession() {
     try {
-      const session = JSON.parse(sessionStorage.getItem(SESSION_KEY));
-      if (!session) return null;
+      const s = JSON.parse(sessionStorage.getItem(SESSION_KEY));
+      if (s) {
+        if (s.perfil === 'Administrador' || s.perfil === 'administrador') {
+          s.perfil = 'Desenvolvedor';
+          if (s.cargo && s.cargo.includes('Administrador')) {
+             s.cargo = s.cargo.replace(/Administrador/g, 'Desenvolvedor');
+          }
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+          
+          // Also update the user in the database
+          const users = getUsers();
+          const uIndex = users.findIndex(u => u.id === s.userId);
+          if (uIndex !== -1) {
+            users[uIndex].perfil = 'Desenvolvedor';
+            saveUsers(users);
+          }
+        }
+      }
+      
+      if (!s) return null;
       
       // Validação em tempo real: se o usuário foi deletado ou inativado, derruba a sessão
       const users = getUsers();
       if (users.length > 0) {
-        const user = users.find(u => u.matricula === session.matricula);
+        const user = users.find(u => u.matricula === s.matricula);
         if (!user || user.status === 'Inativo') {
           sessionStorage.removeItem(SESSION_KEY);
           return null;
