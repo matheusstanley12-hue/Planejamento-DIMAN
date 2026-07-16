@@ -416,7 +416,7 @@ window.DB = (() => {
     }
   });
 
-  async function initSupabase() {
+  async function initSupabase(force = false) {
     if (!supabaseClient) return;
     try {
       // 1. Initial fetch (Excluding photos to avoid massive memory usage)
@@ -426,12 +426,21 @@ window.DB = (() => {
       const pageSize = 1000;
       let hasMore = true;
       let fetchError = null;
+      
+      const lastSyncKey = 'diman_last_sync_time';
+      const lastSync = force ? null : localStorage.getItem(lastSyncKey);
+      const syncStartTime = new Date().toISOString();
 
       while (hasMore) {
-        const { data, error } = await supabaseClient.from('diman_store')
+        let query = supabaseClient.from('diman_store')
           .select('*')
-          .not('collection', 'ilike', 'photo_%')
-          .range(page * pageSize, (page + 1) * pageSize - 1);
+          .not('collection', 'ilike', 'photo_%');
+          
+        if (lastSync) {
+          query = query.gt('updated_at', lastSync);
+        }
+
+        const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
         
         if (error) {
           fetchError = error;
@@ -564,6 +573,10 @@ window.DB = (() => {
             
             try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
           }
+      }
+      
+      if (!fetchError) {
+         localStorage.setItem('diman_last_sync_time', syncStartTime);
       }
 
       // 2. Real-time subscription (DESATIVADO PARA ECONOMIA DE BANCO DE DADOS)
@@ -1353,6 +1366,13 @@ window.DB = (() => {
     update: (id, updates) => { let m = get(KEYS.vacations); const i = m.findIndex(r => r && r.id === id); if (i !== -1) { m[i] = { ...m[i], ...updates, updatedAt: now() }; set(KEYS.vacations, m); } },
     delete: (id) => { const m = get(KEYS.vacations); set(KEYS.vacations, m.filter(r => r && r.id !== id)); }
   };
+
+  // Auto-refresh engine (Polling)
+  setInterval(() => {
+     if (window.DB && window.DB.initSupabase && localStorage.getItem('diman_unsynced') !== 'true') {
+         window.DB.initSupabase(false);
+     }
+  }, 15000);
 
   return {
     equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, uid, now,

@@ -137,9 +137,22 @@ window.WorkforceTimeModule = (() => {
               stateColor = 'var(--color-success)';
               stateBg = 'var(--color-success-bg)';
               icon = '▶';
-              const t = tasks.find(x => x.id === w.currentTaskId);
+              const t = window.DB.tasks.get(w.currentTaskId);
+              let targetEqId = (t && t.equipmentId) ? t.equipmentId : w.equipmentId;
+              let eqText = '';
+              if (targetEqId) {
+                 const eq = window.DB.equipment.get(targetEqId);
+                 if (eq) eqText = ` • ${eq.nome}`;
+              }
+              let displayTitle = '—';
+              if (t && t.descricao) {
+                  displayTitle = `${t.descricao}${eqText}`;
+              } else if (w.currentTaskId) {
+                  displayTitle = `(Tarefa Apagada)${eqText}`;
+              }
+              
               timerHtml = `<div class="live-timer-wft" data-start="${w.currentActionStartTime}" style="font-family:monospace;font-size:16px;font-weight:bold;margin-top:5px;color:${stateColor}">${formatTimeDiff(w.currentActionStartTime)}</div>`;
-              detailsHtml = `<div style="font-size:12px;color:var(--text-secondary);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${t ? t.descricao : ''}">${t ? t.descricao : '—'}</div>`;
+              detailsHtml = `<div style="font-size:12px;color:var(--text-secondary);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${displayTitle}">${displayTitle}</div>`;
             } else if (state === 'Em Pausa') {
               stateColor = 'var(--color-warning)';
               stateBg = 'var(--color-warning-bg)';
