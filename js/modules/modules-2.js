@@ -616,8 +616,8 @@ window.PartsModule = (() => {
 
   function deletePart(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir peças.');
+    if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores podem excluir peças.');
       return;
     }
     confirmDialog('Excluir Peça', 'Tem certeza?', () => { DB.parts.delete(id); Router.navigate('parts', { force: true }); Toast.success('Peça excluída'); });
@@ -654,7 +654,7 @@ window.WorkforceModule = (() => {
       <div class="section-header">
         <div class="section-title"><div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-4.5 0 2.625 2.625 0 014.5 0z"/></svg></div>Mão de Obra</div>
         <div style="display:flex;gap:var(--space-2);">
-          ${(window.Auth && window.Auth.getSession() && window.Auth.getSession().perfil === 'Administrador') ? 
+          ${(window.Auth && window.Auth.getSession() && window.Auth.getSession().perfil === 'Desenvolvedor') ? 
             '<button class="btn btn-sm" style="background:var(--color-danger);color:white;" onclick="WorkforceModule.resetAllHours()">⚠️ Zerar Banco de Horas</button>' : ''}
           ${activeTab === 'team' ? '<button class="btn btn-primary" onclick="WorkforceModule.openCreateWorker()">+ Novo Funcionário</button>' :
             activeTab === 'timesheets' ? '<button class="btn btn-primary" onclick="WorkforceModule.openCreateTimesheet()">+ Apontamento</button>' : ''}
@@ -852,7 +852,7 @@ window.WorkforceModule = (() => {
     const eqs = allEqs.filter(e => e.status !== 'Liberado' || currentEqIds.includes(e.id));
     
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canBypassLock = session && ['Administrador', 'Desenvolvedor', 'Gerente', 'Encarregado'].includes(session.perfil);
+    const canBypassLock = session && ['Desenvolvedor', 'Gerente', 'Encarregado'].includes(session.perfil);
     const isLocked = worker && currentEqIds.length > 0 && currentEqIds.some(id => {
       const eq = allEqs.find(e => e.id === id);
       return eq && eq.status !== 'Liberado';
@@ -998,8 +998,8 @@ window.WorkforceModule = (() => {
 
   function deleteWorker(id, nome) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir funcionários.');
+    if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores podem excluir funcionários.');
       return;
     }
     confirmDialog('Excluir Funcionário', `Deseja realmente excluir ${nome}?`, () => {
@@ -1272,8 +1272,8 @@ window.RestrictionsModule = (() => {
 
   function deleteRestriction(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir restrições.');
+    if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores podem excluir restrições.');
       return;
     }
     confirmDialog('Excluir Restrição', 'Tem certeza?', () => { DB.restrictions.delete(id); Router.navigate('restrictions', { force: true }); Toast.success('Restrição excluída'); });

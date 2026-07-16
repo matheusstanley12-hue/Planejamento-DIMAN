@@ -506,7 +506,7 @@ window.EquipmentModule = (() => {
   let showLiberados = false;
   function render() {
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil);
 
     let eqs = DB.equipment.list();
     if (!showLiberados) {
@@ -712,7 +712,7 @@ window.EquipmentModule = (() => {
 
   function openCreate() {
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil);
     if (!canEditEq) {
       if (window.Toast) Toast.error('Acesso Negado', 'Você não tem permissão para criar equipamentos.');
       return;
@@ -726,7 +726,7 @@ window.EquipmentModule = (() => {
 
   function openEdit(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil);
     if (!canEditEq) {
       if (window.Toast) Toast.error('Acesso Negado', 'Você não tem permissão para editar equipamentos.');
       return;
@@ -737,7 +737,7 @@ window.EquipmentModule = (() => {
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(eq);
     
     // Adiciona botão Excluir se for admin, gerente ou planejador
-    if (session && ['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (session && ['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
       document.getElementById('eq-modal-footer-left').innerHTML = `<button class="btn btn-icon" style="background:var(--color-danger); color:#fff; border:none; padding:8px 16px; width:auto; border-radius:6px; font-weight:600;" onclick="EquipmentModule.confirmDelete('${id}', '${eq.codigo}')">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px; height:16px; margin-right:6px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg> Excluir
       </button>`;
@@ -870,7 +870,7 @@ window.EquipmentModule = (() => {
     };
 
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEditPlan = !eq || (session && ['Desenvolvedor', 'Administrador', 'Planejador'].includes(session.perfil));
+    const canEditPlan = !eq || (session && ['Desenvolvedor', 'Planejador'].includes(session.perfil));
 
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       <div class="form-row">
@@ -987,7 +987,7 @@ window.EquipmentModule = (() => {
 
   async function save() {
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador', 'Administrador'].includes(session.perfil);
+    const canEditEq = session && ['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil);
     if (!canEditEq) {
       if (window.Toast) Toast.error('Acesso Negado', 'Você não tem permissão para editar equipamentos.');
       return;
@@ -1097,7 +1097,7 @@ window.EquipmentModule = (() => {
     }
 
     if (id) { 
-      const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Administrador', 'Planejador'].includes(window.Auth.getSession().perfil);
+      const isDev = window.Auth && window.Auth.getSession() && ['Desenvolvedor', 'Planejador'].includes(window.Auth.getSession().perfil);
       if (isDev && document.getElementById('eq-data-plan')) {
         data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value;
       }
@@ -1120,7 +1120,7 @@ window.EquipmentModule = (() => {
 
   function addReplanning(eqId) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
       Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
       return;
     }
@@ -1146,7 +1146,7 @@ window.EquipmentModule = (() => {
 
   function saveReplanning(eqId, btn) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
       Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
       return;
     }
@@ -1171,8 +1171,8 @@ window.EquipmentModule = (() => {
 
   function confirmDelete(id, nome) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores, gerentes ou planejadores podem excluir equipamentos.');
+    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores, gerentes ou planejadores podem excluir equipamentos.');
       return;
     }
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Esta ação apagará permanentemente o equipamento e todas as tarefas e históricos associados.`, () => {
@@ -1547,7 +1547,7 @@ window.TasksModule = (() => {
 
   function renderTaskRow(t, equipMap) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
+    const canEdit = session && ['Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
     const today = new Date().toISOString().slice(0,10);
     const isLate = t.dataPlanejadaTermino && t.dataPlanejadaTermino < today && t.status !== 'Concluída';
     
@@ -1898,7 +1898,7 @@ window.TasksModule = (() => {
     document.getElementById('task-modal-body').innerHTML = taskForm(t);
 
     const session = window.Auth.getSession();
-    const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
+    const canEdit = session && ['Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
     const saveBtn = document.getElementById('modal-task-save-btn');
     if (!canEdit) {
       if (saveBtn) saveBtn.style.display = 'none';
@@ -1928,8 +1928,8 @@ window.TasksModule = (() => {
       if (t) {
         if (t.status === 'Concluída') {
           const session = window.Auth.getSession();
-          if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-            Toast.error('Acesso Negado', 'Somente o Administrador do Sistema pode editar tarefas já concluídas.');
+          if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+            Toast.error('Acesso Negado', 'Somente o Desenvolvedor do Sistema pode editar tarefas já concluídas.');
             return;
           }
         }
@@ -2008,8 +2008,8 @@ window.TasksModule = (() => {
 
   function deleteTask(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir tarefas.');
+    if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores podem excluir tarefas.');
       return;
     }
     const t = DB.tasks.get(id);

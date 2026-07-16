@@ -524,7 +524,7 @@ function showLoginPage() {
 }
 
 function showForgotPassword() {
-  Toast.info('Recuperação de Senha', 'Entre em contato com o Administrador do sistema para redefinir sua senha.', 6000);
+  Toast.info('Recuperação de Senha', 'Entre em contato com o Desenvolvedor do Sistema para redefinir sua senha.', 6000);
 }
 
 // ================================================================
@@ -700,12 +700,12 @@ function renderShell(session) {
     const perfil = session.perfil || '';
     
     // STRICT RULE: Only Executante can see worker- routes
-    const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'admin-worker-panel'];
+    const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'];
     if (workerRoutes.includes(route)) {
       if (perfil !== 'Executante') return false;
     }
 
-    if (perfil === 'Administrador' || perfil === 'Desenvolvedor' || perfil === 'Gerente') return true;
+    if (perfil === 'Desenvolvedor' || perfil === 'Desenvolvedor' || perfil === 'Gerente') return true;
     const allowed = roleAccess[perfil];
     if (!allowed) return false;
     if (allowed.includes('*')) return true;

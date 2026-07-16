@@ -174,7 +174,7 @@ window.FollowupModule = (() => {
               const overdue = !isDone && window.daysBetween(new Date().toISOString().slice(0,10), t.dueDate) < 0;
               
               const session = Auth.getSession();
-              const isManager = session && ['Planejador', 'Administrador'].includes(session.perfil);
+              const isManager = session && ['Planejador'].includes(session.perfil);
 
               let actionsHtml = '';
               if (!isDone) {

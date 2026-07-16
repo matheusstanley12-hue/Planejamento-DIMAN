@@ -20,7 +20,7 @@ window.AttendanceModule = (() => {
   function render() {
     const session = Auth.getSession();
     
-    if (!session || !['Administrador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil)) {
+    if (!session || !['Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil)) {
       return `
         <div class="page-container" style="display:flex;justify-content:center;align-items:center;height:80vh;">
           <div class="card" style="padding:40px;text-align:center;max-width:400px;border-top:4px solid var(--color-danger);">

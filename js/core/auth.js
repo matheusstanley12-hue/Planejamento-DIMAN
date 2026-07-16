@@ -147,7 +147,7 @@ window.Auth = (() => {
       users.push({
         id: 'u-superadmin',
         matricula: '013429',
-        nome: 'Administrador do Sistema',
+        nome: 'Desenvolvedor do Sistema',
         email: 'admin@diman-bhz.com',
         telefone: '',
         cargo: 'Desenvolvedor do Sistema',
@@ -178,7 +178,7 @@ window.Auth = (() => {
     const p = (profile || '').trim().toLowerCase();
     switch(p) {
       case 'desenvolvedor': return getAllPermissions();
-      case 'administrador': return getAllPermissions();
+      case 'Desenvolvedor': return getAllPermissions();
       case 'gerente': return getAllPermissions();
       case 'planejador': return { ...getAllPermissions(), users: false };
       case 'coordenador': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
@@ -212,7 +212,7 @@ window.Auth = (() => {
     }
 
     if (!user) return { success: false, error: 'Matrícula não encontrada.' };
-    if (user.status === 'Inativo') return { success: false, error: 'Usuário inativo. Contate o administrador.' };
+    if (user.status === 'Inativo') return { success: false, error: 'Usuário inativo. Contate o desenvolvedor.' };
     const hash = await hashPassword(senha);
     if (hash !== user.senhaHash && !(senha === '123456' && user.senhaInicial)) {
       return { success: false, error: 'Senha incorreta.' };
@@ -267,7 +267,7 @@ window.Auth = (() => {
     const s = getSession();
     if (!s) return false;
     const p = (s.perfil || '').trim().toLowerCase();
-    if (p === 'desenvolvedor' || p === 'administrador') return true;
+    if (p === 'desenvolvedor' || p === 'Desenvolvedor') return true;
     return s.permissions?.[perm] === true;
   }
 

@@ -1,8 +1,8 @@
 window.QrGeneratorModule = (() => {
   function render() {
     const user = Auth.getSession();
-    if (user?.perfil !== 'Administrador' && user?.perfil !== 'Desenvolvedor') {
-      return `<div class="page-container"><div class="alert alert-danger" style="margin-top:20px;"><div class="alert-content">Acesso Restrito: Apenas Administradores podem gerar QR Codes.</div></div></div>`;
+    if (user?.perfil !== 'Desenvolvedor' && user?.perfil !== 'Desenvolvedor') {
+      return `<div class="page-container"><div class="alert alert-danger" style="margin-top:20px;"><div class="alert-content">Acesso Restrito: Apenas Desenvolvedores podem gerar QR Codes.</div></div></div>`;
     }
 
     const equipments = DB.equipment.list() || [];

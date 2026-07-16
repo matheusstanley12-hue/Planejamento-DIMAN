@@ -80,10 +80,10 @@ Abaixo está o detalhamento de todos os módulos, processos e telas do sistema.
 - **Objetivo:** Gerar etiquetas com QR para colar na máquina. Ao ler o código com o celular, o DIMAN abre o histórico, manuais e status instantâneo do equipamento.
 
 ## 2. REGRAS DE NEGÓCIO E PERMISSÕES
-- **Administrador / Gerente:** Acesso total a tudo, incluindo exclusão de dados e configurações globais.
+- **Desenvolvedor / Gerente:** Acesso total a tudo, incluindo exclusão de dados e configurações globais.
 - **Planejador / Engenharia:** Pode criar tarefas, aprovar peças, alterar cronogramas (Gantt), gerenciar custos e cadastrar restrições.
 - **Executante / Mecânico / Eletricista:** Visão restrita. Acessa apenas o "Meu Painel". Só pode iniciar, pausar e concluir tarefas, além de solicitar peças. NÃO pode alterar prazos nem aprovar custos.
-- **Supervisor / Encarregado:** Vê todos os equipamentos (como o Administrador), mas pode ter limitações em edições globais e aprovações financeiras pesadas.
+- **Supervisor / Encarregado:** Vê todos os equipamentos (como o Desenvolvedor), mas pode ter limitações em edições globais e aprovações financeiras pesadas.
 
 ## 3. FLUXOS COMUNS (COMO FAZER)
 

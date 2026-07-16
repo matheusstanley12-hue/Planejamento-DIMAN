@@ -9,7 +9,7 @@ window.ServicesModule = (() => {
     const session = window.Auth ? window.Auth.getSession() : null;
     if (!session) return 0;
     const p = (session.perfil || '').trim().toLowerCase();
-    const isPCM = ['desenvolvedor', 'administrador', 'planejador', 'gerente'].includes(p);
+    const isPCM = ['desenvolvedor', 'planejador', 'gerente'].includes(p);
     const isEncarregado = ['supervisor', 'encarregado'].includes(p);
     
     if (!isPCM && !isEncarregado) return 0;
@@ -45,7 +45,7 @@ window.ServicesModule = (() => {
 
     const session = Auth.getSession();
     const p = session ? (session.perfil || '').trim().toLowerCase() : '';
-    const isPCM = ['desenvolvedor', 'administrador', 'planejador', 'gerente'].includes(p);
+    const isPCM = ['desenvolvedor', 'planejador', 'gerente'].includes(p);
     const isEncarregado = ['supervisor', 'encarregado'].includes(p);
     
     if (!isPCM && !isEncarregado) {
@@ -142,7 +142,7 @@ window.ServicesModule = (() => {
                 let actions = '';
                 const isMySector = isEncarregado && session && (s.destino || s.setorDestino) === session.disciplina;
                 const pForDelete = session ? (session.perfil || '').trim().toLowerCase() : '';
-                const isDeleteAllowed = ['planejador', 'administrador', 'gerente'].includes(pForDelete);
+                const isDeleteAllowed = ['planejador', 'gerente'].includes(pForDelete);
 
                 actions += `<button class="btn btn-ghost btn-xs" onclick="window.ServicesModule.viewDetails('${s.id}')" title="Ver Detalhes e OS">🔍 Detalhes</button>`;
 

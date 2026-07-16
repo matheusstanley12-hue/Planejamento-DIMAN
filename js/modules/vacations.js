@@ -7,12 +7,12 @@ window.VacationsModule = (() => {
   function render() {
     const session = Auth.getSession();
     
-    if (!session || !['Administrador', 'Gerente', 'Desenvolvedor'].includes(session.perfil)) {
+    if (!session || !['Gerente', 'Desenvolvedor'].includes(session.perfil)) {
       return `
         <div class="page-container" style="display:flex;justify-content:center;align-items:center;height:80vh;">
           <div class="card" style="padding:40px;text-align:center;max-width:400px;border-top:4px solid var(--color-danger);">
             <h2 style="color:var(--text-primary);margin-bottom:10px;">Acesso Negado</h2>
-            <p style="color:var(--text-muted);">Apenas Administradores e Gerentes possuem permissão para acessar a Gestão de Férias.</p>
+            <p style="color:var(--text-muted);">Apenas Desenvolvedores e Gerentes possuem permissão para acessar a Gestão de Férias.</p>
           </div>
         </div>
       `;

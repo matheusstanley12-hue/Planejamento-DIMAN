@@ -43,7 +43,7 @@ window.HomeModule = (() => {
     const restrictions = window.DB.restrictions.getAll();
     const today = new Date().toISOString().slice(0,10);
     const session = window.Auth ? window.Auth.getSession() : null;
-    const isAdmin = session && (session.perfil === 'Administrador' || session.perfil === 'Desenvolvedor');
+    const isAdmin = session && (session.perfil === 'Desenvolvedor' || session.perfil === 'Desenvolvedor');
 
     const emManutencao = eqs.filter(e => e.status !== 'Liberado').length;
     let atrasados = 0;

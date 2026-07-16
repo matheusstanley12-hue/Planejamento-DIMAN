@@ -16,7 +16,7 @@ window.EquipmentPanel = (() => {
     }
     
     const session = Auth.getSession();
-    const isDeleteAllowed = session && ['Planejador', 'Administrador', 'Gerente'].includes(session.perfil);
+    const isDeleteAllowed = session && ['Planejador', 'Gerente'].includes(session.perfil);
 
     let html = `<div style="display:flex;flex-direction:column;gap:var(--space-3);">`;
     reqs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(r => {
@@ -85,7 +85,7 @@ window.EquipmentPanel = (() => {
     const currentUserId = session ? session.userId : 'anonymous';
 
     return comments.map(c => {
-      const isAuthor = c.userId === currentUserId || (c.id === 'legacy' && (session?.perfil === 'Administrador' || session?.perfil === 'Desenvolvedor'));
+      const isAuthor = c.userId === currentUserId || (c.id === 'legacy' && (session?.perfil === 'Desenvolvedor' || session?.perfil === 'Desenvolvedor'));
       const formattedDate = formatCommentDate(c.createdAt);
       const isEdited = !!c.updatedAt;
       const editedInfo = isEdited ? ` <span style="font-size:9px;color:var(--text-muted);font-style:italic;" title="Editado em ${formatCommentDate(c.updatedAt)}">(editado em ${formatCommentDateOnly(c.updatedAt)})</span>` : '';
@@ -174,7 +174,7 @@ window.EquipmentPanel = (() => {
             Voltar para Oficina
           </button>
           <div style="display:flex;gap:var(--space-2);">
-            ${window.Auth && Auth.getSession()?.perfil === 'Administrador' ? `
+            ${window.Auth && Auth.getSession()?.perfil === 'Desenvolvedor' ? `
               <button class="btn btn-ghost btn-sm" onclick="try{window.EquipmentPanel.deleteEquipment()}catch(e){window.Toast.error('Erro', e.message)}" style="color:var(--color-danger);border:1px solid transparent;" title="Excluir Equipamento permanentemente" onmouseover="this.style.borderColor='var(--color-danger)'" onmouseout="this.style.borderColor='transparent'">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                 Excluir Equipamento
@@ -593,7 +593,7 @@ window.EquipmentPanel = (() => {
   function renderDisciplina(tasks, eq, disc) {
     const allEqTasks = DB.tasks.getByEquipment(eq.id);
     const session = window.Auth.getSession();
-    const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
+    const canEdit = session && ['Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Encarregado', 'Coordenador', 'Supervisor'].includes(session.perfil);
     let html = '';
     if (tasks.length === 0) {
       html = `<div class="empty-state" style="padding:var(--space-4)"><p>Nenhuma atividade desta disciplina.</p></div>`;
@@ -1072,8 +1072,8 @@ window.EquipmentPanel = (() => {
       }
       
       const session = window.Auth.getSession();
-      const canEdit = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
-      const canComment = session && ['Administrador', 'Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Coordenador', 'Supervisor', 'Encarregado'].includes(session.perfil);
+      const canEdit = session && ['Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor'].includes(session.perfil);
+      const canComment = session && ['Planejamento', 'Planejador', 'Gerente', 'Desenvolvedor', 'Coordenador', 'Supervisor', 'Encarregado'].includes(session.perfil);
       
       const saveBtn = document.getElementById('new-task-save-btn');
       if (!canEdit) {
@@ -1217,8 +1217,8 @@ window.EquipmentPanel = (() => {
       if (t) {
         if (t.status === 'Concluída') {
           const session = window.Auth.getSession();
-          if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-            Toast.error('Acesso Negado', 'Somente o Administrador do Sistema pode editar tarefas já concluídas.');
+          if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+            Toast.error('Acesso Negado', 'Somente o Desenvolvedor do Sistema pode editar tarefas já concluídas.');
             return;
           }
         }
@@ -1853,7 +1853,7 @@ window.EquipmentPanel = (() => {
     if (!eq) return;
     
     const user = window.Auth.getSession();
-    if (user?.perfil !== 'Administrador') {
+    if (user?.perfil !== 'Desenvolvedor') {
       window.Toast.error('Acesso Negado', 'Você não tem permissão para excluir equipamentos.');
       return;
     }
@@ -2005,7 +2005,7 @@ window.EquipmentPanel = (() => {
 
     const session = window.Auth.getSession();
     const currentUserId = session ? session.userId : 'anonymous';
-    const isAuthor = comment.userId === currentUserId || (comment.id === 'legacy' && (session?.perfil === 'Administrador' || session?.perfil === 'Desenvolvedor'));
+    const isAuthor = comment.userId === currentUserId || (comment.id === 'legacy' && (session?.perfil === 'Desenvolvedor' || session?.perfil === 'Desenvolvedor'));
 
     if (!isAuthor) {
       Toast.error('Erro', 'Apenas o autor do comentário pode editá-lo.');
@@ -2040,7 +2040,7 @@ window.EquipmentPanel = (() => {
 
     const session = window.Auth.getSession();
     const currentUserId = session ? session.userId : 'anonymous';
-    const isAuthor = comment.userId === currentUserId || (comment.id === 'legacy' && (session?.perfil === 'Administrador' || session?.perfil === 'Desenvolvedor'));
+    const isAuthor = comment.userId === currentUserId || (comment.id === 'legacy' && (session?.perfil === 'Desenvolvedor' || session?.perfil === 'Desenvolvedor'));
 
     if (!isAuthor) {
       Toast.error('Erro', 'Apenas o autor do comentário pode excluí-lo.');

@@ -125,8 +125,8 @@ window.CostsModule = (() => {
 
   function _delete(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores podem excluir registros.');
+    if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores podem excluir registros.');
       return;
     }
     confirmDialog('Excluir Lançamento', 'Tem certeza?', () => { DB.costs.delete(id); Router.navigate('costs', { force: true }); });
@@ -2399,8 +2399,8 @@ window.UsersModule = (() => {
   
   async function saveUser() {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem criar usuários.');
+    if (!session || !['Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores e gerentes podem criar usuários.');
       return;
     }
 
@@ -2513,8 +2513,8 @@ window.UsersModule = (() => {
 
   function deleteUser(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem excluir usuários.');
+    if (!session || !['Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores e gerentes podem excluir usuários.');
       return;
     }
     window.uiConfirm('Tem certeza que deseja excluir este usuário?', (res) => {
@@ -2547,8 +2547,8 @@ window.UsersModule = (() => {
 
   function openEditUser(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem editar usuários.');
+    if (!session || !['Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores e gerentes podem editar usuários.');
       return;
     }
     
@@ -2591,8 +2591,8 @@ window.UsersModule = (() => {
 
   function resetPassword(id) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Administrador', 'Desenvolvedor', 'Gerente'].includes(session.perfil)) {
-      Toast && Toast.error('Acesso Negado', 'Apenas administradores e gerentes podem resetar senhas.');
+    if (!session || !['Desenvolvedor', 'Gerente'].includes(session.perfil)) {
+      Toast && Toast.error('Acesso Negado', 'Apenas desenvolvedores e gerentes podem resetar senhas.');
       return;
     }
     window.uiConfirm('Tem certeza que deseja resetar a senha deste usuário para 123456?', (res) => {
@@ -2844,8 +2844,8 @@ window.ActionPlanModule = (() => {
 
   function deletePlan(planId) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-      Toast.error('Acesso Negado', 'Apenas administradores podem excluir planos de ação.');
+    if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+      Toast.error('Acesso Negado', 'Apenas desenvolvedores podem excluir planos de ação.');
       return;
     }
     window.uiConfirm('Tem certeza que deseja excluir este plano de ação?', (res) => {

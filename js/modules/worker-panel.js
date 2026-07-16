@@ -2059,8 +2059,8 @@ window.WorkerPanel = (() => {
     
     if (t.status === 'Concluída') {
       const session = window.Auth.getSession();
-      if (!session || (session.perfil !== 'Administrador' && session.perfil !== 'Desenvolvedor')) {
-        Toast.error('Acesso Negado', 'Somente o Administrador do Sistema pode editar tarefas já concluídas.');
+      if (!session || (session.perfil !== 'Desenvolvedor' && session.perfil !== 'Desenvolvedor')) {
+        Toast.error('Acesso Negado', 'Somente o Desenvolvedor do Sistema pode editar tarefas já concluídas.');
         return;
       }
     }

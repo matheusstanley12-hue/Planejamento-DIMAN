@@ -66,7 +66,7 @@ window.MeetingsModule = (() => {
               </svg>
               Baixar PDF
             </button>
-            ${(Auth.getSession() && ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente', 'Coordenador', 'Encarregado'].includes(Auth.getSession().perfil)) ? `<button class="btn btn-primary" onclick="MeetingsModule.openNewTaskModal()">+ Nova Tarefa</button>` : ''}
+            ${(Auth.getSession() && ['Desenvolvedor', 'Planejador', 'Gerente', 'Coordenador', 'Encarregado'].includes(Auth.getSession().perfil)) ? `<button class="btn btn-primary" onclick="MeetingsModule.openNewTaskModal()">+ Nova Tarefa</button>` : ''}
           </div>
         </header>
 
@@ -189,7 +189,7 @@ window.MeetingsModule = (() => {
     }
 
     const session = Auth.getSession();
-    const isManager = session && ['Desenvolvedor', 'Administrador', 'Planejador', 'Gerente', 'Coordenador', 'Encarregado'].includes(session.perfil);
+    const isManager = session && ['Desenvolvedor', 'Planejador', 'Gerente', 'Coordenador', 'Encarregado'].includes(session.perfil);
 
     tbody.innerHTML = `
       <div class="table-responsive" style="background:var(--bg-card);border:1px solid var(--border-card);border-radius:var(--radius-lg);overflow-x:auto;">
