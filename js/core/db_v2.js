@@ -428,7 +428,6 @@ window.DB = (() => {
       let fetchError = null;
       
       const lastSyncKey = 'diman_last_sync_time';
-      const lastSync = force ? null : localStorage.getItem(lastSyncKey);
       const syncStartTime = new Date().toISOString();
 
       while (hasMore) {
@@ -436,10 +435,8 @@ window.DB = (() => {
           .select('*')
           .not('collection', 'ilike', 'photo_%');
           
-        if (lastSync) {
-          query = query.gt('updated_at', lastSync);
-        }
-
+        // Removed clock-dependent differential sync to fix missing updates
+        
         const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
         
         if (error) {
