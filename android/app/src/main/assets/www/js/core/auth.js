@@ -285,7 +285,7 @@ window.Auth = (() => {
         }
       }
       
-      return session;
+      return s;
     } catch { return null; }
   }
 
