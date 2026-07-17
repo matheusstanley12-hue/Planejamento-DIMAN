@@ -230,7 +230,11 @@ window.Auth = (() => {
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     addAuditLog('LOGIN', `Usuário ${user.nome} fez login`, null);
-    return { success: true, session, mustChangePassword: user.senhaInicial === true };
+    
+    // Call getSession to trigger any auto-migrations (like renaming Administrador to Desenvolvedor)
+    const finalSession = getSession() || session;
+    
+    return { success: true, session: finalSession, mustChangePassword: user.senhaInicial === true };
   }
 
   function logout() {
@@ -245,16 +249,17 @@ window.Auth = (() => {
       const s = JSON.parse(sessionStorage.getItem(SESSION_KEY));
       if (s) {
         let changed = false;
-        if (s.perfil === 'Administrador' || s.perfil === 'administrador') {
+        let p = (s.perfil || '').trim().toLowerCase();
+        if (p === 'administrador' || p === 'administrador do sistema') {
           s.perfil = 'Desenvolvedor';
           changed = true;
         }
-        if (s.cargo && s.cargo.includes('Administrador')) {
-           s.cargo = s.cargo.replace(/Administrador/g, 'Desenvolvedor');
+        if (s.cargo && /administrador/i.test(s.cargo)) {
+           s.cargo = s.cargo.replace(/Administrador/gi, 'Desenvolvedor');
            changed = true;
         }
-        if (s.nome && s.nome.includes('Administrador')) {
-           s.nome = s.nome.replace(/Administrador/g, 'Desenvolvedor');
+        if (s.nome && /administrador/i.test(s.nome)) {
+           s.nome = s.nome.replace(/Administrador/gi, 'Desenvolvedor');
            changed = true;
         }
         
@@ -266,8 +271,8 @@ window.Auth = (() => {
           const uIndex = users.findIndex(u => u.id === s.userId);
           if (uIndex !== -1) {
             users[uIndex].perfil = 'Desenvolvedor';
-            if (users[uIndex].cargo) users[uIndex].cargo = users[uIndex].cargo.replace(/Administrador/g, 'Desenvolvedor');
-            if (users[uIndex].nome) users[uIndex].nome = users[uIndex].nome.replace(/Administrador/g, 'Desenvolvedor');
+            if (users[uIndex].cargo) users[uIndex].cargo = users[uIndex].cargo.replace(/Administrador/gi, 'Desenvolvedor');
+            if (users[uIndex].nome) users[uIndex].nome = users[uIndex].nome.replace(/Administrador/gi, 'Desenvolvedor');
             saveUsers(users);
           }
         }
