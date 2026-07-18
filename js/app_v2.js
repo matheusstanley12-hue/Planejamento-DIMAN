@@ -283,6 +283,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isPublic = await initApp();
     if (isPublic) return; // Halt bootstrap if public route handled
 
+    // Delete mock data to prevent them from coming back
+    setTimeout(() => {
+      try {
+        if (window.DB && window.DB.equipment) {
+          const mockIds = ['eq-bhz-001', 'eq-bmp-202', 'eq-sub-501', 'eq-1781182428218-cqydn', 'eq-1781182833302-d47ym', 'eq-1781182873636-msohn', 'eq-1781890782380-3xgxw', 'eq-1781890819436-s8tac', 'eq-1781890843333-6n2b9', 'eq-1781890886611-0d6pu', 'eq-1781890910487-lgvu1', 'eq-1781890940902-ro4yr', 'eq-1781891018493-uo6w2'];
+          mockIds.forEach(id => {
+            const exists = window.DB.equipment.get(id);
+            if (exists) {
+               window.DB.equipment.delete(id);
+            }
+          });
+        }
+      } catch(e) {}
+    }, 2000);
+
     // Check session
     if (!Auth.isLoggedIn()) {
       showLoginPage();
