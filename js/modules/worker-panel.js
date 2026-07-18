@@ -227,7 +227,7 @@ window.WorkerPanel = (() => {
 
     Toast.success('Iniciado!', `A tarefa "${t.descricao}" foi iniciada para os executantes selecionados.`);
     if (document.getElementById('modal-worker-start-task')) closeModal('modal-worker-start-task');
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   function startTask(taskId) {
@@ -577,7 +577,7 @@ window.WorkerPanel = (() => {
       Toast.info('Pausado', `Motivo: ${reason}`);
     }
 
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   function addResumeExecutorInput() {
@@ -778,7 +778,7 @@ window.WorkerPanel = (() => {
     });
 
     Toast.success('Retomado!', `Executantes alocados na tarefa: "${t.descricao}"`);
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   function resumeWork(workerId) {
@@ -816,7 +816,7 @@ window.WorkerPanel = (() => {
       }
 
       Toast.success('Retomado!', 'O cronômetro de trabalho voltou a rodar.');
-      Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+      Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   function cancelWork(workerId) {
@@ -872,7 +872,7 @@ window.WorkerPanel = (() => {
       }
 
       Toast.success('Cancelado', 'Andamento cancelado com sucesso.');
-      Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+      Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
     });
   }
 
@@ -1056,7 +1056,7 @@ window.WorkerPanel = (() => {
 
       closeModal('modal-worker-complete');
       Toast.success('Sucesso', 'Tarefa concluída com sucesso!');
-      Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+      Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
     };
 
     if (hasFile) {
@@ -1162,7 +1162,7 @@ window.WorkerPanel = (() => {
       
       if (tasksConcluded > 0 && window.Toast) {
          window.Toast.info('Ajuste Automático', `Foram concluídas ${tasksConcluded} tarefas esquecidas do dia anterior.`);
-         window.Router.navigate(window.location.hash.replace('#', '') || 'worker-panel', { force: true });
+         window.Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
       }
     }
 
@@ -1729,14 +1729,12 @@ window.WorkerPanel = (() => {
 
   function setEqFilter(id) {
     eqFilter = id;
-    const currentRoute = window.location.hash.replace('#', '');
-    Router.navigate(currentRoute.includes('worker-panel') ? currentRoute : 'worker-panel', { force: true });
+    Router.navigate(isAdminMode ? 'admin-worker-panel' : 'worker-panel', { force: true });
   }
 
   function setDiscFilter(disc) {
     discFilter = disc;
-    const currentRoute = window.location.hash.replace('#', '');
-    Router.navigate(currentRoute.includes('worker-panel') ? currentRoute : 'worker-panel', { force: true });
+    Router.navigate(isAdminMode ? 'admin-worker-panel' : 'worker-panel', { force: true });
   }
 
   // --- TASK MODALS (CREATE & EDIT) ---
@@ -1926,7 +1924,7 @@ window.WorkerPanel = (() => {
 
     Toast.success('Sucesso', 'Nova tarefa criada.');
     closeModal('modal-worker-new-task');
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   function openEditTask(id) {
@@ -2188,7 +2186,7 @@ window.WorkerPanel = (() => {
     DB.tasks.update(id, data);
     Toast.success('Tarefa Atualizada!', 'As alterações foram registradas com sucesso.');
     closeModal('modal-worker-task');
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   // --- PARTS REQUESTS ---
@@ -2287,7 +2285,7 @@ window.WorkerPanel = (() => {
     DB.parts.create(data);
     Toast.success('Solicitação Enviada!', `Peça "${desc}" cadastrada com status Solicitada.`);
     closeModal('modal-worker-part');
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   // --- SERVICE REQUESTS ---
@@ -2393,7 +2391,7 @@ window.WorkerPanel = (() => {
 
     Toast.success('Serviço Solicitado!', 'A solicitação foi enviada com sucesso para o setor.');
     closeModal('modal-worker-service');
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   // --- IMPEDIMENT RESTRICTIONS ---
@@ -2505,7 +2503,7 @@ window.WorkerPanel = (() => {
     DB.restrictions.create(data);
     Toast.success('Impedimento Registrado!', 'O PCM e Supervisão foram alertados sobre a restrição.');
     closeModal('modal-worker-restriction');
-    Router.navigate(window.location.hash.replace('#', '').includes('worker-panel') ? window.location.hash.replace('#', '') : 'worker-panel', { force: true });
+    Router.navigate((isAdminMode ? 'admin-worker-panel' : 'worker-panel'), { force: true });
   }
 
   function openTaskDetail(taskId) {
