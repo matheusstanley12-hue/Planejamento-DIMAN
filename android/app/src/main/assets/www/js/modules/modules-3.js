@@ -2436,7 +2436,8 @@ window.UsersModule = (() => {
       senhaHash,
       senhaInicial: true,
       status: 'Ativo',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     users.push(newUser);
@@ -2604,6 +2605,7 @@ window.UsersModule = (() => {
       Auth.hashPassword('123456').then(hash => {
         users[userIndex].senhaHash = hash;
         users[userIndex].senhaInicial = true;
+        users[userIndex].updatedAt = new Date().toISOString();
         localStorage.setItem('diman_users', JSON.stringify(users));
         if (window.DB && DB.syncToSupabase) DB.syncToSupabase('diman_users', users);
         Toast && Toast.success('Sucesso', 'Senha resetada para 123456.');

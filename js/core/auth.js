@@ -313,7 +313,9 @@ window.Auth = (() => {
     users[idx].senhaHash = await hashPassword(novaSenha);
     users[idx].senhaInicial = false;
     if (nome) users[idx].nome = nome;
+    users[idx].updatedAt = new Date().toISOString();
     saveUsers(users);
+    if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_users', users);
 
     // Update session
     const session = getSession();
