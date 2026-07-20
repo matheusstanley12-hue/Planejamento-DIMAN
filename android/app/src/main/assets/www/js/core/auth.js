@@ -103,14 +103,34 @@ window.Auth = (() => {
   }
 
   function getUsers() {
-    let users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+    const data = localStorage.getItem(USERS_KEY);
+    let users = data ? JSON.parse(data) : [];
+    
+    // Filter deleted users first
     try {
       const blacklist = JSON.parse(localStorage.getItem('diman_deleted_users') || '[]');
       if (blacklist.length > 0) {
         users = users.filter(u => !blacklist.includes(u.id));
       }
     } catch(e) {}
-    return users;
+    
+    // Deduplicate by matricula, keeping the newest updatedAt (or the one with senhaInicial=true if equal)
+    const unique = {};
+    users.forEach(u => {
+      if (!u.matricula) return;
+      if (!unique[u.matricula]) {
+        unique[u.matricula] = u;
+      } else {
+        const existTime = unique[u.matricula].updatedAt ? new Date(unique[u.matricula].updatedAt).getTime() : 0;
+        const newTime = u.updatedAt ? new Date(u.updatedAt).getTime() : 0;
+        if (newTime > existTime) {
+          unique[u.matricula] = u;
+        } else if (newTime === existTime && u.senhaInicial) {
+           unique[u.matricula] = u;
+        }
+      }
+    });
+    return Object.values(unique);
   }
 
   function saveUsers(users) {
