@@ -366,6 +366,7 @@ window.DB = (() => {
     }
     const allKeys = Object.values(KEYS);
     for (const k of allKeys) {
+      if (k === KEYS.audit) continue; // Do not sync audit logs to Supabase to save space and 1000 row limits
       const data = get(k);
       if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
         try {

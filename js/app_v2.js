@@ -126,7 +126,34 @@ window.Router = (() => {
 })();
 
 // ================================================================
-// APP BOOTSTRAP
+// GLOBAL STORAGE QUOTA HANDLER
+// ================================================================
+(function() {
+  const originalSetItem = localStorage.setItem;
+  localStorage.setItem = function(key, value) {
+    try {
+      originalSetItem.call(this, key, value);
+    } catch(e) {
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        console.warn('DIMAN Storage Quota Exceeded. Purging non-critical large collections...');
+        if (key !== 'diman_manuals') this.removeItem('diman_manuals');
+        if (key !== 'diman_audit') this.removeItem('diman_audit');
+        if (key !== 'diman_notifications') this.removeItem('diman_notifications');
+        try {
+          originalSetItem.call(this, key, value);
+          console.log('Successfully saved after purge.');
+        } catch(retryErr) {
+          throw retryErr;
+        }
+      } else {
+        throw e;
+      }
+    }
+  };
+})();
+
+// ================================================================
+// CORE APP LOGIC (app_v2.js)
 // ================================================================
 
 async  function clearAppCache() {
