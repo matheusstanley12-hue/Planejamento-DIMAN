@@ -366,46 +366,14 @@ window.DB = (() => {
     }
     const allKeys = Object.values(KEYS);
     for (const k of allKeys) {
-      if (k === KEYS.audit) continue; // Do not sync audit logs to Supabase to save space and 1000 row limits
-      const data = get(k);
-      if (data && (Array.isArray(data) ? data.length > 0 : Object.keys(data).length > 0)) {
-        try {
-          let upsertPayload = [];
-          if (Array.isArray(data) && data.length > 0 && data[0] && data[0].id) {
-             upsertPayload = data.map(item => ({ collection: k, key: item.id, data: item, updated_at: new Date().toISOString() }));
-          } else {
-             upsertPayload = { collection: k, key: 'all', data: data, updated_at: new Date().toISOString() };
-          }
-          const { error } = await supabaseClient.from('diman_store')
-            .upsert(upsertPayload, { onConflict: 'collection,key' });
-          if (error) {
-             console.error('Supabase Error:', error);
-             if (window.Toast) window.Toast.error('Erro do Banco de Dados', error.message || JSON.stringify(error));
-             return;
-          }
-        } catch (e) {
-          console.error('Sync failed for collection:', k, e);
-          if (window.Toast) window.Toast.error('Erro de Conexão', e.message);
-          return;
-        }
-      }
+      if (k === KEYS.audit) continue; 
+      syncToSupabase(k, []); // Push only dirty items and tombstones
     }
-
-    try {
-       const tombstones = JSON.parse(localStorage.getItem('diman_tombstones') || '[]');
-       if (tombstones.length > 0) {
-           const tbPayload = tombstones.map(t => ({
-              collection: t.collection,
-              key: t.key,
-              data: { id: t.key, _deleted: true },
-              updated_at: new Date().toISOString()
-           }));
-           await supabaseClient.from('diman_store').upsert(tbPayload, { onConflict: 'collection,key' });
-       }
-    } catch(e) {}
-
-    localStorage.setItem('diman_unsynced', 'false');
-    if (window.Toast) window.Toast.success('Sincronização Concluída', 'Todos os dados locais foram enviados para a nuvem.');
+    
+    // Pull the latest data to merge properly
+    setTimeout(() => {
+        if (window.DB && window.DB.initSupabase) window.DB.initSupabase(true);
+    }, 1500);
   }
 
   // Automatic sync when coming back online
