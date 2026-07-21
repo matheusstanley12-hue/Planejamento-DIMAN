@@ -733,6 +733,12 @@ window.EquipmentModule = (() => {
     }
     ensureModalExists();
     const eq = DB.equipment.get(id);
+    if (!eq) {
+      if (window.Toast) Toast.error('Erro', 'Este equipamento foi removido por outro usuário ou não está mais disponível.');
+      if (window.Router) window.Router.navigate(window.Router.current() || 'home', { force: true });
+      return;
+    }
+    
     document.getElementById('eq-modal-title').textContent = `Editar — ${eq.codigo}`;
     document.getElementById('eq-modal-body').innerHTML = equipmentForm(eq);
     
