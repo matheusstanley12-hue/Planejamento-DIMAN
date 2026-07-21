@@ -161,6 +161,8 @@ window.ReleasedModule = (() => {
         </div>
       </div>
     `;
+  }
+  
   function revertToMaintenance(id) {
     if (window.uiConfirm) {
         window.uiConfirm('Tem certeza que deseja retornar este equipamento para o status Em Manutenção?', (res) => {
