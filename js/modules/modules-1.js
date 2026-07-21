@@ -735,7 +735,10 @@ window.EquipmentModule = (() => {
     const eq = DB.equipment.get(id);
     if (!eq) {
       if (window.Toast) Toast.error('Erro', 'Este equipamento foi removido por outro usuário ou não está mais disponível.');
-      if (window.Router) window.Router.navigate(window.Router.current() || 'home', { force: true });
+      if (window.Router) {
+         const currentRoute = typeof window.Router.getCurrent === 'function' ? window.Router.getCurrent() : 'home';
+         window.Router.navigate(currentRoute || 'home', { force: true });
+      }
       return;
     }
     
