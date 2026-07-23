@@ -81,7 +81,7 @@ window.BonusModule = (() => {
     }
 
     // --- COLETIVO: Retrabalho (10%) ---
-    const allTasks = DB.tasks.list();
+    const allTasks = DB.tasks.getAll();
     const tasksInPeriod = allTasks.filter(t => {
        const d = new Date(t.createdAt);
        return d >= startDate && d <= endDate;

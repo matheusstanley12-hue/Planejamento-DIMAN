@@ -1196,7 +1196,7 @@ window.EquipmentModule = (() => {
     }
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Esta ação apagará permanentemente o equipamento e todas as tarefas e históricos associados.`, () => {
       try {
-        const eqTasks = DB.tasks.list(id);
+        const eqTasks = DB.tasks.getByEquipment(id);
         const ts = DB.timesheets.list().filter(t => t.equipmentId === id);
         const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
         const rest = DB.restrictions ? DB.restrictions.list(id) : [];
