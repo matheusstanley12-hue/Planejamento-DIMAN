@@ -475,6 +475,14 @@ window.DB = (() => {
                            item.status = existing.status;
                            item._statusUpdatedAt = existing._statusUpdatedAt;
                            syncToSupabase(collection, [item]);
+                        } else if (newStatusTime > existStatusTime) {
+                           existing.status = item.status;
+                           existing._statusUpdatedAt = item._statusUpdatedAt;
+                        } else if (existStatusTime === 0 && newStatusTime === 0) {
+                           if (item.status === 'Liberado' || existing.status === 'Liberado') {
+                               existing.status = 'Liberado';
+                               item.status = 'Liberado';
+                           }
                         }
                     }
                     
@@ -505,6 +513,14 @@ window.DB = (() => {
                        item.status = existing.status;
                        item._statusUpdatedAt = existing._statusUpdatedAt;
                        syncToSupabase(collection, [item]);
+                    } else if (newStatusTime > existStatusTime) {
+                       existing.status = item.status;
+                       existing._statusUpdatedAt = item._statusUpdatedAt;
+                    } else if (existStatusTime === 0 && newStatusTime === 0) {
+                       if (item.status === 'Liberado' || existing.status === 'Liberado') {
+                           existing.status = 'Liberado';
+                           item.status = 'Liberado';
+                       }
                     }
                 }
                 
@@ -636,7 +652,7 @@ window.DB = (() => {
     get: id => get(KEYS.equipment).find(e => String(e.id) === String(id)),
     create(data) {
       const items = get(KEYS.equipment);
-      const item = { id: uid('eq'), ...data, createdAt: now(), updatedAt: now(), timeline: [], replanning: [] };
+      const item = { id: uid('eq'), ...data, createdAt: now(), updatedAt: now(), _etapaUpdatedAt: now(), timeline: [], replanning: [] };
       items.push(item);
       set(KEYS.equipment, items);
       if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('CREATE_EQUIPMENT', `Equipamento ${data.nome} criado`, data);
@@ -651,6 +667,9 @@ window.DB = (() => {
       
       if (data.status !== undefined && data.status !== before.status) {
         data._statusUpdatedAt = now();
+      }
+      if (data.etapaAtual !== undefined && data.etapaAtual !== before.etapaAtual) {
+        data._etapaUpdatedAt = now();
       }
       
       items[idx] = { ...items[idx], ...data, updatedAt: now() };

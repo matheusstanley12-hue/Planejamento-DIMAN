@@ -5,20 +5,7 @@
 window.FollowupModule = (() => {
   let selectedMeetingDate = '';
 
-  function getMeetingDates() {
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 30); // Up to ~4 weeks ahead
-    const dates = [];
-    let curr = new Date(2026, 5, 30); // 30/06/2026
-    
-    while (curr <= endDate) {
-      if (curr.getDay() === 2) {
-        dates.push(new Date(curr)); // Terças-feiras
-      }
-      curr.setDate(curr.getDate() + 1);
-    }
-    return dates.sort((a, b) => b - a); // descending
-  }
+  // (Antiga função getMeetingDates removida)
 
   function formatDate(d) {
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -31,17 +18,16 @@ window.FollowupModule = (() => {
   }
 
   function getInitialMeetingDate() {
-    const dates = getMeetingDates();
-    const todayStr = formatDate(new Date());
-    // Find the closest meeting date that is <= today
-    const pastDates = dates.filter(d => formatDate(d) <= todayStr);
-    if (pastDates.length > 0) return formatDate(pastDates[0]);
-    return formatDate(dates[dates.length - 1]); // fallback to the oldest if all are in future
+    const tasks = window.DB && window.DB.followupTasks ? window.DB.followupTasks.getAll() : [];
+    if (tasks.length > 0) {
+      const sortedDates = [...new Set(tasks.map(t => t.meetingDate))].sort((a, b) => b.localeCompare(a));
+      if (sortedDates.length > 0) return sortedDates[0];
+    }
+    return formatDate(new Date());
   }
 
   function render() {
     if (!selectedMeetingDate) selectedMeetingDate = getInitialMeetingDate();
-    const dates = getMeetingDates();
     
     // Workforce for dropdown
     const wf = DB.workforce.list().sort((a,b) => a.nome.localeCompare(b.nome));
@@ -54,12 +40,10 @@ window.FollowupModule = (() => {
             <p>Gerenciamento de Tarefas e Deliberações de Follow-up</p>
           </div>
           <div style="display:flex; gap:10px; align-items:center;">
-            <select id="followup-date-select" class="form-control" style="width:auto; font-weight:bold;" onchange="FollowupModule.onDateChange()">
-              ${dates.map(d => {
-                const f = formatDate(d);
-                return `<option value="${f}" ${f === selectedMeetingDate ? 'selected' : ''}>Reunião: ${formatDisplayDate(f)}</option>`;
-              }).join('')}
-            </select>
+            <div style="display:flex; align-items:center; gap:8px; background:var(--bg-card); padding:6px 12px; border-radius:6px; border:1px solid var(--border-default);">
+              <label for="followup-date-select" style="font-weight:bold; font-size:14px; color:var(--text-secondary); margin:0;">Reunião:</label>
+              <input type="date" id="followup-date-select" class="form-control" style="width:auto; font-weight:bold; border:none; background:transparent; padding:0; outline:none; font-family:inherit;" value="${selectedMeetingDate}" onchange="FollowupModule.onDateChange()">
+            </div>
             <button class="btn btn-secondary" onclick="FollowupModule.downloadPDF()">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:16px; height:16px; margin-right:6px;">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />

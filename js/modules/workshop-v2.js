@@ -74,24 +74,86 @@ window.WorkshopModule = (() => {
      renderChartsAndTables();
   }
 
-  function exportToExcel() {
-     const table = document.querySelector('#ws-table-container table');
-     if (!table) return;
-     let csv = [];
-     const rows = table.querySelectorAll('tr');
-     for (let i = 0; i < rows.length; i++) {
-        let row = [], cols = rows[i].querySelectorAll('td, th');
-        for (let j = 0; j < cols.length; j++) row.push('"' + cols[j].innerText.replace(/"/g, '""').trim() + '"');
-        csv.push(row.join(';'));
+  function openExportModal() {
+     const modal = document.getElementById('ws-export-modal');
+     if (modal) modal.style.display = 'flex';
+  }
+
+  function doExport() {
+     const format = document.getElementById('ws-export-format').value;
+     const statusFilter = document.getElementById('ws-export-status').value;
+     document.getElementById('ws-export-modal').style.display = 'none';
+     
+     const rawEqs = window.DB.equipment ? window.DB.equipment.list() : [];
+     let exportEqs = rawEqs.filter(e => {
+        return (e.fase !== 'Liberada' && e.status !== 'Liberado' && e.fase !== 'Expedição' && e.status !== 'Expedição');
+     });
+     
+     if (statusFilter !== 'todos') {
+        exportEqs = exportEqs.filter(e => {
+           let eqStatus = e.status || '';
+           let eqEtapa = e.etapaAtual || e.fase || 'Nenhuma';
+           if (eqEtapa === 'Na Oficina') eqEtapa = 'Nenhuma';
+           return (eqStatus.toLowerCase() === statusFilter.toLowerCase() || eqEtapa.toLowerCase() === statusFilter.toLowerCase());
+        });
      }
-     const csvFile = new Blob(["\uFEFF" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
-     const downloadLink = document.createElement('a');
-     downloadLink.download = 'Controle_Oficina.csv';
-     downloadLink.href = window.URL.createObjectURL(csvFile);
-     downloadLink.style.display = 'none';
-     document.body.appendChild(downloadLink);
-     downloadLink.click();
-     document.body.removeChild(downloadLink);
+     
+     if (exportEqs.length === 0) {
+        if(window.Toast) window.Toast.warning('Exportar', 'Nenhum equipamento encontrado para este filtro.');
+        return;
+     }
+     
+     const headers = ['Código', 'Nome', 'Cliente', 'Status', 'Etapa', 'Dias na Oficina', 'Prioridade', 'Responsável', 'Data Entrada', 'Data Liberação'];
+     const data = exportEqs.map(e => {
+        let etapa = e.etapaAtual || e.fase || 'Nenhuma';
+        if (etapa === 'Na Oficina') etapa = 'Nenhuma';
+        let dias = getDaysDiff(e.dataEntrada, new Date().toISOString());
+        return [
+           e.codigo || '',
+           e.nome || '',
+           e.cliente || '',
+           e.status || '',
+           etapa,
+           dias.toString(),
+           e.prioridade || 'Normal',
+           e.responsavel || '',
+           formatDate(e.dataEntrada),
+           e.dataLiberacaoAtual ? formatDate(e.dataLiberacaoAtual) : (e.dataSaida ? formatDate(e.dataSaida) : '—')
+        ];
+     });
+     
+     if (format === 'excel') {
+        let csv = [headers.join(';')];
+        data.forEach(row => csv.push(row.map(c => `"${c.replace(/"/g, '""')}"`).join(';')));
+        const csvFile = new Blob(["\uFEFF" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `Oficina_${statusFilter}_${new Date().getTime()}.csv`;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = 'none';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+     } else {
+        if (window.jspdf && window.jspdf.jsPDF) {
+           const doc = new window.jspdf.jsPDF('landscape');
+           doc.setFontSize(14);
+           doc.text(`Relatório de Oficina - ${statusFilter === 'todos' ? 'Todos os Equipamentos' : statusFilter}`, 14, 15);
+           doc.setFontSize(10);
+           doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 22);
+           
+           doc.autoTable({
+              head: [headers],
+              body: data,
+              startY: 28,
+              theme: 'grid',
+              styles: { fontSize: 8 },
+              headStyles: { fillColor: [30, 136, 229] }
+           });
+           doc.save(`Oficina_${statusFilter}_${new Date().getTime()}.pdf`);
+        } else {
+           if(window.Toast) window.Toast.error('Erro', 'Biblioteca PDF não carregada.');
+        }
+     }
   }
 
   function renderChartsAndTables() {
@@ -125,10 +187,21 @@ window.WorkshopModule = (() => {
       
       const aguardandoPecas = parts.some(p => p.equipmentId === eq.id && ['Solicitada','Comprada','Em Transporte'].includes(p.status));
       
+      let etapa = eq.etapaAtual || eq.fase || 'Nenhuma';
+      if (etapa === 'Na Oficina') etapa = 'Nenhuma';
+      
+      let refDate = eq._etapaUpdatedAt || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
+      let daysInStage = 0;
+      if (refDate && eq.status !== 'Liberado' && etapa !== 'Liberada') {
+        const diffTime = Math.abs(new Date() - new Date(refDate));
+        daysInStage = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      }
+      
       return { 
         ...eq, daysInWorkshop, isCurrent, ePlan, atrasoSla, aguardandoPecas,
         prioridade: eq.prioridade || 'Normal',
-        etapa: eq.fase || 'Na Oficina',
+        etapa: etapa,
+        daysInStage: daysInStage,
         categoria: eq.tipo || 'Outros'
       };
     }).filter(e => e.tipo !== 'Subconjuntos');
@@ -185,10 +258,6 @@ window.WorkshopModule = (() => {
        <div class="ws-kpi ws-kpi-clickable" data-kpi-alert="sla_ok" onclick="WorkshopModule.setFilter('alerta', 'sla_ok')">
           <div class="ws-kpi-lbl">SLA no Prazo</div>
           <div class="ws-kpi-val" style="color:#10B981;">${qtdSlaDentro}</div>
-       </div>
-       <div class="ws-kpi ws-kpi-clickable" data-kpi-alert="sla_vencido" style="border-bottom:3px solid #EF4444;" onclick="WorkshopModule.setFilter('alerta', 'sla_vencido')">
-          <div class="ws-kpi-lbl" style="color:#EF4444;">SLA Vencido</div>
-          <div class="ws-kpi-val" style="color:#EF4444;">${qtdSlaVencido}</div>
        </div>
     `;
     const kpisDiv = document.getElementById('ws-kpis');
@@ -373,14 +442,14 @@ window.WorkshopModule = (() => {
     // Configuração global para textos de gráficos herdarem o tema
     Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096';
     
-    // Top 10
+    // Top 10 Maior Tempo na Oficina (Restaurado)
     const top10 = [...currentEqs].sort((a,b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
     const ctxTop = document.getElementById('ws-chart-top');
     if (ctxTop && top10.length > 0) {
       charts.push(new Chart(ctxTop, {
         type: 'bar',
         data: {
-          labels: top10.map(e => e.codigo),
+          labels: top10.map(e => e.codigo || e.nome),
           datasets: [{
             label: 'Dias',
             data: top10.map(e => e.daysInWorkshop),
@@ -397,6 +466,47 @@ window.WorkshopModule = (() => {
               if (elements[0]) {
                  const i = elements[0].index;
                  window.showEquipmentsModal('Top 10: ' + chart.data.labels[i], [top10[i]]);
+              }
+           }
+        }
+      }));
+    }
+
+    // Tempo na Etapa Atual (Todos)
+    const allEqsEtapa = [...currentEqs].filter(e => e.status !== 'Liberado' && e.etapa !== 'Liberada')
+                                 .sort((a,b) => {
+                                    const aBacklog = (a.etapa === 'Backlog' || a.status === 'Backlog');
+                                    const bBacklog = (b.etapa === 'Backlog' || b.status === 'Backlog');
+                                    if (aBacklog && !bBacklog) return 1;
+                                    if (!aBacklog && bBacklog) return -1;
+                                    return b.daysInStage - a.daysInStage;
+                                 });
+    const ctxEtapa = document.getElementById('ws-chart-etapa');
+    if (ctxEtapa && allEqsEtapa.length > 0) {
+      const containerEtapa = ctxEtapa.parentElement;
+      const calcHeight = Math.max(280, allEqsEtapa.length * 40);
+      containerEtapa.style.height = calcHeight + 'px';
+
+      charts.push(new Chart(ctxEtapa, {
+        type: 'bar',
+        data: {
+          labels: allEqsEtapa.map(e => `${e.codigo || e.nome} (${e.etapa !== 'Nenhuma' ? e.etapa : (e.status || 'Sem status')})`),
+          datasets: [{
+            label: 'Dias na Etapa',
+            data: allEqsEtapa.map(e => e.daysInStage),
+            backgroundColor: allEqsEtapa.map(e => e.daysInStage > 15 ? '#EF4444' : e.daysInStage > 5 ? '#F59E0B' : '#3B82F6'),
+            borderRadius: 4
+          }]
+        },
+        options: { 
+           responsive: true, maintainAspectRatio: false, indexAxis: 'y', 
+           plugins: { tooltip: { enabled: false }, legend: { display: false } },
+           scales: { x: { grace: '10%', grid: { color: getComputedStyle(document.body).getPropertyValue('--border-card') || '#E2E8F0' } }, y: { grid: { display: false } } },
+           onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+           onClick: (event, elements, chart) => {
+              if (elements[0]) {
+                 const i = elements[0].index;
+                 window.showEquipmentsModal('Tempo na Etapa: ' + chart.data.labels[i], [allEqsEtapa[i]]);
               }
            }
         }
@@ -765,6 +875,7 @@ window.WorkshopModule = (() => {
             <div style="display:flex; gap: 20px; align-items:center; font-size: 13px; color: var(--ws-muted); background: var(--ws-card); padding: 10px 20px; border-radius: 30px; border: 1px solid var(--ws-border);">
                <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#10B981;margin-right:6px;animation:pulse 2s infinite;"></span>Sincronizado</span>
                <span style="border-left:1px solid var(--ws-border); padding-left:20px;">Atualizado: <strong id="ws-last-update" style="color:var(--ws-text);">00:00:00</strong></span>
+               <button onclick="WorkshopModule.openExportModal()" style="background:#10B981; color:#fff; border:none; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer; font-size:12px;">Exportar</button>
                <button onclick="WorkshopModule.forceRender()" style="background:#1E88E5; color:var(--ws-text); border:none; padding:6px 12px; border-radius:6px; font-weight:700; cursor:pointer; font-size:12px;">Atualizar</button>
             </div>
          </div>
@@ -785,10 +896,14 @@ window.WorkshopModule = (() => {
             </div>
          </div>
          
-         <div class="ws-charts-row" style="grid-template-columns: 1fr;">
-            <div class="ws-chart-card">
+         <div class="ws-charts-row" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="ws-chart-card" style="height: auto; min-height: 340px;">
                <h3>Top 10 Maior Tempo (Dias)</h3>
                <div style="position:relative; height: 280px; width:100%;"><canvas id="ws-chart-top"></canvas></div>
+            </div>
+            <div class="ws-chart-card" style="height: auto; min-height: 340px;">
+               <h3>Tempo na Etapa Atual (Todos)</h3>
+               <div style="position:relative; height: 280px; width:100%;"><canvas id="ws-chart-etapa"></canvas></div>
             </div>
          </div>
          
@@ -807,6 +922,34 @@ window.WorkshopModule = (() => {
             </div>
          </div>
       </div>
+      
+      <!-- Export Modal -->
+      <div id="ws-export-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:var(--bg-card, #fff); padding:24px; border-radius:12px; width:400px; max-width:90%; color:var(--text-primary); box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+          <h3 style="margin:0 0 16px 0; font-size:18px;">Exportar Relatório</h3>
+          <label style="display:block; margin-bottom:8px; font-weight:bold; font-size:14px;">Formato</label>
+          <select id="ws-export-format" style="width:100%; padding:10px; margin-bottom:16px; border-radius:6px; border:1px solid var(--border-default); background:var(--bg-base); color:var(--text-primary);">
+             <option value="excel">Excel (CSV)</option>
+             <option value="pdf">PDF</option>
+          </select>
+          <label style="display:block; margin-bottom:8px; font-weight:bold; font-size:14px;">Filtrar por Status / Etapa</label>
+          <select id="ws-export-status" style="width:100%; padding:10px; margin-bottom:24px; border-radius:6px; border:1px solid var(--border-default); background:var(--bg-base); color:var(--text-primary);">
+             <option value="todos">Todos na Oficina</option>
+             <option value="Em manutenção">Em Manutenção</option>
+             <option value="Backlog">Backlog</option>
+             <option value="Aguardando Peças">Aguardando Peças</option>
+             <option value="Falta Mão de Obra">Falta Mão de Obra</option>
+             <option value="Lavador">Lavador</option>
+             <option value="Mecânica">Mecânica</option>
+             <option value="Pintura">Pintura</option>
+             <option value="Teste">Teste</option>
+          </select>
+          <div style="display:flex; justify-content:flex-end; gap:12px;">
+            <button onclick="document.getElementById('ws-export-modal').style.display='none'" style="padding:10px 16px; border-radius:6px; border:1px solid var(--border-default); background:transparent; color:var(--text-primary); cursor:pointer;">Cancelar</button>
+            <button onclick="WorkshopModule.doExport()" style="padding:10px 16px; border-radius:6px; border:none; background:#10B981; color:#fff; font-weight:bold; cursor:pointer;">Baixar</button>
+          </div>
+        </div>
+      </div>
     `;
   }
   
@@ -815,5 +958,5 @@ window.WorkshopModule = (() => {
     if (updateInterval) clearInterval(updateInterval);
   }
 
-  return { render, destroy, setFilter, clearFilters, exportToExcel, forceRender: renderChartsAndTables };
+  return { render, destroy, setFilter, clearFilters, exportToExcel: doExport, openExportModal, doExport, forceRender: renderChartsAndTables };
 })();

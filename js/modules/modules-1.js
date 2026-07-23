@@ -358,8 +358,11 @@ window.WorkshopModule = (() => {
           days = getDaysDiff(eq.dataEntrada, eq.dataLiberacaoAtual);
         }
       }
-      return { ...eq, daysInWorkshop: days, isCurrent };
-    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada);
+      let etapa = eq.etapaAtual || 'Nenhuma';
+      let refDate = eq._etapaUpdatedAt || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
+      let daysInStage = getDaysDiff(refDate, new Date().toISOString());
+      return { ...eq, daysInWorkshop: days, isCurrent, daysInStage, etapa };
+    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada && eq.etapa !== 'Liberada');
 
     const currentInWorkshop = workshopData.filter(e => e.isCurrent).sort((a, b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
     const categories = {};
@@ -424,8 +427,11 @@ window.WorkshopModule = (() => {
           days = getDaysDiff(eq.dataEntrada, eq.dataLiberacaoAtual);
         }
       }
-      return { ...eq, daysInWorkshop: days, isCurrent };
-    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada);
+      let etapa = eq.etapaAtual || 'Nenhuma';
+      let refDate = eq._etapaUpdatedAt || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
+      let daysInStage = getDaysDiff(refDate, new Date().toISOString());
+      return { ...eq, daysInWorkshop: days, isCurrent, daysInStage, etapa };
+    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada && eq.etapa !== 'Liberada');
 
     let tabContent = `
       <div class="charts-grid">
@@ -449,23 +455,23 @@ window.WorkshopModule = (() => {
               <tr style="border-bottom:1px solid var(--border-card);">
                 <th style="padding:12px;">Equipamento</th>
                 <th style="padding:12px;">Modelo/Tipo</th>
-                <th style="padding:12px;">Status Atual</th>
+                <th style="padding:12px;">Status / Etapa Atual</th>
                 <th style="padding:12px;">Data Entrada</th>
-                <th style="padding:12px;">Tempo na Oficina</th>
+                <th style="padding:12px;">Tempo na Etapa</th>
               </tr>
             </thead>
             <tbody>
-              ${workshopData.sort((a,b) => b.daysInWorkshop - a.daysInWorkshop).map(eq => `
+              ${workshopData.sort((a,b) => b.daysInStage - a.daysInStage).map(eq => `
                 <tr style="border-bottom:1px solid var(--border-hover);">
                   <td style="padding:12px;"><strong>${eq.codigo || eq.nome}</strong></td>
                   <td style="padding:12px;">${eq.tipo || '-'}</td>
                   <td style="padding:12px;">
                     <span class="badge ${eq.isCurrent ? 'badge-warning' : 'badge-success'}" style="${eq.isCurrent ? 'background:rgba(239,68,68,0.1);color:var(--color-danger);border-color:rgba(239,68,68,0.2);' : 'background:rgba(34,197,94,0.1);color:var(--color-success);border-color:rgba(34,197,94,0.2);'}">
-                      ${eq.status || '-'}
+                      ${eq.etapa !== 'Nenhuma' ? eq.etapa : (eq.status || '-')}
                     </span>
                   </td>
                   <td style="padding:12px;">${eq.dataEntrada ? new Date(eq.dataEntrada).toLocaleDateString('pt-BR') : '-'}</td>
-                  <td style="padding:12px;"><strong>${eq.daysInWorkshop} dias</strong></td>
+                  <td style="padding:12px;"><strong>${eq.daysInStage} dias</strong> em ${eq.etapa}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -911,7 +917,7 @@ window.EquipmentModule = (() => {
           </select>
         </div>
       </div>
-      <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
+      <div class="form-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
         <div class="form-group">
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
@@ -927,12 +933,7 @@ window.EquipmentModule = (() => {
           </div>` : ''}
         </div>
         <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoReal)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="eq-status" class="form-control">
-            ${['Nenhuma', 'Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </div>
+        <!-- Campo Status removido; agora é derivado da Etapa Atual -->
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
@@ -1023,7 +1024,16 @@ window.EquipmentModule = (() => {
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
       dataLiberacaoReal: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
-      status: document.getElementById('eq-status').value,
+      status: (() => {
+        let e = document.getElementById('eq-etapa-atual').value;
+        if (e === 'Nenhuma') return 'Nenhuma';
+        if (e === 'Falta de mão de obra') return 'Falta de Mão de Obra';
+        if (e === 'Falta de peças') return 'Falta de Peças';
+        if (e === 'Paralisada') return 'Paralisado';
+        if (e === 'Backlog') return 'Backlog';
+        if (e === 'Liberada') return 'Liberado';
+        return 'Em Manutenção';
+      })(),
       etapaAtual: document.getElementById('eq-etapa-atual').value,
       pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
       prioridade: document.getElementById('eq-prioridade').value,
