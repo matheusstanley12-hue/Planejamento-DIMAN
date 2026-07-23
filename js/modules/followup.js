@@ -18,7 +18,7 @@ window.FollowupModule = (() => {
   }
 
   function getInitialMeetingDate() {
-    const tasks = window.DB && window.DB.followupTasks ? window.DB.followupTasks.getAll() : [];
+    const tasks = window.DB && window.DB.followupTasks ? window.DB.followupTasks.list() : [];
     if (tasks.length > 0) {
       const sortedDates = [...new Set(tasks.map(t => t.meetingDate))].sort((a, b) => b.localeCompare(a));
       if (sortedDates.length > 0) return sortedDates[0];
