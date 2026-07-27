@@ -290,9 +290,18 @@ window.Auth = (() => {
            s.nome = s.nome.replace(/Administrador/gi, 'Desenvolvedor');
            changed = true;
         }
-        if (s.matricula === '013429' && !s.isPro) {
+        if (s.perfil === 'Desenvolvedor PRO') {
+           s.perfil = 'Desenvolvedor';
            s.isPro = true;
            changed = true;
+        }
+        if (s.matricula === '013429') {
+           if (!s.isPro || s.perfil !== 'Desenvolvedor') {
+               s.isPro = true;
+               s.perfil = 'Desenvolvedor';
+               s.cargo = 'Desenvolvedor do Sistema';
+               changed = true;
+           }
         }
         
         if (changed) {
