@@ -124,7 +124,9 @@ window.FollowupModule = (() => {
     // Sort: Pending first, then by urgency
     const prioWeight = { 'Urgente': 4, 'Alta': 3, 'Média': 2, 'Baixa': 1 };
     tasks.sort((a,b) => {
-      if (a.status !== b.status) return a.status === 'Pendente' ? -1 : 1;
+      const aConcluida = a.status === 'Concluída' ? 1 : 0;
+      const bConcluida = b.status === 'Concluída' ? 1 : 0;
+      if (aConcluida !== bConcluida) return aConcluida - bConcluida;
       return prioWeight[b.priority] - prioWeight[a.priority];
     });
 
@@ -323,7 +325,9 @@ window.FollowupModule = (() => {
     const tasks = DB.followupTasks.list().filter(t => t.meetingDate === selectedMeetingDate);
     const prioWeight = { 'Urgente': 4, 'Alta': 3, 'Média': 2, 'Baixa': 1 };
     tasks.sort((a,b) => {
-      if (a.status !== b.status) return a.status === 'Pendente' ? -1 : 1;
+      const aConcluida = a.status === 'Concluída' ? 1 : 0;
+      const bConcluida = b.status === 'Concluída' ? 1 : 0;
+      if (aConcluida !== bConcluida) return aConcluida - bConcluida;
       return prioWeight[b.priority] - prioWeight[a.priority];
     });
 
