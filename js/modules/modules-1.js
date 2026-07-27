@@ -116,7 +116,9 @@ window.Dashboard = (() => {
           const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
           const mP = Array(12).fill(0), mR = Array(12).fill(0);
           eqs.forEach(e => {
-            if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+            let dtPlan = e.dataLiberacaoPlanejada;
+            if (e.replanning && e.replanning.length > 0) dtPlan = e.replanning[e.replanning.length - 1].novaData;
+            if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) { const m = parseInt((e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
           });
           const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);

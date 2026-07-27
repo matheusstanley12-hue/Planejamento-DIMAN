@@ -311,8 +311,12 @@ window.WorkshopModule = (() => {
             if (tipo !== sector.name) return;
           }
 
-          if(e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentYear)) { 
-              const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); 
+          let dtPlan = e.dataLiberacaoPlanejada;
+          if (e.replanning && e.replanning.length > 0) {
+            dtPlan = e.replanning[e.replanning.length - 1].novaData;
+          }
+          if(dtPlan && dtPlan.startsWith(currentYear)) { 
+              const m = parseInt(dtPlan.split('-')[1],10); 
               if(m>=1&&m<=12) { mP[m-1]++; eqListP[m-1].push(e); } 
           }
           if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) {
