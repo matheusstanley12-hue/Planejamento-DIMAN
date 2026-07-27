@@ -119,7 +119,10 @@ window.Dashboard = (() => {
             let dtPlan = e.dataLiberacaoPlanejada;
             if (e.replanning && e.replanning.length > 0) dtPlan = e.replanning[e.replanning.length - 1].novaData;
             if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-            if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) { const m = parseInt((e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+            if(e.status==='Liberado') {
+              const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+              if(dt) { const m = parseInt(dt.split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+            }
           });
           const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
 

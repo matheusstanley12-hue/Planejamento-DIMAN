@@ -14,15 +14,15 @@ window.ReleasedModule = (() => {
     
     // Sort by most recent release date first
     eqs.sort((a,b) => {
-        const da = a.dataRealLiberacao || a.dataLiberacaoAtual || a.dataLiberacaoReal || '';
-        const db = b.dataRealLiberacao || b.dataLiberacaoAtual || b.dataLiberacaoReal || '';
+        const da = a.dataLiberacaoReal || a.dataRealLiberacao || a.dataFim || (a._statusUpdatedAt ? a._statusUpdatedAt.slice(0,10) : a.dataLiberacaoAtual) || '';
+        const db = b.dataLiberacaoReal || b.dataRealLiberacao || b.dataFim || (b._statusUpdatedAt ? b._statusUpdatedAt.slice(0,10) : b.dataLiberacaoAtual) || '';
         return db.localeCompare(da);
     });
 
     // Extract unique months for the dropdown
     const monthsSet = new Set();
     eqs.forEach(e => {
-        const d = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual;
+        const d = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
         if (d) {
             monthsSet.add(d.substring(0, 7)); // YYYY-MM
         }
@@ -33,7 +33,7 @@ window.ReleasedModule = (() => {
     
     if (selectedMonth && selectedMonth !== 'all') {
         eqs = eqs.filter(e => {
-            const date = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || '';
+            const date = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual) || '';
             return date.startsWith(selectedMonth);
         });
     }

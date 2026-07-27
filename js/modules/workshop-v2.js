@@ -319,9 +319,9 @@ window.WorkshopModule = (() => {
               const m = parseInt(dtPlan.split('-')[1],10); 
               if(m>=1&&m<=12) { mP[m-1]++; eqListP[m-1].push(e); } 
           }
-          if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) {
-              const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual;
-              if (dt.startsWith(currentYear)) {
+          if(e.status==='Liberado') {
+              const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+              if (dt && dt.startsWith(currentYear)) {
                   const m = parseInt(dt.split('-')[1],10); 
                   if(m>=1&&m<=12) { mR[m-1]++; eqListR[m-1].push(e); } 
               }
