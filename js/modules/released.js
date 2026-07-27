@@ -1,5 +1,5 @@
 window.ReleasedModule = (() => {
-  let selectedMonth = 'all';
+  let selectedMonth = new Date().toISOString().slice(0, 7);
 
   function filter(val) {
     selectedMonth = val;
@@ -21,6 +21,7 @@ window.ReleasedModule = (() => {
 
     // Extract unique months for the dropdown
     const monthsSet = new Set();
+    monthsSet.add(new Date().toISOString().slice(0, 7)); // Always include current month
     eqs.forEach(e => {
         const d = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
         if (d) {
@@ -65,7 +66,7 @@ window.ReleasedModule = (() => {
           <div style="display:flex; align-items:center; gap:var(--space-2);">
             <div style="position: relative; width: 220px; background: var(--bg-card, #fff); border-radius: 8px; border: 1px solid var(--border-card, #e2e8f0);">
               <select class="input" style="width:100%; padding-left: 36px; padding-top: 8px; padding-bottom: 8px; font-weight: 600; font-size: 0.9rem; border: none; background-color: transparent; color: var(--text-primary); cursor: pointer; appearance: none;" onchange="window.ReleasedModule.filter(this.value)">
-                  <option value="all">Todos os meses</option>
+                  <option value="all" ${selectedMonth === 'all' ? 'selected' : ''}>Todos os meses</option>
                   ${monthOptions}
               </select>
               <div style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
