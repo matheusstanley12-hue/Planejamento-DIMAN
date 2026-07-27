@@ -926,7 +926,7 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
-            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${canEditPlan ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} />
+            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${(canEditPlan && !(eq && eq.replanning && eq.replanning.length > 0)) ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} title="${(eq && eq.replanning && eq.replanning.length > 0) ? 'Esta é a data base original. Para mudar a data atual, clique em Replanejar.' : ''}" />
             ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
           ${eq && eq.replanning && eq.replanning.length > 0 ? `
