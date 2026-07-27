@@ -66,7 +66,7 @@ window.ChecklistsModule = (() => {
         });
       }
       
-      window.DB.equipment.save(eq);
+      window.DB.equipment.update(eq.id, eq);
       window.Toast && Toast.success(files.length > 1 ? `${files.length} arquivos anexados!` : 'Arquivo anexado com sucesso!');
       Router.navigate('checklists', { force: true });
     };
@@ -81,7 +81,7 @@ window.ChecklistsModule = (() => {
       if (!res) return;
       if (eq.checklists && eq.checklists[currentTab]) {
         eq.checklists[currentTab] = eq.checklists[currentTab].filter(f => f.id !== id);
-        window.DB.equipment.save(eq);
+        window.DB.equipment.update(eq.id, eq);
       }
       window.Toast && Toast.success('Anexo removido.');
       Router.navigate('checklists', { force: true });
