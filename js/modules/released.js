@@ -7,8 +7,9 @@ window.ReleasedModule = (() => {
   }
 
   function render() {
-    const session = localStorage.getItem('diman_session') ? JSON.parse(localStorage.getItem('diman_session')) : null;
-    const canEdit = session && ['Desenvolvedor', 'Cordenador', 'Coordenador', 'Supervisor', 'Planejador', 'Planejamento'].includes(session.perfil);
+    const session = window.Auth ? window.Auth.getSession() : (sessionStorage.getItem('diman_session') ? JSON.parse(sessionStorage.getItem('diman_session')) : null);
+    const perfil = session && session.perfil ? session.perfil.trim().toLowerCase() : '';
+    const canEdit = ['desenvolvedor', 'cordenador', 'coordenador', 'supervisor', 'planejador', 'planejamento', 'gerente', 'encarregado', 'lider', 'líder'].includes(perfil);
     let eqs = DB.equipment.list().filter(e => e.status === 'Liberado');
     
     // Sort by most recent release date first
@@ -21,7 +22,7 @@ window.ReleasedModule = (() => {
     // Extract unique months for the dropdown
     const monthsSet = new Set();
     eqs.forEach(e => {
-        const d = e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal;
+        const d = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual;
         if (d) {
             monthsSet.add(d.substring(0, 7)); // YYYY-MM
         }
@@ -32,7 +33,7 @@ window.ReleasedModule = (() => {
     
     if (selectedMonth && selectedMonth !== 'all') {
         eqs = eqs.filter(e => {
-            const date = e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal || '';
+            const date = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || '';
             return date.startsWith(selectedMonth);
         });
     }
@@ -43,6 +44,15 @@ window.ReleasedModule = (() => {
     }).join('');
 
     return `
+      <style>
+        .btn-premium-edit {
+           background: rgba(59,130,246,0.05); border: 1px solid transparent; color: var(--text-muted); width: 28px; height: 28px;
+           display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer;
+           transition: all 0.2s;
+        }
+        .btn-premium-edit:hover { background: rgba(59,130,246,0.15); color: var(--brand-primary); }
+        .btn-premium-edit svg { width: 16px; height: 16px; }
+      </style>
       <div class="page-container" style="animation: fadeIn 0.3s ease;">
         <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
           <div class="section-title">
@@ -149,7 +159,7 @@ window.ReleasedModule = (() => {
                         </div>
                         <div>
                           <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">Data Real</strong>
-                          <span style="color:var(--color-success);font-weight:600;">${(e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal) ? window.formatDate(e.dataRealLiberacao || e.dataLiberacaoAtual || e.dataLiberacaoReal) : '-'}</span>
+                          <span style="color:var(--color-success);font-weight:600;">${(e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual) ? window.formatDate(e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual) : '-'}</span>
                         </div>
                       </div>
                     </div>

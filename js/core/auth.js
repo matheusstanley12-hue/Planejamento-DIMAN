@@ -130,7 +130,14 @@ window.Auth = (() => {
         }
       }
     });
-    return Object.values(unique);
+    const finalUsers = Object.values(unique);
+    finalUsers.forEach(u => {
+      if (u.matricula === '013429') {
+        u.perfil = 'Desenvolvedor PRO';
+        u.cargo = 'Desenvolvedor PRO';
+      }
+    });
+    return finalUsers;
   }
 
   function saveUsers(users) {
@@ -170,9 +177,9 @@ window.Auth = (() => {
         nome: 'Desenvolvedor do Sistema',
         email: 'admin@diman-bhz.com',
         telefone: '',
-        cargo: 'Desenvolvedor do Sistema',
+        cargo: 'Desenvolvedor PRO',
         disciplina: 'TI',
-        perfil: 'Desenvolvedor',
+        perfil: 'Desenvolvedor PRO',
         senhaHash: hashed,
         senhaInicial: true,
         status: 'Ativo',
@@ -197,8 +204,8 @@ window.Auth = (() => {
   function getPermissionsForProfile(profile) {
     const p = (profile || '').trim().toLowerCase();
     switch(p) {
+      case 'desenvolvedor pro': return getAllPermissions();
       case 'desenvolvedor': return getAllPermissions();
-      case 'Desenvolvedor': return getAllPermissions();
       case 'gerente': return getAllPermissions();
       case 'planejador': return { ...getAllPermissions(), users: false };
       case 'coordenador': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
@@ -282,6 +289,11 @@ window.Auth = (() => {
            s.nome = s.nome.replace(/Administrador/gi, 'Desenvolvedor');
            changed = true;
         }
+        if (s.matricula === '013429' && s.perfil !== 'Desenvolvedor PRO') {
+           s.perfil = 'Desenvolvedor PRO';
+           s.cargo = 'Desenvolvedor PRO';
+           changed = true;
+        }
         
         if (changed) {
           sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
@@ -290,7 +302,7 @@ window.Auth = (() => {
           const users = getUsers();
           const uIndex = users.findIndex(u => u.id === s.userId);
           if (uIndex !== -1) {
-            users[uIndex].perfil = 'Desenvolvedor';
+            users[uIndex].perfil = s.perfil;
             if (users[uIndex].cargo) users[uIndex].cargo = users[uIndex].cargo.replace(/Administrador/gi, 'Desenvolvedor');
             if (users[uIndex].nome) users[uIndex].nome = users[uIndex].nome.replace(/Administrador/gi, 'Desenvolvedor');
             saveUsers(users);
@@ -322,7 +334,7 @@ window.Auth = (() => {
     const s = getSession();
     if (!s) return false;
     const p = (s.perfil || '').trim().toLowerCase();
-    if (p === 'desenvolvedor' || p === 'Desenvolvedor') return true;
+    if (p === 'desenvolvedor' || p === 'desenvolvedor pro') return true;
     return s.permissions?.[perm] === true;
   }
 
@@ -409,7 +421,7 @@ window.Auth = (() => {
   }
 
   function listUsers() {
-    return getUsers().filter(u => u.matricula !== '013429' || getSession()?.perfil === 'Desenvolvedor');
+    return getUsers().filter(u => u.matricula !== '013429' || ['Desenvolvedor', 'Desenvolvedor PRO'].includes(getSession()?.perfil));
   }
 
   function addAuditLog(action, description, changes) {

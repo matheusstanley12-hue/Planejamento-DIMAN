@@ -25,8 +25,8 @@ const aggregateCategory = (categoryKey, monthPrefix) => {
       const idx = months.indexOf(m);
       if (idx !== -1) planned[idx]++;
     }
-    if (eq.status === 'Liberado' && (eq.dataLiberacaoAtual || eq.dataFim)) {
-      const m = (eq.dataLiberacaoAtual || eq.dataFim).slice(0, 7);
+    if (eq.status === 'Liberado' && (eq.dataLiberacaoReal || eq.dataRealLiberacao || eq.dataFim || eq.dataLiberacaoAtual)) {
+      const m = (eq.dataLiberacaoReal || eq.dataRealLiberacao || eq.dataFim || eq.dataLiberacaoAtual).slice(0, 7);
       const idx = months.indexOf(m);
       if (idx !== -1) realized[idx]++;
     }
@@ -51,7 +51,7 @@ const getAnnualStats = (yearPrefix) => {
   let planned = 0, realized = 0;
   equipment.forEach(eq => {
     if (eq.dataLiberacaoPlanejada && eq.dataLiberacaoPlanejada.slice(0, 4) === yearPrefix.slice(0,4)) planned++;
-    if (eq.status === 'Liberado' && (eq.dataLiberacaoAtual || eq.dataFim) && (eq.dataLiberacaoAtual || eq.dataFim).slice(0,4) === yearPrefix.slice(0,4)) realized++;
+    if (eq.status === 'Liberado' && (eq.dataLiberacaoReal || eq.dataRealLiberacao || eq.dataFim || eq.dataLiberacaoAtual) && (eq.dataLiberacaoReal || eq.dataRealLiberacao || eq.dataFim || eq.dataLiberacaoAtual).slice(0,4) === yearPrefix.slice(0,4)) realized++;
   });
   return { planned, realized };
 };

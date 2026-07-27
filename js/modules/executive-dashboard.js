@@ -43,7 +43,7 @@ window.ExecutiveDashboard = (() => {
     
     // Planejado vs Realizado (Current Month)
     const libPlanejadasMes = eqs.filter(e => isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
-    const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
+    const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && isMonth(e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
     
     const aderencia = libPlanejadasMes > 0 ? Math.round((libRealizadasMes / libPlanejadasMes) * 100) : 0;
     const avancoGeral = Math.round(stats.pctAvancoGeral || 0);
@@ -202,7 +202,7 @@ window.ExecutiveDashboard = (() => {
           else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
           else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
           else if (tipoLower === 'compressor' || tipoLower === 'compressores') tipo = 'Compressor';
-          return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoAtual || e.dataRealLiberacao || e.dataLiberacaoReal || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
+          return tipo === cat && e.status === 'Liberado' && isMonth(e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix);
       }).length;
 
       const pct = p > 0 ? Math.round((r/p)*100) : 0;
@@ -265,7 +265,7 @@ window.ExecutiveDashboard = (() => {
       const mP = Array(12).fill(0), mR = Array(12).fill(0);
       eqs.forEach(e => {
         if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-        if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+        if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) { const m = parseInt((e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
       });
       const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
       

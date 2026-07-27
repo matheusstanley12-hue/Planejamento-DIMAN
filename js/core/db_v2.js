@@ -31,7 +31,8 @@ window.DB = (() => {
     manualFolders: 'diman_manual_folders',
     meetingTasks: 'diman_meeting_tasks',
     followupTasks: 'diman_followup_tasks',
-    vacations: 'diman_vacations'
+    vacations: 'diman_vacations',
+    assets: 'diman_assets'
   };
 
   window.GlobalEqFilter = '';
@@ -1352,6 +1353,13 @@ window.DB = (() => {
     delete: (id) => { const m = get(KEYS.vacations); set(KEYS.vacations, m.filter(r => r && r.id !== id)); }
   };
 
+  const assets = {
+    list: () => get(KEYS.assets),
+    add: (data) => { const a = get(KEYS.assets); a.push({ ...data, createdAt: now() }); set(KEYS.assets, a); },
+    update: (id, updates) => { let a = get(KEYS.assets); const i = a.findIndex(r => r && r.id === id); if (i !== -1) { a[i] = { ...a[i], ...updates, updatedAt: now() }; set(KEYS.assets, a); } },
+    delete: (id) => { const a = get(KEYS.assets); set(KEYS.assets, a.filter(r => r && r.id !== id)); }
+  };
+
   // Auto-refresh engine (Polling)
   setInterval(() => {
      if (window.DB && window.DB.initSupabase && localStorage.getItem('diman_unsynced') !== 'true') {
@@ -1360,7 +1368,7 @@ window.DB = (() => {
   }, 15000);
 
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, assets, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);

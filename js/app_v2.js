@@ -661,6 +661,7 @@ function renderShell(session) {
     { route:'tasks',      label:'Tarefas',               icon:'clipboard-list', perm:'tasks',       section:'PLANEJAMENTO' },
     { route:'services',   label:'Solicitação de Serviço', icon:'clipboard-document-check', perm:'dashboard', section:'' },
     { route:'equipment',  label:'Equipamentos',          icon:'wrench-screwdriver', perm:'equipment', section:'' },
+    { route:'assets',     label:'Bens',                  icon:'cog-6-tooth',        perm:'equipment', section:'' },
     { route:'released',   label:'Equip. Liberados',      icon:'check-circle',   perm:'dashboard',   section:'' },
     { route:'parts',      label:'Falta de Peças',        icon:'cube',           perm:'parts',       section:'' },
     { route:'planning',   label:'Planejamento',          icon:'calendar',       perm:'planning',    section:'' },
@@ -747,10 +748,22 @@ function renderShell(session) {
       if (perfil !== 'Executante') return false;
     }
 
-    if (perfil === 'Desenvolvedor' || perfil === 'Desenvolvedor' || perfil === 'Gerente') return true;
+    if (perfil === 'Desenvolvedor PRO') return true;
+    
+    if (perfil === 'Desenvolvedor' || perfil === 'Gerente') {
+      if (route === 'assets') return false;
+      return true;
+    }
+    
     const allowed = roleAccess[perfil];
     if (!allowed) return false;
-    if (allowed.includes('*')) return true;
+    if (allowed.includes('*')) {
+      if (route === 'assets') return false;
+      return true;
+    }
+    
+    if (route === 'assets') return false;
+    
     return allowed.includes(route);
   };
 
@@ -991,6 +1004,7 @@ function renderShell(session) {
   }
   // Removido fallback antigo do dashboard
   if (typeof EquipmentModule !== 'undefined') Router.register('equipment', () => EquipmentModule.render());
+  if (typeof AssetsModule !== 'undefined') Router.register('assets', () => AssetsModule.render());
   if (typeof ReleasedModule !== 'undefined') Router.register('equipment-released', () => ReleasedModule.render());
   if (typeof TasksModule !== 'undefined') Router.register('tasks', () => TasksModule.render());
   if (typeof TasksOngoingModule !== 'undefined') Router.register('tasks-ongoing', () => TasksOngoingModule.render());

@@ -117,7 +117,7 @@ window.Dashboard = (() => {
           const mP = Array(12).fill(0), mR = Array(12).fill(0);
           eqs.forEach(e => {
             if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-            if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+            if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) { const m = parseInt((e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
           });
           const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
 
@@ -204,7 +204,7 @@ window.Dashboard = (() => {
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
              else if (t === 'Compressores') t = 'Compressor';
-             return t === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix);
+             return t === c && e.status === 'Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || '').startsWith(currentMonthPrefix);
           }).length);
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
@@ -786,6 +786,7 @@ window.EquipmentModule = (() => {
             <div><label>Status</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${statusBadge(eq.status)}</div></div>
             <div><label>Avanço</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:800;font-size:var(--text-xl);color:var(--brand-primary-light)">${eq.pctAvanco||0}%</div></div>
             <div><label>Cliente</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.cliente||'—'}</div></div>
+            <div><label>Bem Vinculado</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.bem||'—'}</div></div>
             <div><label>Entrada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${formatDate(eq.dataEntrada)}</div></div>
             <div><label>Data Planejada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:700;">${formatDate(eq.dataLiberacaoPlanejada)}</div></div>
             <div style="grid-column:1/-1;"><label>Observações</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.observacoes||'—'}</div></div>
@@ -886,10 +887,14 @@ window.EquipmentModule = (() => {
 
     const session = window.Auth ? window.Auth.getSession() : null;
     const canEditPlan = !eq || (session && ['Desenvolvedor', 'Planejador'].includes(session.perfil));
+    const assetsList = window.DB && window.DB.assets ? window.DB.assets.list() : [];
+    const datalistHTML = `<datalist id="assets-datalist">${assetsList.map(a => `<option value="${a.codigo}">`).join('')}</datalist>`;
 
     return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
-      <div class="form-row">
+      ${datalistHTML}
+      <div class="form-row cols-3">
         <div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
+        <div class="form-group"><label>Bem Vinculado</label><input id="eq-bem" value="${eq?.bem||''}" placeholder="Ex: BEM-01" list="assets-datalist" autocomplete="off" /></div>
         <div class="form-group"><label>O.S. *</label><input id="eq-os" value="${eq?.os||''}" placeholder="Ordem de Serviço" required /></div>
       </div>
       <div class="form-row">
@@ -1012,6 +1017,7 @@ window.EquipmentModule = (() => {
     const data = {
       dataLiberacaoAtual: computedLiberacaoAtual,
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
+      bem: document.getElementById('eq-bem') ? document.getElementById('eq-bem').value.trim().toUpperCase() : '',
       nome: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       os: document.getElementById('eq-os').value.trim(),
       cliente: document.getElementById('eq-cliente').value.trim(),
@@ -1130,11 +1136,7 @@ window.EquipmentModule = (() => {
     }
     closeModal('modal-equipment');
     const currentRoute = Router.getCurrent();
-    if (currentRoute === 'home') {
-      Router.navigate('home', { force: true });
-    } else {
-      Router.navigate('equipment', { force: true });
-    }
+    Router.navigate(currentRoute || 'equipment', { force: true });
   }
 
   function addReplanning(eqId) {
