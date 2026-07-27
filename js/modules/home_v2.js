@@ -201,7 +201,7 @@ window.HomeModule = (() => {
           
           <div class="premium-footer">
             <div style="display:flex;align-items:center;gap:6px;">
-              ${iconDate} Prev. ${dtPrev ? formatDate(dtPrev).substring(0,5) : '—'}
+              ${iconDate} <span style="${(e.replanning && e.replanning.length > 0) ? 'color:#b45309;font-weight:600;' : ''}">${(e.replanning && e.replanning.length > 0) ? 'Replan.' : 'Prev.'}</span> ${dtPrev ? formatDate(dtPrev).substring(0,5) : '—'}
             </div>
             <div>
               ${desvioStr}

@@ -1141,7 +1141,7 @@ window.EquipmentModule = (() => {
 
   function addReplanning(eqId) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (!session || (!session.isPro && !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil))) {
       Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
       return;
     }
@@ -1167,7 +1167,7 @@ window.EquipmentModule = (() => {
 
   function saveReplanning(eqId, btn) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (!session || (!session.isPro && !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil))) {
       Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
       return;
     }
