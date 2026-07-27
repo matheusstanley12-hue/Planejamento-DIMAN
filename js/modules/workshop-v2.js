@@ -164,7 +164,7 @@ window.WorkshopModule = (() => {
     const todayStr = new Date().toISOString().slice(0,10);
     
     const eqs = rawEqs.map(eq => {
-      const isCurrent = ['Em Manutenção', 'Aguardando Manutenção', 'Backlog'].includes(eq.status);
+      const isCurrent = eq.status !== 'Liberado' && eq.status !== 'Operando';
       let daysInWorkshop = 0;
       if (eq.dataEntrada) {
         if (isCurrent || !eq.dataLiberacaoAtual) {

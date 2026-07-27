@@ -354,7 +354,7 @@ window.WorkshopModule = (() => {
     const eqs = window.DB.equipment.list();
     const workshopData = eqs.map(eq => {
       let status = eq.status || '';
-      let isCurrent = (status === 'Em Manutenção' || status === 'Aguardando Manutenção' || status === 'Backlog');
+      let isCurrent = eq.status !== 'Liberado' && eq.status !== 'Operando';
       let days = 0;
       if (eq.dataEntrada) {
         if (isCurrent || !eq.dataLiberacaoAtual) {
@@ -423,7 +423,7 @@ window.WorkshopModule = (() => {
     const eqs = window.DB.equipment.list();
     const workshopData = eqs.map(eq => {
       let status = eq.status || '';
-      let isCurrent = (status === 'Em Manutenção' || status === 'Aguardando Manutenção' || status === 'Backlog');
+      let isCurrent = eq.status !== 'Liberado' && eq.status !== 'Operando';
       let days = 0;
       if (eq.dataEntrada) {
         if (isCurrent || !eq.dataLiberacaoAtual) {
