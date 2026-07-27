@@ -1357,8 +1357,8 @@ window.MeetingMode = (() => {
         </div>
       </div>
 
-      <!-- 4-panel grid -->
-      <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:16px;overflow:hidden;">
+      <!-- 3-panel grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px;overflow:hidden;">
         
         <!-- Column 1: Em Manutenção -->
         <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
@@ -1416,29 +1416,6 @@ window.MeetingMode = (() => {
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
-          </div>
-        </div>
-
-        <!-- Column 3: Top Executantes -->
-        <div style="background:#0A1929;border:1px solid rgba(156,39,176,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:10px;background:rgba(156,39,176,.1);border-bottom:1px solid rgba(156,39,176,.2);">
-            <h2 style="margin:0;color:#BA68C8;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              🚀 Top Executantes
-            </h2>
-          </div>
-          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-            ${topPerformers.length > 0 ? topPerformers.map((t, idx) => {
-              const emojis = ['🏆 1º', '🥈 2º', '🥉 3º', '🏅 4º', '🏅 5º'];
-              return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #AB47BC;padding:10px;border-radius:6px;display:flex;align-items:center;gap:12px;">
-                  <div style="font-size:1.5rem;">${emojis[idx] || '🏅'}</div>
-                  <div style="flex:1;">
-                    <div style="font-weight:800;color:white;font-size:1rem;margin-bottom:2px;">${t.nome}</div>
-                    <div style="color:#CE93D8;font-weight:700;font-size:0.85rem;"><span style="color:white;font-weight:900;">${t.count}</span> tarefas executadas</div>
-                  </div>
-                </div>
-              `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum dado de execução</div>'}
           </div>
         </div>
 
