@@ -742,7 +742,7 @@ function renderShell(session) {
     if (!session) return false;
     const perfil = session.perfil || '';
     
-    if (perfil === 'Desenvolvedor PRO') return true;
+    if (session.isPro) return true;
     
     // STRICT RULE: Only Executante can see worker- routes
     const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'];

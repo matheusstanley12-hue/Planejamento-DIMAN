@@ -133,8 +133,9 @@ window.Auth = (() => {
     const finalUsers = Object.values(unique);
     finalUsers.forEach(u => {
       if (u.matricula === '013429') {
-        u.perfil = 'Desenvolvedor PRO';
-        u.cargo = 'Desenvolvedor PRO';
+        u.perfil = 'Desenvolvedor';
+        u.cargo = 'Desenvolvedor do Sistema';
+        u.isPro = true;
       }
     });
     return finalUsers;
@@ -177,9 +178,9 @@ window.Auth = (() => {
         nome: 'Desenvolvedor do Sistema',
         email: 'admin@diman-bhz.com',
         telefone: '',
-        cargo: 'Desenvolvedor PRO',
+        cargo: 'Desenvolvedor do Sistema',
         disciplina: 'TI',
-        perfil: 'Desenvolvedor PRO',
+        perfil: 'Desenvolvedor',
         senhaHash: hashed,
         senhaInicial: true,
         status: 'Ativo',
@@ -289,9 +290,8 @@ window.Auth = (() => {
            s.nome = s.nome.replace(/Administrador/gi, 'Desenvolvedor');
            changed = true;
         }
-        if (s.matricula === '013429' && s.perfil !== 'Desenvolvedor PRO') {
-           s.perfil = 'Desenvolvedor PRO';
-           s.cargo = 'Desenvolvedor PRO';
+        if (s.matricula === '013429' && !s.isPro) {
+           s.isPro = true;
            changed = true;
         }
         
@@ -421,7 +421,7 @@ window.Auth = (() => {
   }
 
   function listUsers() {
-    return getUsers().filter(u => u.matricula !== '013429' || ['Desenvolvedor', 'Desenvolvedor PRO'].includes(getSession()?.perfil));
+    return getUsers().filter(u => u.matricula !== '013429' || getSession()?.isPro || getSession()?.perfil === 'Desenvolvedor');
   }
 
   function addAuditLog(action, description, changes) {
