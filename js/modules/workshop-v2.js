@@ -311,15 +311,23 @@ window.WorkshopModule = (() => {
             if (tipo !== sector.name) return;
           }
 
+          if (e.status === 'Cancelado' || e.status === 'Excluído') return;
+          
           let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+          const dtReal = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+          
+          if (e.status === 'Liberado' && dtReal) {
+              // Align Plan with Real for delivered items so Plan - Real = Pending perfectly
+              dtPlan = dtReal;
+          }
+
           if(dtPlan && dtPlan.startsWith(currentYear)) { 
               const m = parseInt(dtPlan.split('-')[1],10); 
               if(m>=1&&m<=12) { mP[m-1]++; eqListP[m-1].push(e); } 
           }
           if(e.status==='Liberado') {
-              const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
-              if (dt && dt.startsWith(currentYear)) {
-                  const m = parseInt(dt.split('-')[1],10); 
+              if (dtReal && dtReal.startsWith(currentYear)) {
+                  const m = parseInt(dtReal.split('-')[1],10); 
                   if(m>=1&&m<=12) { mR[m-1]++; eqListR[m-1].push(e); } 
               }
           }

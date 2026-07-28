@@ -116,7 +116,15 @@ window.Dashboard = (() => {
           const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
           const mP = Array(12).fill(0), mR = Array(12).fill(0);
           eqs.forEach(e => {
+            if (e.status === 'Cancelado' || e.status === 'Excluído') return;
+            
             let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+            const dtReal = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+            
+            if (e.status === 'Liberado' && dtReal) {
+                dtPlan = dtReal;
+            }
+            
             if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado') {
               const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);

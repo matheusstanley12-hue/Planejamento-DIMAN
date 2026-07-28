@@ -265,9 +265,17 @@ window.ExecutiveDashboard = (() => {
       const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const mP = Array(12).fill(0), mR = Array(12).fill(0);
       eqs.forEach(e => {
-        const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+        if (e.status === 'Cancelado' || e.status === 'Excluído') return;
+        
+        let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+        const dtReal = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+        
+        if (e.status === 'Liberado' && dtReal) {
+            dtPlan = dtReal;
+        }
+        
         if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-        if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) { const m = parseInt((e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+        if(e.status==='Liberado' && dtReal) { const m = parseInt(dtReal.split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
       });
       const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
       
