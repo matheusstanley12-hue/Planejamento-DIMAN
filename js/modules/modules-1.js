@@ -377,7 +377,7 @@ window.WorkshopModule = (() => {
       return { ...eq, daysInWorkshop: days, isCurrent, daysInStage, etapa };
     }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada && eq.etapa !== 'Liberada');
 
-    const currentInWorkshop = workshopData.filter(e => e.isCurrent).sort((a, b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
+    const currentInWorkshop = workshopData.filter(e => e.isCurrent).sort((a, b) => b.daysInWorkshop - a.daysInWorkshop);
     const categories = {};
     workshopData.forEach(e => {
       const cat = e.tipo || 'Outros';
@@ -390,6 +390,9 @@ window.WorkshopModule = (() => {
 
     const ctxTop = document.getElementById('chart-top-10');
     if (ctxTop && currentInWorkshop.length > 0) {
+      const calcHeightTop = Math.max(300, currentInWorkshop.length * 35);
+      ctxTop.parentElement.style.height = calcHeightTop + 'px';
+      ctxTop.parentElement.parentElement.style.height = 'auto';
       charts.push(new Chart(ctxTop, {
         type: 'bar',
         data: {
@@ -448,9 +451,9 @@ window.WorkshopModule = (() => {
 
     let tabContent = `
       <div class="charts-grid">
-        <div class="chart-card">
-          <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Top 10 Maior Tempo (Atuais na Oficina)</h3>
-          <div style="position:relative;height:300px;width:100%;"><canvas id="chart-top-10"></canvas></div>
+        <div class="chart-card" style="height: auto; min-height: 350px;">
+          <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Maior Tempo (Todos)</h3>
+          <div style="position:relative;height:300px;width:100%;overflow-y:hidden;"><canvas id="chart-top-10"></canvas></div>
         </div>
         <div class="chart-card">
           <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Tempo Médio por Categoria (Dias)</h3>

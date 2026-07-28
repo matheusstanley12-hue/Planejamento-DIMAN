@@ -451,18 +451,22 @@ window.WorkshopModule = (() => {
     // Configuração global para textos de gráficos herdarem o tema
     Chart.defaults.color = getComputedStyle(document.body).getPropertyValue('--text-muted') || '#718096';
     
-    // Top 10 Maior Tempo na Oficina (Restaurado)
-    const top10 = [...currentEqs].sort((a,b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
+    // Maior Tempo na Oficina (Todos)
+    const allEqsTempo = [...currentEqs].sort((a,b) => b.daysInWorkshop - a.daysInWorkshop);
     const ctxTop = document.getElementById('ws-chart-top');
-    if (ctxTop && top10.length > 0) {
+    if (ctxTop && allEqsTempo.length > 0) {
+      const containerTop = ctxTop.parentElement;
+      const calcHeightTop = Math.max(280, allEqsTempo.length * 40);
+      containerTop.style.height = calcHeightTop + 'px';
+
       charts.push(new Chart(ctxTop, {
         type: 'bar',
         data: {
-          labels: top10.map(e => e.codigo || e.nome),
+          labels: allEqsTempo.map(e => e.codigo || e.nome),
           datasets: [{
             label: 'Dias',
-            data: top10.map(e => e.daysInWorkshop),
-            backgroundColor: top10.map(e => e.daysInWorkshop > 60 ? '#EF4444' : e.daysInWorkshop > 30 ? '#F59E0B' : '#10B981'),
+            data: allEqsTempo.map(e => e.daysInWorkshop),
+            backgroundColor: allEqsTempo.map(e => e.daysInWorkshop > 60 ? '#EF4444' : e.daysInWorkshop > 30 ? '#F59E0B' : '#10B981'),
             borderRadius: 4
           }]
         },
@@ -474,7 +478,7 @@ window.WorkshopModule = (() => {
            onClick: (event, elements, chart) => {
               if (elements[0]) {
                  const i = elements[0].index;
-                 window.showEquipmentsModal('Top 10: ' + chart.data.labels[i], [top10[i]]);
+                 window.showEquipmentsModal('Maior Tempo: ' + chart.data.labels[i], [allEqsTempo[i]]);
               }
            }
         }
@@ -907,7 +911,7 @@ window.WorkshopModule = (() => {
          
          <div class="ws-charts-row" style="grid-template-columns: repeat(2, 1fr);">
             <div class="ws-chart-card" style="height: auto; min-height: 340px;">
-               <h3>Top 10 Maior Tempo (Dias)</h3>
+               <h3>Maior Tempo (Todos)</h3>
                <div style="position:relative; height: 280px; width:100%;"><canvas id="ws-chart-top"></canvas></div>
             </div>
             <div class="ws-chart-card" style="height: auto; min-height: 340px;">
