@@ -312,9 +312,6 @@ window.WorkshopModule = (() => {
           }
 
           let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
-          if (e.replanning && e.replanning.length > 0) {
-            dtPlan = e.replanning[e.replanning.length - 1].novaData;
-          }
           if(dtPlan && dtPlan.startsWith(currentYear)) { 
               const m = parseInt(dtPlan.split('-')[1],10); 
               if(m>=1&&m<=12) { mP[m-1]++; eqListP[m-1].push(e); } 

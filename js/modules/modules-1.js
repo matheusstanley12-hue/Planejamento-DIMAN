@@ -116,8 +116,7 @@ window.Dashboard = (() => {
           const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
           const mP = Array(12).fill(0), mR = Array(12).fill(0);
           eqs.forEach(e => {
-            let dtPlan = e.dataLiberacaoPlanejada;
-            if (e.replanning && e.replanning.length > 0) dtPlan = e.replanning[e.replanning.length - 1].novaData;
+            let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
             if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
             if(e.status==='Liberado') {
               const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
@@ -199,7 +198,8 @@ window.Dashboard = (() => {
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
              else if (t === 'Compressores') t = 'Compressor';
-             return t === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix);
+             const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+             return t === c && dtPlan && dtPlan.startsWith(currentMonthPrefix);
           }).length);
           const cR = catsFull.map(c => eqs.filter(e => {
              let t = e.tipo || '';
@@ -588,10 +588,7 @@ window.EquipmentModule = (() => {
                 groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
                   const pct = e.pctAvanco || 0;
                   const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
-                  let ePlan = e.dataLiberacaoPlanejada;
-                  if (e.replanning && e.replanning.length > 0) {
-                    ePlan = e.replanning[e.replanning.length - 1].novaData;
-                  }
+                  let ePlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
                   const days = ePlan ? daysBetween(refDate, ePlan) : null;
                   const isLiberated = e.status === 'Liberado';
                   const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
