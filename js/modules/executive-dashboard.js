@@ -42,7 +42,7 @@ window.ExecutiveDashboard = (() => {
     const emManutencao = eqs.filter(e => e.status === 'Em Manutenção').length;
     
     // Planejado vs Realizado (Current Month)
-    const libPlanejadasMes = eqs.filter(e => isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
+    const libPlanejadasMes = eqs.filter(e => isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada, currentMonthPrefix)).length;
     const libRealizadasMes = eqs.filter(e => e.status === 'Liberado' && isMonth(e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || e.dataLiberacaoPlanejada || e.updatedAt, currentMonthPrefix)).length;
     
     const aderencia = libPlanejadasMes > 0 ? Math.round((libRealizadasMes / libPlanejadasMes) * 100) : 0;
@@ -56,8 +56,9 @@ window.ExecutiveDashboard = (() => {
     // Alerts
     const aguardandoPeca = eqs.filter(e => e.status === 'Aguardando Peça').length;
     const atrasados = eqs.filter(e => {
-       if(!e.dataLiberacaoPlanejada || e.status === 'Liberado') return false;
-       return new Date(e.dataLiberacaoPlanejada) < new Date();
+       const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+       if(!dtPlan || e.status === 'Liberado') return false;
+       return new Date(dtPlan) < new Date();
     });
     
     const criticalHtml = atrasados.slice(0, 3).map(e => `<li><span style="color:var(--color-danger); margin-right:8px;">●</span> ${e.codigo} (${e.cliente || 'Sem Cliente'}) atrasado</li>`).join('');
@@ -96,7 +97,7 @@ window.ExecutiveDashboard = (() => {
         <h2 class="exec-title" style="font-size:18px; margin-bottom:24px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:1px;">Timeline de Fluxo</h2>
         <div class="exec-card" style="margin-bottom:48px;">
           <div class="exec-timeline">
-             ${renderTimelineStep('Planejados', eqs.filter(e => e.dataLiberacaoPlanejada).length, true)}
+             ${renderTimelineStep('Planejados', eqs.filter(e => e.dataLiberacaoAtual || e.dataLiberacaoPlanejada).length, true)}
              ${renderTimelineStep('Atrasados', atrasados.length, atrasados.length > 0)}
              ${renderTimelineStep('Manutenção', emManutencao, emManutencao > 0)}
              ${renderTimelineStep('Aguardando Peça', aguardandoPeca, aguardandoPeca > 0)}
@@ -189,7 +190,7 @@ window.ExecutiveDashboard = (() => {
           else if (tipoLower === 'subconjunto') tipo = 'Subconjuntos';
           else if (tipoLower === 'serviço de almoxarifado' || tipoLower === 'servico de almoxarifado' || tipoLower === 'programação almoxarifado') tipo = 'Programação de almoxarifado';
           else if (tipoLower === 'compressor' || tipoLower === 'compressores') tipo = 'Compressor';
-          return tipo === cat && isMonth(e.dataLiberacaoPlanejada, currentMonthPrefix);
+          return tipo === cat && isMonth(e.dataLiberacaoAtual || e.dataLiberacaoPlanejada, currentMonthPrefix);
       }).length;
       
       const r = eqs.filter(e => {
@@ -236,7 +237,7 @@ window.ExecutiveDashboard = (() => {
         <td style="font-weight:700; color:var(--brand-primary-light);">${e.codigo}</td>
         <td>${e.cliente || '-'}</td>
         <td>${e.responsavel || '-'}</td>
-        <td>${e.dataLiberacaoPlanejada}</td>
+        <td>${e.dataLiberacaoAtual || e.dataLiberacaoPlanejada}</td>
         <td>${e.status}</td>
         <td><span style="background:var(--color-danger-bg); color:var(--color-danger); padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700;">ALTA</span></td>
       </tr>
@@ -264,7 +265,8 @@ window.ExecutiveDashboard = (() => {
       const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
       const mP = Array(12).fill(0), mR = Array(12).fill(0);
       eqs.forEach(e => {
-        if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+        const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+        if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
         if(e.status==='Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual)) { const m = parseInt((e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
       });
       const adrArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);

@@ -311,7 +311,7 @@ window.WorkshopModule = (() => {
             if (tipo !== sector.name) return;
           }
 
-          let dtPlan = e.dataLiberacaoPlanejada;
+          let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
           if (e.replanning && e.replanning.length > 0) {
             dtPlan = e.replanning[e.replanning.length - 1].novaData;
           }
