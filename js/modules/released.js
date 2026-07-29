@@ -144,8 +144,7 @@ window.ReleasedModule = (() => {
                           ` : ''}
                         </div>
                       </div>
-                      
-                      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size:var(--text-xs); color:var(--text-muted); background: var(--bg-body, #f8fafc); padding: 8px; border-radius: 6px; margin-top: 4px;">
+                      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size:var(--text-xs); color:var(--text-muted); background: var(--bg-base); padding: 8px; border-radius: 6px; margin-top: 4px;">
                         <div>
                           <strong style="display:block;color:var(--text-primary);margin-bottom:2px;">Cliente</strong>
                           ${e.cliente || '-'}

@@ -588,7 +588,7 @@ window.DPanel = (() => {
             </div>
             <span style="font-size:var(--text-xs);color:var(--text-muted)">Ranking do Mês (Tarefas Concluídas)</span>
           </div>
-          <div style="padding: 30px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; background: var(--bg-body); border-radius: 8px;">
+          <div style="padding: 30px 20px; text-align: center; color: var(--text-muted); font-size: 0.9rem; background: var(--bg-base); border-radius: 8px;">
             Nenhuma tarefa concluída neste mês ainda.
           </div>
         </div>
