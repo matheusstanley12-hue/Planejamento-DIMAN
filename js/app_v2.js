@@ -742,13 +742,13 @@ function renderShell(session) {
     if (!session) return false;
     const perfil = session.perfil || '';
     
-    if (session.isPro) return true;
-    
     // STRICT RULE: Only Executante can see worker- routes
-    const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals'];
+    const workerRoutes = ['worker-panel', 'worker-parts', 'worker-services', 'worker-manuals', 'qrview'];
     if (workerRoutes.includes(route)) {
       if (perfil !== 'Executante') return false;
     }
+    
+    if (session.isPro) return true;
     
     if (perfil === 'Desenvolvedor' || perfil === 'Gerente') {
       if (route === 'assets') return false;
