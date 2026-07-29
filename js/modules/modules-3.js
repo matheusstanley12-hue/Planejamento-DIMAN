@@ -348,7 +348,7 @@ window.PlanningModule = (() => {
     let modal = document.getElementById('modal-replan-history');
     if (!modal) {
       modal = document.createElement('div');
-      modal.className = 'modal';
+      modal.className = 'modal-overlay';
       modal.id = 'modal-replan-history';
       document.body.appendChild(modal);
     }
@@ -378,7 +378,7 @@ window.PlanningModule = (() => {
     }
     
     modal.innerHTML = `
-      <div class="modal-content modal-md" style="max-width: 700px; padding: 0; overflow: hidden;">
+      <div class="modal modal-md" style="max-width: 700px; padding: 0; overflow: hidden;">
         <div class="modal-header" style="padding: 24px; border-bottom: 1px solid var(--border-default);">
           <div class="modal-title" style="font-size: 1.25rem; font-weight: 800;">Histórico: ${eq.codigo}</div>
           <button class="modal-close" onclick="closeModal('modal-replan-history')" style="background: var(--bg-alt); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: var(--text-secondary);">
