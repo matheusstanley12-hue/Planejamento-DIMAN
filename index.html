@@ -64,10 +64,11 @@
             meta.data.forEach((element, index) => {
               let value = dataset.data[index];
               if (value === 0 || value == null || value === '') return;
+              if (chart.canvas.id === 'plan-chart') return;
               
               let valStr = String(value);
               // Add % if it's progress or avanço
-              if (chart.canvas.id === 'ch-eq' || chart.canvas.id === 'plan-chart') valStr += '%';
+              if (chart.canvas.id === 'ch-eq') valStr += '%';
 
               const position = element.tooltipPosition();
               if (chart.config.type === 'bar' || chart.config.type === 'line') {
