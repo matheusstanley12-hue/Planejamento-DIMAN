@@ -64,19 +64,29 @@
             meta.data.forEach((element, index) => {
               let value = dataset.data[index];
               if (value === 0 || value == null || value === '') return;
-              if (chart.canvas.id === 'plan-chart') return;
-              
               let valStr = String(value);
               // Add % if it's progress or avanço
-              if (chart.canvas.id === 'ch-eq') valStr += '%';
+              if (chart.canvas.id === 'ch-eq' || chart.canvas.id === 'plan-chart') valStr += '%';
 
               const position = element.tooltipPosition();
               if (chart.config.type === 'bar' || chart.config.type === 'line') {
+                // Determine yOffset to prevent overlap in plan-chart
+                let yOffset = -12;
+                if (chart.canvas.id === 'plan-chart') {
+                  // i is the dataset index. 0 = Planejado (above), 1 = Realizado (below)
+                  if (i === 0) yOffset = -14;
+                  if (i === 1) yOffset = 14;
+                  
+                  // For plan-chart with 31 days, it can get crowded horizontally.
+                  // Draw label only every 2 days, plus the last day
+                  if (index % 2 !== 0 && index !== dataset.data.length - 1) return;
+                }
+
                 ctx.fillStyle = textColor;
                 if (chart.config.options && chart.config.options.indexAxis === 'y') {
                   ctx.fillText(valStr, position.x + 12, position.y);
                 } else {
-                  ctx.fillText(valStr, position.x, position.y - 12);
+                  ctx.fillText(valStr, position.x, position.y + yOffset);
                 }
               }
             });
