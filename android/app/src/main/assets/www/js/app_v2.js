@@ -1169,17 +1169,6 @@ window.gerarDadosDeTeste = function() {
     dataLiberacaoPlanejada: now 
   });
 
-  const eq3 = window.DB.equipment.create({ 
-    nome: 'BMS-101', 
-    codigo: 'BMS-101', 
-    tipo: 'Bomba de pesquisa', 
-    status: 'Liberado', 
-    os: 'OS-77110', 
-    cliente: 'VALE', 
-    dataEntrada: now, 
-    dataLiberacaoPlanejada: now 
-  });
-
   const eq4 = window.DB.equipment.create({ 
     nome: 'BMP-202', 
     codigo: 'BMP-202', 
