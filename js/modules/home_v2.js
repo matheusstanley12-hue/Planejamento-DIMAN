@@ -122,12 +122,22 @@ window.HomeModule = (() => {
 
       let statusColor = 'var(--text-secondary)';
       let statusBg = 'var(--bg-base)';
-      let statusIcon = '';
-      if (e.status === 'Em Manutenção') { statusColor = '#047857'; statusBg = 'rgba(16, 185, 129, 0.1)'; statusIcon = '🟢'; }
-      else if (e.status === 'Falta de Peças') { statusColor = '#b45309'; statusBg = 'rgba(245, 158, 11, 0.1)'; statusIcon = '🟡'; }
-      else if (e.status === 'Atrasado' || e.status === 'Paralisado' || e.status === 'Falta de Mão de Obra') { statusColor = '#be123c'; statusBg = 'rgba(225, 29, 72, 0.1)'; statusIcon = '🔴'; }
-      else if (e.status === 'Liberado') { statusColor = '#1d4ed8'; statusBg = 'rgba(59, 130, 246, 0.1)'; statusIcon = '🔵'; }
-      else { statusIcon = '⚪'; }
+      let statusIcon = '⚪';
+      let displayStatus = e.status;
+
+      if (e.status === 'Em Manutenção' && e.etapaAtual && e.etapaAtual !== 'Nenhuma') {
+        displayStatus = e.etapaAtual;
+      }
+
+      const lowerStatus = displayStatus.toLowerCase();
+      if (lowerStatus === 'em manutenção' || lowerStatus === 'em manutencao') { statusColor = '#047857'; statusBg = 'rgba(16, 185, 129, 0.1)'; statusIcon = '🟢'; }
+      else if (lowerStatus === 'falta de peças' || lowerStatus === 'falta de pecas') { statusColor = '#b45309'; statusBg = 'rgba(245, 158, 11, 0.1)'; statusIcon = '🟡'; }
+      else if (lowerStatus.includes('atrasado') || lowerStatus.includes('paralisad') || lowerStatus.includes('falta de mão de obra') || lowerStatus.includes('falta de mao de obra')) { statusColor = '#be123c'; statusBg = 'rgba(225, 29, 72, 0.1)'; statusIcon = '🔴'; }
+      else if (lowerStatus.includes('liberad')) { statusColor = '#1d4ed8'; statusBg = 'rgba(59, 130, 246, 0.1)'; statusIcon = '🔵'; }
+      else if (lowerStatus.includes('check-list')) { statusColor = '#6366f1'; statusBg = 'rgba(99, 102, 241, 0.1)'; statusIcon = '🟣'; }
+      else if (lowerStatus === 'teste' || lowerStatus === 'lavador' || lowerStatus === 'pintura') { statusColor = '#0284c7'; statusBg = 'rgba(2, 132, 199, 0.1)'; statusIcon = '🔵'; }
+      else if (lowerStatus === 'backlog') { statusColor = '#475569'; statusBg = 'rgba(71, 85, 105, 0.1)'; statusIcon = '⚫'; }
+      else { statusColor = '#047857'; statusBg = 'rgba(16, 185, 129, 0.1)'; statusIcon = '🟢'; }
       
       const badgeStyle = `background:${statusBg};color:${statusColor};border:1px solid rgba(0,0,0,0.03);border-radius:9999px;padding:4px 10px;font-size:12px;font-weight:700;letter-spacing:0.02em;display:inline-flex;align-items:center;gap:4px;`;
 
@@ -186,7 +196,7 @@ window.HomeModule = (() => {
           </div>
           
           <div style="margin-top:12px;">
-            <span style="${badgeStyle}">${statusIcon} ${e.status}</span>
+            <span style="${badgeStyle}">${statusIcon} ${displayStatus}</span>
           </div>
           
           <div class="premium-progress-container">
