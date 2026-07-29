@@ -1755,7 +1755,7 @@ window.TasksModule = (() => {
             ${t?.codigo ? t.codigo : 'Nova Tarefa'}
             ${t?.critico ? '<span class="badge" style="background:rgba(244,67,54,0.1);color:#f44336;margin-left:8px;">Crítica</span>' : ''}
           </h3>
-          <p style="margin:4px 0 0; font-size:0.9rem; color:var(--text-secondary);">Equipamento: <strong>${selectedEq.codigo}</strong> - ${selectedEq.nome}</p>
+          <p style="margin:4px 0 0; font-size:0.9rem; color:var(--text-secondary);">Detalhes Gerais</p>
         </div>
         <div style="text-align:right;">
           <select id="tk-status" style="font-weight:700; border:2px solid var(--border-default); border-radius:var(--radius-md); padding:4px 8px;">
@@ -1771,7 +1771,12 @@ window.TasksModule = (() => {
         <div style="background:var(--bg-card); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--border-default);">
           <h4 style="margin:0 0 12px; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Detalhes da Execução</h4>
           
-          <div class="form-group" style="display:none;"><label>Equipamento (ID Oculto)</label><select id="tk-eq" onchange="TasksModule.onFormChange()">${eqs.map(e=>`<option value="${e.id}" ${t?.equipmentId===e.id?'selected':''}>${e.codigo}</option>`).join('')}</select></div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.85rem; color:var(--text-secondary);">Equipamento *</label>
+            <select id="tk-eq" onchange="TasksModule.onFormChange()" style="font-weight:700;">
+              ${eqs.map(e=>`<option value="${e.id}" ${currentEqId===e.id?'selected':''}>${e.codigo} - ${e.nome}</option>`).join('')}
+            </select>
+          </div>
           <div class="form-group" style="display:none;"><label>Código</label><input id="tk-cod" value="${t?.codigo||''}" /></div>
           
           <div class="form-group">
