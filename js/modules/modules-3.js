@@ -318,10 +318,10 @@ window.PlanningModule = (() => {
               </tr>
             </thead>
             <tbody>
-              ${eqs.map((e, idx) => {
+              ${[...eqs].sort((a, b) => (b.replanning?.length || 0) - (a.replanning?.length || 0)).map((e, idx, arr) => {
                 const repls = e.replanning || [];
                 const totalDays = repls.reduce((s,r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
-                const isLast = idx === eqs.length - 1;
+                const isLast = idx === arr.length - 1;
                 return `<tr style="${!isLast ? 'border-bottom: 1px solid var(--border-default, #e2e8f0);' : ''} transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover, #f1f5f9)'" onmouseout="this.style.background='transparent'">
                   <td style="padding: 16px 24px;"><strong>${e.codigo}</strong></td>
                   <td style="padding: 16px 24px; color: var(--text-secondary); font-weight: 500;">${e.cliente || '—'}</td>
