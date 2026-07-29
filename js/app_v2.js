@@ -321,6 +321,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                window.DB.equipment.delete(id);
             }
           });
+          
+          const eqs = window.DB.equipment.list();
+          const bms = eqs.filter(e => e.codigo === 'BMS-101');
+          bms.forEach(e => window.DB.equipment.delete(e.id));
         }
       } catch(e) {}
     }, 2000);
