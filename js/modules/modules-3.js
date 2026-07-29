@@ -142,12 +142,59 @@ window.PlanningModule = (() => {
   let planChart = null;
 
   function render() {
-    const eqs = DB.equipment.list();
-    const allTasks = DB.tasks.getAll();
-    const totalTasks = allTasks.length;
-    const doneTasks = allTasks.filter(t=>t.status==='Concluída').length;
-    const realizado = totalTasks ? Math.round(doneTasks/totalTasks*100) : 0;
-    const planejado = 78;
+    const eqs = DB.equipment.list().filter(e => e.status !== 'Cancelado' && e.status !== 'Excluído');
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    // Equipamentos planejados para liberação neste mês
+    const plannedEqs = eqs.filter(e => {
+       const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+       return dtPlan && dtPlan.startsWith(`${currentYear}-${(currentMonth+1).toString().padStart(2,'0')}`);
+    });
+    const totalPlanned = plannedEqs.length > 0 ? plannedEqs.length : 1;
+    
+    const labels = [];
+    const plData = [];
+    const rlData = [];
+    
+    let cumPlan = 0;
+    let cumReal = 0;
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayStr = i.toString().padStart(2, '0');
+      const dateStr = `${currentYear}-${(currentMonth+1).toString().padStart(2,'0')}-${dayStr}`;
+      
+      labels.push(`${i}/${currentMonth+1}`);
+      
+      const dayPlanCount = plannedEqs.filter(e => {
+          const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+          return dtPlan === dateStr;
+      }).length;
+      
+      const dayRealCount = eqs.filter(e => {
+          if (e.status !== 'Liberado') return false;
+          const dtReal = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual;
+          return dtReal && dtReal.startsWith(dateStr);
+      }).length;
+      
+      cumPlan += dayPlanCount;
+      cumReal += dayRealCount;
+      
+      plData.push(Math.round((cumPlan / totalPlanned) * 100));
+      
+      if (i <= now.getDate()) {
+          rlData.push(Math.round((cumReal / totalPlanned) * 100));
+      } else {
+          rlData.push(null);
+      }
+    }
+    
+    // Resumo atualizado até o dia de hoje
+    const todayIndex = Math.min(now.getDate() - 1, daysInMonth - 1);
+    const planejado = plData[todayIndex] || 0;
+    const realizado = rlData[todayIndex] || 0;
     const desvio = realizado - planejado;
     const devCls = desvio >= 0 ? 'success' : desvio >= -10 ? 'warning' : 'danger';
 
@@ -164,16 +211,7 @@ window.PlanningModule = (() => {
       gradReal.addColorStop(0, desvio >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)');
       gradReal.addColorStop(1, desvio >= 0 ? 'rgba(16,185,129,0.0)' : 'rgba(239,68,68,0.0)');
 
-      const labels = [];
-      const plData = [];
-      const rlData = [];
-      for (let i = 20; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        labels.push(`${d.getDate()}/${d.getMonth()+1}`);
-        plData.push(Math.min(100, Math.round((20-i)/20*planejado + Math.random()*3)));
-        rlData.push(Math.min(100, Math.round((20-i)/20*realizado + Math.random()*2)));
-      }
+      // Data generated dynamically above
       planChart = new Chart(canvas, {
         type:'line', data: {
           labels,
@@ -187,6 +225,7 @@ window.PlanningModule = (() => {
           maintainAspectRatio:false, 
           interaction: { mode: 'index', intersect: false },
           plugins:{
+            datalabels: { display: false },
             tooltip: { backgroundColor: 'rgba(15,23,42,0.9)', titleFont: { family: 'Inter', size: 13 }, bodyFont: { family: 'Inter', size: 13 }, padding: 12, cornerRadius: 8 },
             legend:{labels:{color:'var(--text-secondary)',font:{family:'Inter',size:12, weight:'600'}, usePointStyle: true, boxWidth: 8}}
           }, 
