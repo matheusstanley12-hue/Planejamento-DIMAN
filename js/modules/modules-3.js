@@ -322,7 +322,7 @@ window.PlanningModule = (() => {
                 const repls = e.replanning || [];
                 const totalDays = repls.reduce((s,r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
                 const isLast = idx === arr.length - 1;
-                return `<tr style="${!isLast ? 'border-bottom: 1px solid var(--border-default, #e2e8f0);' : ''} transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover, #f1f5f9)'" onmouseout="this.style.background='transparent'">
+                return `<tr style="cursor: pointer; ${!isLast ? 'border-bottom: 1px solid var(--border-default, #e2e8f0);' : ''} transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover, #f1f5f9)'" onmouseout="this.style.background='transparent'" onclick="window.PlanningModule.showHistory('${e.id}')">
                   <td style="padding: 16px 24px;"><strong>${e.codigo}</strong></td>
                   <td style="padding: 16px 24px; color: var(--text-secondary); font-weight: 500;">${e.cliente || '—'}</td>
                   <td style="padding: 16px 24px; font-family: var(--font-mono); font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-weight: 600;">
@@ -341,8 +341,73 @@ window.PlanningModule = (() => {
     </div>`;
   }
 
+  function showHistory(eqId) {
+    const eq = DB.equipment.get(eqId);
+    if (!eq) return;
+    
+    let modal = document.getElementById('modal-replan-history');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.id = 'modal-replan-history';
+      document.body.appendChild(modal);
+    }
+    
+    const repls = eq.replanning || [];
+    
+    let rowsHtml = '';
+    if (repls.length === 0) {
+      rowsHtml = `<tr><td colspan="4" style="text-align:center; padding: 32px 20px; color: var(--text-muted);">Nenhum replanejamento registrado para este equipamento.</td></tr>`;
+    } else {
+      rowsHtml = repls.map((r, i) => {
+        const dias = daysBetween(r.dataAnterior, r.novaData);
+        return `
+          <tr style="border-bottom: 1px solid var(--border-default);">
+            <td style="padding: 16px 24px; font-weight: 800; color: var(--text-primary);">${i+1}º Replan.</td>
+            <td style="padding: 16px 24px;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">De</div>
+              <div style="font-family: var(--font-mono); font-weight: 500;">${formatDate(r.dataAnterior)}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px;">Para</div>
+              <div style="font-family: var(--font-mono); font-weight: 800; color: var(--brand-primary);">${formatDate(r.novaData)}</div>
+            </td>
+            <td style="padding: 16px 24px; color: var(--color-danger); font-weight: 800;">+${dias} dias</td>
+            <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">${r.motivo || '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    modal.innerHTML = `
+      <div class="modal-content modal-md" style="max-width: 700px; padding: 0; overflow: hidden;">
+        <div class="modal-header" style="padding: 24px; border-bottom: 1px solid var(--border-default);">
+          <div class="modal-title" style="font-size: 1.25rem; font-weight: 800;">Histórico: ${eq.codigo}</div>
+          <button class="modal-close" onclick="closeModal('modal-replan-history')" style="background: var(--bg-alt); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: var(--text-secondary);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="modal-body" style="padding: 0; max-height: 60vh; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: var(--bg-alt); position: sticky; top: 0;">
+              <tr>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Vez</th>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Datas</th>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Impacto</th>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    openModal('modal-replan-history');
+  }
+
   function destroy() { if (planChart) { try { planChart.destroy(); } catch(e){} planChart = null; } }
-  return { render, destroy };
+  return { render, destroy, showHistory };
 })();
 
 
