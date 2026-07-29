@@ -1045,7 +1045,10 @@ window.EquipmentModule = (() => {
       dataLiberacaoReal: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
       status: (() => {
         let e = document.getElementById('eq-etapa-atual').value;
-        if (e === 'Nenhuma') return 'Nenhuma';
+        if (e === 'Nenhuma') {
+          // If no specific stage is selected, fallback to checking if we have an existing valid status or default to Em Manutenção
+          return (id && window.DB && window.DB.equipment.get(id)?.status !== 'Nenhuma') ? window.DB.equipment.get(id).status : 'Em Manutenção';
+        }
         if (e === 'Aguardando manutenção') return 'Aguardando Manutenção';
         if (e === 'Falta de mão de obra') return 'Falta de Mão de Obra';
         if (e === 'Falta de peças') return 'Falta de Peças';

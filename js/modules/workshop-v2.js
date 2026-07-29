@@ -190,7 +190,7 @@ window.WorkshopModule = (() => {
       let etapa = eq.etapaAtual || eq.fase || 'Nenhuma';
       if (etapa === 'Na Oficina') etapa = 'Nenhuma';
       
-      let refDate = eq._etapaUpdatedAt || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
+      let refDate = (etapa === 'Nenhuma' ? (eq._statusUpdatedAt || eq._etapaUpdatedAt) : eq._etapaUpdatedAt) || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
       let daysInStage = 0;
       if (refDate && eq.status !== 'Liberado' && etapa !== 'Liberada') {
         const diffTime = Math.abs(new Date() - new Date(refDate));
@@ -508,7 +508,8 @@ window.WorkshopModule = (() => {
             label: 'Dias na Etapa',
             data: allEqsEtapa.map(e => e.daysInStage),
             backgroundColor: allEqsEtapa.map(e => e.daysInStage > 15 ? '#EF4444' : e.daysInStage > 5 ? '#F59E0B' : '#3B82F6'),
-            borderRadius: 4
+            borderRadius: 4,
+            minBarLength: 10
           }]
         },
         options: { 
