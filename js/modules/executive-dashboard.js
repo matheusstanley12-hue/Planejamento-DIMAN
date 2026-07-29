@@ -470,7 +470,7 @@ window.ExecutiveDashboard = (() => {
     // 4. Pipeline (Etapas Reais do Equipamento)
     const ctxPipe = document.getElementById('execChartPipeline');
     if(ctxPipe) {
-      const realStages = ['Check-list de recebimento', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'];
+      const realStages = ['Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'];
       
       // Contar equipamentos por etapa (apenas aqueles que estão em manutenção ou aguardando)
       const eqsInProcess = eqs.filter(e => e.status !== 'Liberado' && e.status !== 'Operando');

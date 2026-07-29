@@ -930,13 +930,13 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Status</label>
           <select id="eq-status" class="form-control">
-            ${['Nenhuma', 'Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Aguardando Manutenção', 'Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma', 'Check-list de recebimento', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>

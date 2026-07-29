@@ -955,7 +955,7 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma', 'Check-list de recebimento', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${['Nenhuma', 'Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -1046,6 +1046,7 @@ window.EquipmentModule = (() => {
       status: (() => {
         let e = document.getElementById('eq-etapa-atual').value;
         if (e === 'Nenhuma') return 'Nenhuma';
+        if (e === 'Aguardando manutenção') return 'Aguardando Manutenção';
         if (e === 'Falta de mão de obra') return 'Falta de Mão de Obra';
         if (e === 'Falta de peças') return 'Falta de Peças';
         if (e === 'Paralisada') return 'Paralisado';
