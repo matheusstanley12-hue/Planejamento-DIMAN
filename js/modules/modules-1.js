@@ -955,7 +955,18 @@ window.EquipmentModule = (() => {
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
-            ${['Nenhuma', 'Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada'].map(s=>`<option ${eq?.etapaAtual===s?'selected':''}>${s}</option>`).join('')}
+            ${(() => {
+              let displayEtapa = eq?.etapaAtual || 'Nenhuma';
+              if (eq?.status === 'Liberado') displayEtapa = 'Liberada';
+              else if (eq?.status === 'Backlog') displayEtapa = 'Backlog';
+              else if (eq?.status === 'Aguardando Manutenção') displayEtapa = 'Aguardando manutenção';
+              else if (eq?.status === 'Paralisado') displayEtapa = 'Paralisada';
+              else if (eq?.status === 'Falta de Peças') displayEtapa = 'Falta de peças';
+              else if (eq?.status === 'Falta de Mão de Obra') displayEtapa = 'Falta de mão de obra';
+              
+              return ['Nenhuma', 'Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Paralisada', 'Backlog', 'Liberada']
+                .map(s => `<option ${displayEtapa === s ? 'selected' : ''}>${s}</option>`).join('');
+            })()}
           </select>
         </div>
       </div>
