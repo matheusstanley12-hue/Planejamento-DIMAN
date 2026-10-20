@@ -102,6 +102,21 @@ window.Auth = (() => {
     return result;
   }
 
+  function normalizeMatricula(mat) {
+    if (!mat) return '';
+    return String(mat).trim().replace(/^0+/, '');
+  }
+
+  function matchMatricula(m1, m2) {
+    if (!m1 || !m2) return false;
+    const s1 = String(m1).trim();
+    const s2 = String(m2).trim();
+    if (s1 === s2) return true;
+    const n1 = s1.replace(/^0+/, '');
+    const n2 = s2.replace(/^0+/, '');
+    return n1.length > 0 && n1 === n2;
+  }
+
   function getUsers() {
     const data = localStorage.getItem(USERS_KEY);
     let users = data ? JSON.parse(data) : [];
@@ -110,29 +125,38 @@ window.Auth = (() => {
     try {
       const blacklist = JSON.parse(localStorage.getItem('diman_deleted_users') || '[]');
       if (blacklist.length > 0) {
-        users = users.filter(u => !blacklist.includes(u.id));
+        users = users.filter(u => !blacklist.includes(u.id) && !blacklist.includes(u.matricula));
       }
     } catch(e) {}
     
-    // Deduplicate by matricula, keeping the newest updatedAt (or the one with senhaInicial=true if equal)
+    // Deduplicate by normalized matricula
     const unique = {};
     users.forEach(u => {
       if (!u.matricula) return;
-      if (!unique[u.matricula]) {
-        unique[u.matricula] = u;
+      const key = normalizeMatricula(u.matricula) || String(u.matricula).trim();
+      u.id = 'u-' + (normalizeMatricula(u.matricula) || u.matricula);
+
+      if (!unique[key]) {
+        unique[key] = u;
       } else {
-        const existTime = unique[u.matricula].updatedAt ? new Date(unique[u.matricula].updatedAt).getTime() : 0;
+        const exist = unique[key];
+        const existTime = exist.updatedAt ? new Date(exist.updatedAt).getTime() : 0;
         const newTime = u.updatedAt ? new Date(u.updatedAt).getTime() : 0;
-        if (newTime > existTime) {
-          unique[u.matricula] = u;
-        } else if (newTime === existTime && u.senhaInicial) {
-           unique[u.matricula] = u;
+
+        // Se um usuário já cadastrou sua senha pessoal (senhaInicial === false),
+        // NUNCA permita que um registro antigo com senhaInicial === true sobrescreva!
+        if (exist.senhaInicial === false && u.senhaInicial === true) {
+          // Mantém exist (já cadastrou a senha pessoal)
+        } else if (exist.senhaInicial === true && u.senhaInicial === false) {
+          unique[key] = u; // Atualiza para o que já tem senha cadastrada
+        } else if (newTime > existTime) {
+          unique[key] = u;
         }
       }
     });
     const finalUsers = Object.values(unique);
     finalUsers.forEach(u => {
-      if (u.matricula === '013429') {
+      if (matchMatricula(u.matricula, '013429') || matchMatricula(u.matricula, '13429')) {
         u.perfil = 'Desenvolvedor';
         u.cargo = 'Desenvolvedor do Sistema';
         u.isPro = true;
@@ -142,7 +166,14 @@ window.Auth = (() => {
   }
 
   function saveUsers(users) {
-    users.forEach(u => { if (!u.id) u.id = window.DB && window.DB.uid ? window.DB.uid('u') : 'u-' + Date.now() + Math.random().toString(36).substring(2); });
+    users.forEach(u => {
+      if (!u.id) {
+        u.id = 'u-' + (normalizeMatricula(u.matricula) || u.matricula || Date.now());
+      }
+      if (!u.updatedAt) {
+        u.updatedAt = new Date().toISOString();
+      }
+    });
     
     try {
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
@@ -170,10 +201,11 @@ window.Auth = (() => {
 
   async function initSuperAdmin() {
     const users = getUsers();
-    if (users.length === 0) {
+    const hasAdmin = users.some(u => matchMatricula(u.matricula, '013429') || matchMatricula(u.matricula, '13429'));
+    if (!hasAdmin) {
       const hashed = await hashPassword('35215415');
       users.push({
-        id: 'u-superadmin',
+        id: 'u-13429',
         matricula: '013429',
         nome: 'Desenvolvedor do Sistema',
         email: 'admin@diman-bhz.com',
@@ -182,9 +214,10 @@ window.Auth = (() => {
         disciplina: 'TI',
         perfil: 'Desenvolvedor',
         senhaHash: hashed,
-        senhaInicial: true,
+        senhaInicial: false,
         status: 'Ativo',
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         permissions: getAllPermissions()
       });
       saveUsers(users);
@@ -205,44 +238,59 @@ window.Auth = (() => {
   function getPermissionsForProfile(profile) {
     const p = (profile || '').trim().toLowerCase();
     switch(p) {
-      case 'desenvolvedor pro': return getAllPermissions();
-      case 'desenvolvedor': return getAllPermissions();
-      case 'gerente': return getAllPermissions();
-      case 'planejador': return { ...getAllPermissions(), users: false };
-      case 'coordenador': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
-      case 'encarregado': return { ...getAllPermissions(), users: false };
-      case 'supervisor': return { dashboard: true, equipment: true, tasks: true, gantt: true, parts: true, workforce: true, workshop: true, restrictions: true, timeline: true, kpi: false, ai: true, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: true, criticalPath: true, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
-      case 'executante': return { dashboard: false, equipment: false, tasks: false, gantt: false, parts: false, workforce: false, workshop: false, restrictions: false, timeline: false, kpi: false, ai: false, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: false, managerDashboard: false, simulator: false, workerPanel: true };
-      case 'cliente': return { dashboard: true, equipment: true, tasks: false, gantt: true, parts: false, workforce: false, workshop: true, restrictions: false, timeline: true, kpi: true, ai: false, reports: true, audit: false, users: false, planning: false, impacts: true, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
-      default: return {};
+      case 'desenvolvedor pro':
+      case 'desenvolvedor':
+      case 'gerente':
+        return getAllPermissions();
+      case 'planejador':
+      case 'planejador compras':
+        return { ...getAllPermissions(), users: false };
+      case 'coordenador':
+      case 'cordenador':
+      case 'supervisor':
+      case 'encarregado':
+        return { ...getAllPermissions(), users: false };
+      case 'executante':
+        return { dashboard: false, equipment: false, tasks: false, gantt: false, parts: false, workforce: false, workshop: false, restrictions: false, timeline: false, kpi: false, ai: false, reports: false, audit: false, users: false, planning: false, impacts: false, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: false, managerDashboard: false, simulator: false, workerPanel: true };
+      case 'cliente':
+        return { dashboard: true, equipment: true, tasks: false, gantt: true, parts: false, workforce: false, workshop: true, restrictions: false, timeline: true, kpi: true, ai: false, reports: true, audit: false, users: false, planning: false, impacts: true, costs: false, lessons: false, criticalPath: false, meetingMode: false, history: true, managerDashboard: false, simulator: false, workerPanel: false };
+      default:
+        return getAllPermissions();
     }
   }
 
   async function login(matricula, senha) {
     let users = getUsers();
-    let user = users.find(u => u.matricula === matricula);
+    const cleanMat = String(matricula || '').trim();
+
+    let user = users.find(u => matchMatricula(u.matricula, cleanMat));
     
     // Auto-create user from workforce if they don't exist
     if (!user && window.DB && DB.workforce) {
       const wList = DB.workforce.list();
-      const wUser = wList.find(w => w.matricula === matricula);
+      const wUser = wList.find(w => matchMatricula(w.matricula, cleanMat));
       if (wUser) {
-        await createUser({
+        const createRes = await createUser({
           matricula: wUser.matricula,
           nome: wUser.nome,
           disciplina: wUser.disciplina,
           perfil: 'Executante',
           senhaInicial: '123456'
         });
-        users = getUsers();
-        user = users.find(u => u.matricula === matricula);
+        if (createRes && createRes.user) {
+          user = createRes.user;
+          users = getUsers();
+        }
       }
     }
 
     if (!user) return { success: false, error: 'Matrícula não encontrada.' };
-    if (user.status === 'Inativo') return { success: false, error: 'Usuário inativo. Contate o desenvolvedor.' };
+    if (user.status === 'Inativo') return { success: false, error: 'Usuário inativo. Contate o administrador.' };
+    
     const hash = await hashPassword(senha);
-    if (hash !== user.senhaHash && !(senha === '123456' && user.senhaInicial)) {
+    const isDefaultPwd = (senha === '123456' && user.senhaInicial === true);
+    
+    if (hash !== user.senhaHash && !isDefaultPwd) {
       return { success: false, error: 'Senha incorreta.' };
     }
 
@@ -259,9 +307,7 @@ window.Auth = (() => {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     addAuditLog('LOGIN', `Usuário ${user.nome} fez login`, null);
     
-    // Call getSession to trigger any auto-migrations (like renaming Administrador to Desenvolvedor)
     const finalSession = getSession() || session;
-    
     return { success: true, session: finalSession, mustChangePassword: user.senhaInicial === true };
   }
 
@@ -349,14 +395,15 @@ window.Auth = (() => {
 
   async function changePassword(matricula, novaSenha, nome = null) {
     const users = getUsers();
-    const idx = users.findIndex(u => u.matricula === matricula);
+    const cleanMat = String(matricula || '').trim();
+    const idx = users.findIndex(u => matchMatricula(u.matricula, cleanMat));
     if (idx === -1) return false;
+
     users[idx].senhaHash = await hashPassword(novaSenha);
     users[idx].senhaInicial = false;
     if (nome) users[idx].nome = nome;
     users[idx].updatedAt = new Date().toISOString();
     saveUsers(users);
-    if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_users', users);
 
     // Update session
     const session = getSession();
@@ -371,13 +418,15 @@ window.Auth = (() => {
 
   async function createUser(data) {
     const users = getUsers();
-    if (users.find(u => u.matricula === data.matricula)) {
+    const cleanMat = String(data.matricula || '').trim();
+    if (users.find(u => matchMatricula(u.matricula, cleanMat))) {
       return { success: false, error: 'Matrícula já cadastrada.' };
     }
     const hashed = await hashPassword(data.senhaInicial || '123456');
+    const norm = normalizeMatricula(cleanMat) || cleanMat;
     const user = {
-      id: 'u-' + data.matricula,
-      matricula: data.matricula,
+      id: 'u-' + norm,
+      matricula: cleanMat,
       nome: data.nome,
       email: data.email || '',
       telefone: data.telefone || '',
@@ -388,6 +437,7 @@ window.Auth = (() => {
       senhaInicial: true,
       status: data.status || 'Ativo',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       permissions: data.permissions || getPermissionsForProfile(data.perfil)
     };
     users.push(user);
@@ -430,7 +480,7 @@ window.Auth = (() => {
   }
 
   function listUsers() {
-    return getUsers().filter(u => u.matricula !== '013429' || getSession()?.isPro || getSession()?.perfil === 'Desenvolvedor');
+    return getUsers().filter(u => (!matchMatricula(u.matricula, '013429') && !matchMatricula(u.matricula, '13429')) || getSession()?.isPro || getSession()?.perfil === 'Desenvolvedor');
   }
 
   function addAuditLog(action, description, changes) {

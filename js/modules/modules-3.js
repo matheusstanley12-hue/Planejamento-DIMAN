@@ -2384,7 +2384,7 @@ window.UsersModule = (() => {
     
     setTimeout(() => {
       if(!document.getElementById('modal-user-form')) {
-        const perfis = ['Desenvolvedor', 'Gerente', 'Cordenador', 'Encarregado', 'Planejador', 'Planejador compras', 'Executante'];
+        const perfis = ['Desenvolvedor', 'Gerente', 'Coordenador', 'Encarregado', 'Planejador', 'Planejador compras', 'Executante'];
         const modalHtml = `
           <div class="modal-overlay" id="modal-user-form">
             <div class="modal">
@@ -2497,34 +2497,20 @@ window.UsersModule = (() => {
       return;
     }
     
-    const users = window.Auth ? window.Auth.listUsers() : JSON.parse(localStorage.getItem('diman_users')||'[]');
-    if(users.find(u => u.matricula === matricula)) {
-      Toast && Toast.error('Erro', 'Matrícula já existe.');
-      return;
-    }
-
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let randomPassword = '123456';
-
-    const senhaHash = await Auth.hashPassword(randomPassword);
-
-    const newUser = {
-      id: DB.uid('u'),
+    const randomPassword = '123456';
+    const res = await window.Auth.createUser({
       matricula,
       nome,
       email,
       perfil,
       disciplina,
-      senhaHash,
-      senhaInicial: true,
-      status: 'Ativo',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    users.push(newUser);
-    localStorage.setItem('diman_users', JSON.stringify(users));
-    if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_users', users);
+      senhaInicial: randomPassword
+    });
+
+    if (!res.success) {
+      Toast && Toast.error('Erro ao Criar', res.error || 'Não foi possível cadastrar o usuário.');
+      return;
+    }
     
     closeModal('modal-user-form');
     Router.navigate('users', { force: true });
