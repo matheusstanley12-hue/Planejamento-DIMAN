@@ -389,6 +389,53 @@ window.DB = (() => {
   async function initSupabase(force = false) {
     if (!supabaseClient) return;
     try {
+      // 0. Checar Sinal Global de Reset no Supabase antes de qualquer mesclagem
+      try {
+        const { data: sigData, error: sigErr } = await supabaseClient
+          .from('diman_store')
+          .select('*')
+          .eq('collection', '__system__')
+          .eq('key', 'reset_signal')
+          .maybeSingle();
+
+        if (sigData && sigData.data && sigData.data.resetAt) {
+          const remoteResetAt = sigData.data.resetAt;
+          const lastApplied = localStorage.getItem('diman_last_reset_applied') || '1970-01-01T00:00:00.000Z';
+          if (new Date(remoteResetAt).getTime() > new Date(lastApplied).getTime()) {
+            console.log('[DIMAN] Reset global detectado neste computador! Limpando dados locais...');
+
+            // Preservar apenas Mão de Obra, Usuários e Sessão
+            const wf = localStorage.getItem(KEYS.workforce);
+            const usrs = localStorage.getItem(KEYS.users);
+            const sess = localStorage.getItem('diman_session');
+
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith('diman_')) keysToRemove.push(k);
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+
+            if (wf) localStorage.setItem(KEYS.workforce, wf);
+            if (usrs) localStorage.setItem(KEYS.users, usrs);
+            if (sess) localStorage.setItem('diman_session', sess);
+
+            localStorage.setItem('diman_last_reset_applied', remoteResetAt);
+            localStorage.setItem('diman_unsynced', 'false');
+
+            if (window.Toast) {
+              window.Toast.info('Sistema Reiniciado', 'O sistema foi zerado pelo administrador. Mão de obra mantida.', 6000);
+            }
+            setTimeout(() => {
+              window.location.reload();
+            }, 400);
+            return;
+          }
+        }
+      } catch(sigEx) {
+        console.warn('[DIMAN] Não foi possível verificar o sinal de reset:', sigEx);
+      }
+
       // 1. Initial fetch (Excluding photos to avoid massive memory usage)
       // Paginated to avoid 1000 rows limit from Supabase API
       let allFetchedData = [];
@@ -684,7 +731,7 @@ window.DB = (() => {
       <div style="
         background:var(--bg-card,#1e1e2e);
         border:1px solid var(--color-danger,#ef4444);
-        border-radius:12px;padding:32px;max-width:440px;width:90%;
+        border-radius:12px;padding:32px;max-width:460px;width:92%;
         box-shadow:0 20px 60px rgba(0,0,0,0.6);
       ">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
@@ -693,22 +740,30 @@ window.DB = (() => {
               d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           </svg>
           <span style="font-size:18px;font-weight:700;color:var(--color-danger,#ef4444);">
-            ZERAR SISTEMA COMPLETO
+            ZERAR SISTEMA PARA INICIAR DO ZERO
           </span>
         </div>
-        <p style="color:var(--text-secondary,#ccc);font-size:14px;margin-bottom:8px;">
-          Esta ação vai apagar <strong style="color:#fff;">TODOS os dados</strong>:
+        <p style="color:var(--text-secondary,#ccc);font-size:14px;margin-bottom:12px;">
+          Esta ação vai reiniciar os dados operacionais em <strong style="color:#fff;">todos os computadores</strong>:
         </p>
-        <ul style="color:var(--text-muted,#aaa);font-size:13px;margin:0 0 16px 16px;line-height:1.9;">
-          <li>Equipamentos</li>
-          <li>Tarefas, horas e timesheets</li>
-          <li>Restrições, custos e peças</li>
-          <li>Funcionários e férias</li>
-          <li>Solicitações, manuais e reuniões</li>
-          <li>Histórico e bônus</li>
-        </ul>
-        <p style="color:#ef4444;font-size:13px;font-weight:600;margin-bottom:20px;">
-          ⚠️ Isso também limpa a nuvem (Supabase). NÃO tem desfazer!
+        <div style="background:rgba(239,68,68,0.1);border-left:3px solid #ef4444;padding:10px 14px;border-radius:4px;margin-bottom:12px;">
+          <p style="color:#ef4444;font-size:13px;font-weight:600;margin:0 0 4px 0;">
+            🗑️ Serão apagados completamente:
+          </p>
+          <span style="color:var(--text-secondary,#ccc);font-size:12px;line-height:1.6;">
+            Equipamentos, Tarefas, Horas, Peças, Restrições, Custos, Reuniões e Histórico.
+          </span>
+        </div>
+        <div style="background:rgba(34,197,94,0.1);border-left:3px solid #22c55e;padding:10px 14px;border-radius:4px;margin-bottom:14px;">
+          <p style="color:#22c55e;font-size:13px;font-weight:600;margin:0 0 4px 0;">
+            ✅ Serão PRESERVADOS:
+          </p>
+          <span style="color:var(--text-secondary,#ccc);font-size:12px;line-height:1.6;">
+            Toda a lista de Mão de Obra (funcionários) e Usuários de acesso ao sistema.
+          </span>
+        </div>
+        <p style="color:var(--text-muted,#888);font-size:12px;margin-bottom:20px;">
+          ⚡ O reset será sincronizado para todos os outros computadores que acessarem.
         </p>
         <div style="display:flex;gap:10px;justify-content:flex-end;">
           <button id="_fullwipe_cancel" style="
@@ -720,7 +775,7 @@ window.DB = (() => {
             padding:10px 24px;background:#ef4444;color:#fff;
             border:none;border-radius:8px;cursor:pointer;
             font-size:14px;font-weight:700;
-          ">Sim, APAGAR TUDO</button>
+          ">Sim, Zerar Sistema</button>
         </div>
       </div>
     `;
@@ -734,7 +789,6 @@ window.DB = (() => {
   };
 
   async function _executeFullWipe() {
-    // Mostrar loading
     const loading = document.createElement('div');
     loading.id = '_fullwipe_loading';
     loading.style.cssText = `
@@ -748,12 +802,85 @@ window.DB = (() => {
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
       </svg>
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-      <span>Apagando todos os dados...</span>
+      <span>Zerando sistema e preservando mão de obra...</span>
     `;
     document.body.appendChild(loading);
 
     try {
-      // 1. Limpar localStorage — todas as chaves diman_*
+      const resetAt = new Date().toISOString();
+      const userSession = (window.Auth && window.Auth.getSession) ? window.Auth.getSession() : null;
+      const userName = userSession ? userSession.nome : 'Administrador';
+
+      // 1. Obter e higienizar a Mão de Obra para ficarem prontos e livres
+      let currentWf = get(KEYS.workforce) || [];
+      if (!Array.isArray(currentWf) || currentWf.length === 0) {
+        currentWf = INITIAL_DATA[KEYS.workforce] || [];
+      }
+      const cleanedWorkforce = currentWf.map(w => ({
+        ...w,
+        equipmentId: '',
+        currentTaskId: null,
+        currentState: 'Ocioso',
+        justificativa: '',
+        currentPauseReason: '',
+        currentActionStartTime: null
+      }));
+
+      // Obter usuários e sessão
+      const currentUsers = localStorage.getItem(KEYS.users);
+      const currentSession = localStorage.getItem('diman_session');
+
+      // 2. Limpar Supabase
+      if (supabaseClient) {
+        try {
+          const collectionsToWipe = [
+            KEYS.equipment, KEYS.tasks, KEYS.parts, KEYS.timesheets, KEYS.replannings,
+            KEYS.restrictions, KEYS.costs, KEYS.lessons, KEYS.notifications, KEYS.kpiCache,
+            KEYS.settings, KEYS.solicitacoes, KEYS.manuals, KEYS.manualFolders, KEYS.meetingTasks,
+            KEYS.followupTasks, KEYS.vacations, KEYS.assets, KEYS.audit
+          ];
+
+          for (const col of collectionsToWipe) {
+            try {
+              await supabaseClient.from('diman_store').delete().eq('collection', col);
+            } catch(e) {}
+          }
+
+          // Salvar mão de obra preservada no Supabase
+          if (cleanedWorkforce.length > 0) {
+            try {
+              await supabaseClient.from('diman_store').upsert(
+                cleanedWorkforce.map(w => ({
+                  collection: KEYS.workforce,
+                  key: w.id,
+                  data: w,
+                  updated_at: resetAt
+                })),
+                { onConflict: 'collection,key' }
+              );
+            } catch(e) {}
+          }
+
+          // Gravar sinal global de reset no Supabase
+          try {
+            await supabaseClient.from('diman_store').upsert({
+              collection: '__system__',
+              key: 'reset_signal',
+              data: {
+                resetAt: resetAt,
+                resetBy: userName,
+                keep: ['diman_workforce', 'diman_users']
+              },
+              updated_at: resetAt
+            }, { onConflict: 'collection,key' });
+          } catch(e) {}
+
+        } catch(e) {
+          console.error('Supabase wipe warning/error:', e);
+        }
+      }
+
+      // 3. Limpar localStorage local
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -761,19 +888,19 @@ window.DB = (() => {
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
 
-      // 2. Limpar Supabase — apagar todas as linhas da tabela diman_store
-      if (supabaseClient) {
-        try {
-          // Deleta todos os registros individuais (não tombstones)
-          await supabaseClient.from('diman_store').delete().neq('key', '__keep_nothing__');
-        } catch(e) {
-          console.error('Supabase full wipe error:', e);
-        }
+      // 4. Restaurar apenas Mão de Obra e Usuários no localStorage
+      localStorage.setItem(KEYS.workforce, JSON.stringify(cleanedWorkforce));
+      if (currentUsers) localStorage.setItem(KEYS.users, currentUsers);
+      if (currentSession) localStorage.setItem('diman_session', currentSession);
+
+      localStorage.setItem('diman_last_reset_applied', resetAt);
+      localStorage.setItem('diman_unsynced', 'false');
+
+      if (document.getElementById('_fullwipe_loading')) {
+        document.getElementById('_fullwipe_loading').remove();
       }
 
-      document.body.removeChild(loading);
-
-      // Modal de sucesso
+      // Modal customizado de sucesso
       const done = document.createElement('div');
       done.style.cssText = `
         position:fixed;inset:0;z-index:99999;
@@ -783,14 +910,17 @@ window.DB = (() => {
       done.innerHTML = `
         <div style="
           background:var(--bg-card,#1e1e2e);border:1px solid #22c55e;
-          border-radius:12px;padding:32px;max-width:380px;width:90%;text-align:center;
+          border-radius:12px;padding:32px;max-width:420px;width:90%;text-align:center;
         ">
           <svg fill="none" viewBox="0 0 24 24" stroke="#22c55e" style="width:48px;height:48px;margin:0 auto 12px;">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
           <h3 style="color:#22c55e;margin-bottom:8px;">Sistema zerado com sucesso!</h3>
-          <p style="color:var(--text-muted,#aaa);font-size:13px;margin-bottom:20px;">
-            Todos os dados foram removidos. O sistema será reiniciado.
+          <p style="color:var(--text-secondary,#ccc);font-size:13px;margin-bottom:12px;">
+            Todos os equipamentos, tarefas e restrições foram apagados.
+          </p>
+          <p style="color:#22c55e;font-size:13px;font-weight:600;margin-bottom:20px;">
+            ✅ A Mão de Obra (${cleanedWorkforce.length} profissionais) foi mantida intacta!
           </p>
           <button onclick="window.location.href=window.location.pathname" style="
             padding:10px 28px;background:#22c55e;color:#fff;
@@ -801,7 +931,7 @@ window.DB = (() => {
       document.body.appendChild(done);
 
     } catch(err) {
-      document.body.removeChild(loading);
+      if (document.getElementById('_fullwipe_loading')) document.getElementById('_fullwipe_loading').remove();
       if (window.Toast) window.Toast.error('Erro ao Zerar', err.message || 'Falha ao limpar o sistema.', 8000);
       else alert('Erro ao zerar: ' + err.message);
     }
