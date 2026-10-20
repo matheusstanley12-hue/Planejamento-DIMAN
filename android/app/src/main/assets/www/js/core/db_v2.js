@@ -31,7 +31,8 @@ window.DB = (() => {
     manualFolders: 'diman_manual_folders',
     meetingTasks: 'diman_meeting_tasks',
     followupTasks: 'diman_followup_tasks',
-    vacations: 'diman_vacations'
+    vacations: 'diman_vacations',
+    assets: 'diman_assets'
   };
 
   window.GlobalEqFilter = '';
@@ -450,6 +451,7 @@ window.DB = (() => {
 
           for (const collection of allKeys) {
             let localArr = [];
+            const hasLocalData = localStorage.getItem(collection) !== null;
             try { localArr = JSON.parse(localStorage.getItem(collection)) || []; } catch(e){}
             if (!Array.isArray(localArr)) localArr = [];
 
@@ -458,8 +460,11 @@ window.DB = (() => {
 
             const mergedMap = new Map();
             
-            // 1. Inserir dados locais primeiro (fonte da verdade provisória)
-            localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+            // 1. Inserir dados locais primeiro APENAS se o localStorage tiver dados reais
+            // Se o localStorage estiver vazio/ausente, os dados da nuvem sempre prevalecem
+            if (hasLocalData && localArr.length > 0) {
+              localArr.forEach(item => { if (item && item.id) mergedMap.set(item.id, item); });
+            }
 
             // 2. Mesclar baseArr (key: 'all' do Supabase)
             baseArr.forEach(item => {
@@ -475,10 +480,20 @@ window.DB = (() => {
                            item.status = existing.status;
                            item._statusUpdatedAt = existing._statusUpdatedAt;
                            syncToSupabase(collection, [item]);
+                        } else if (newStatusTime > existStatusTime) {
+                           existing.status = item.status;
+                           existing._statusUpdatedAt = item._statusUpdatedAt;
+                        } else if (existStatusTime === 0 && newStatusTime === 0) {
+                           if (item.status === 'Liberado' || existing.status === 'Liberado') {
+                               existing.status = 'Liberado';
+                               item.status = 'Liberado';
+                           }
                         }
                     }
                     
-                   if (!existing || newTime > existTime) {
+                   // Se não há dado local (mergedMap vazio), sempre aceita da nuvem
+                   // Se há dado local, usa o mais recente
+                   if (!existing || newTime >= existTime || existTime === 0) {
                       mergedMap.set(item.id, item);
                    } else if (existTime > newTime) {
                       syncToSupabase(collection, [existing]);
@@ -505,6 +520,14 @@ window.DB = (() => {
                        item.status = existing.status;
                        item._statusUpdatedAt = existing._statusUpdatedAt;
                        syncToSupabase(collection, [item]);
+                    } else if (newStatusTime > existStatusTime) {
+                       existing.status = item.status;
+                       existing._statusUpdatedAt = item._statusUpdatedAt;
+                    } else if (existStatusTime === 0 && newStatusTime === 0) {
+                       if (item.status === 'Liberado' || existing.status === 'Liberado') {
+                           existing.status = 'Liberado';
+                           item.status = 'Liberado';
+                       }
                     }
                 }
                 
@@ -539,6 +562,20 @@ window.DB = (() => {
             
             try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
           }
+
+          // Após sincronizar dados da nuvem, atualiza a UI se estiver visível
+          try {
+            if (window.Router && window.Router.getCurrent) {
+              const current = window.Router.getCurrent();
+              if (current) {
+                setTimeout(() => {
+                  if (window.Router && window.Router.navigate) {
+                    window.Router.navigate(current, { force: true });
+                  }
+                }, 200);
+              }
+            }
+          } catch(e) {}
       }
       
       if (!fetchError) {
@@ -630,13 +667,153 @@ window.DB = (() => {
     window.location.href = window.location.pathname;
   };
 
+  // ==================== WIPE TOTAL ====================
+  window.FullWipeAll = function() {
+    // Modal customizado de confirmação dupla (sem alert/confirm nativo)
+    const existing = document.getElementById('_fullwipe_modal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_fullwipe_modal';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:99999;
+      background:rgba(0,0,0,0.7);
+      display:flex;align-items:center;justify-content:center;
+    `;
+    overlay.innerHTML = `
+      <div style="
+        background:var(--bg-card,#1e1e2e);
+        border:1px solid var(--color-danger,#ef4444);
+        border-radius:12px;padding:32px;max-width:440px;width:90%;
+        box-shadow:0 20px 60px rgba(0,0,0,0.6);
+      ">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <svg fill="none" viewBox="0 0 24 24" stroke="#ef4444" style="width:32px;height:32px;flex-shrink:0;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+          <span style="font-size:18px;font-weight:700;color:var(--color-danger,#ef4444);">
+            ZERAR SISTEMA COMPLETO
+          </span>
+        </div>
+        <p style="color:var(--text-secondary,#ccc);font-size:14px;margin-bottom:8px;">
+          Esta ação vai apagar <strong style="color:#fff;">TODOS os dados</strong>:
+        </p>
+        <ul style="color:var(--text-muted,#aaa);font-size:13px;margin:0 0 16px 16px;line-height:1.9;">
+          <li>Equipamentos</li>
+          <li>Tarefas, horas e timesheets</li>
+          <li>Restrições, custos e peças</li>
+          <li>Funcionários e férias</li>
+          <li>Solicitações, manuais e reuniões</li>
+          <li>Histórico e bônus</li>
+        </ul>
+        <p style="color:#ef4444;font-size:13px;font-weight:600;margin-bottom:20px;">
+          ⚠️ Isso também limpa a nuvem (Supabase). NÃO tem desfazer!
+        </p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button id="_fullwipe_cancel" style="
+            padding:10px 20px;border:1px solid var(--border-default,#333);
+            background:transparent;color:var(--text-secondary,#ccc);
+            border-radius:8px;cursor:pointer;font-size:14px;
+          ">Cancelar</button>
+          <button id="_fullwipe_confirm" style="
+            padding:10px 24px;background:#ef4444;color:#fff;
+            border:none;border-radius:8px;cursor:pointer;
+            font-size:14px;font-weight:700;
+          ">Sim, APAGAR TUDO</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById('_fullwipe_cancel').onclick = () => overlay.remove();
+    document.getElementById('_fullwipe_confirm').onclick = async () => {
+      overlay.remove();
+      await _executeFullWipe();
+    };
+  };
+
+  async function _executeFullWipe() {
+    // Mostrar loading
+    const loading = document.createElement('div');
+    loading.id = '_fullwipe_loading';
+    loading.style.cssText = `
+      position:fixed;inset:0;z-index:99999;
+      background:rgba(0,0,0,0.85);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:16px;color:#fff;font-size:16px;
+    `;
+    loading.innerHTML = `
+      <svg style="width:48px;height:48px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+      <span>Apagando todos os dados...</span>
+    `;
+    document.body.appendChild(loading);
+
+    try {
+      // 1. Limpar localStorage — todas as chaves diman_*
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('diman_')) keysToRemove.push(k);
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+
+      // 2. Limpar Supabase — apagar todas as linhas da tabela diman_store
+      if (supabaseClient) {
+        try {
+          // Deleta todos os registros individuais (não tombstones)
+          await supabaseClient.from('diman_store').delete().neq('key', '__keep_nothing__');
+        } catch(e) {
+          console.error('Supabase full wipe error:', e);
+        }
+      }
+
+      document.body.removeChild(loading);
+
+      // Modal de sucesso
+      const done = document.createElement('div');
+      done.style.cssText = `
+        position:fixed;inset:0;z-index:99999;
+        background:rgba(0,0,0,0.8);
+        display:flex;align-items:center;justify-content:center;
+      `;
+      done.innerHTML = `
+        <div style="
+          background:var(--bg-card,#1e1e2e);border:1px solid #22c55e;
+          border-radius:12px;padding:32px;max-width:380px;width:90%;text-align:center;
+        ">
+          <svg fill="none" viewBox="0 0 24 24" stroke="#22c55e" style="width:48px;height:48px;margin:0 auto 12px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <h3 style="color:#22c55e;margin-bottom:8px;">Sistema zerado com sucesso!</h3>
+          <p style="color:var(--text-muted,#aaa);font-size:13px;margin-bottom:20px;">
+            Todos os dados foram removidos. O sistema será reiniciado.
+          </p>
+          <button onclick="window.location.href=window.location.pathname" style="
+            padding:10px 28px;background:#22c55e;color:#fff;
+            border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:14px;
+          ">OK, Reiniciar</button>
+        </div>
+      `;
+      document.body.appendChild(done);
+
+    } catch(err) {
+      document.body.removeChild(loading);
+      if (window.Toast) window.Toast.error('Erro ao Zerar', err.message || 'Falha ao limpar o sistema.', 8000);
+      else alert('Erro ao zerar: ' + err.message);
+    }
+  }
+
   // ==================== EQUIPMENT ====================
   const equipment = {
     list: () => get(KEYS.equipment),
     get: id => get(KEYS.equipment).find(e => String(e.id) === String(id)),
     create(data) {
       const items = get(KEYS.equipment);
-      const item = { id: uid('eq'), ...data, createdAt: now(), updatedAt: now(), timeline: [], replanning: [] };
+      const item = { id: uid('eq'), ...data, createdAt: now(), updatedAt: now(), _etapaUpdatedAt: now(), timeline: [], replanning: [] };
       items.push(item);
       set(KEYS.equipment, items);
       if (window.Auth && window.Auth.addAuditLog) window.Auth.addAuditLog('CREATE_EQUIPMENT', `Equipamento ${data.nome} criado`, data);
@@ -651,6 +828,9 @@ window.DB = (() => {
       
       if (data.status !== undefined && data.status !== before.status) {
         data._statusUpdatedAt = now();
+      }
+      if (data.etapaAtual !== undefined && data.etapaAtual !== before.etapaAtual) {
+        data._etapaUpdatedAt = now();
       }
       
       items[idx] = { ...items[idx], ...data, updatedAt: now() };
@@ -1333,6 +1513,13 @@ window.DB = (() => {
     delete: (id) => { const m = get(KEYS.vacations); set(KEYS.vacations, m.filter(r => r && r.id !== id)); }
   };
 
+  const assets = {
+    list: () => get(KEYS.assets),
+    add: (data) => { const a = get(KEYS.assets); a.push({ ...data, createdAt: now() }); set(KEYS.assets, a); },
+    update: (id, updates) => { let a = get(KEYS.assets); const i = a.findIndex(r => r && r.id === id); if (i !== -1) { a[i] = { ...a[i], ...updates, updatedAt: now() }; set(KEYS.assets, a); } },
+    delete: (id) => { const a = get(KEYS.assets); set(KEYS.assets, a.filter(r => r && r.id !== id)); }
+  };
+
   // Auto-refresh engine (Polling)
   setInterval(() => {
      if (window.DB && window.DB.initSupabase && localStorage.getItem('diman_unsynced') !== 'true') {
@@ -1341,7 +1528,7 @@ window.DB = (() => {
   }, 15000);
 
   return {
-    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, uid, now,
+    equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, assets, uid, now,
     initSupabase, forceSyncAll, setGlobalEqFilter, syncToSupabase };
   } catch(err) {
     alert('Erro crítico ao inicializar o banco de dados (db.js): ' + err.message + '\n\n' + err.stack);

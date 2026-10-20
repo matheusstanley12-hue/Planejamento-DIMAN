@@ -1,4 +1,4 @@
-/* ================================================================
+﻿/* ================================================================
    PLANEJAMENTO DIMAN-BHZ — Modules Batch 3
    Costs, Planning, KPI, Simulator, AI Assistant
    Meeting Mode, Timeline, Lessons, Reports, Audit, Users, Impacts
@@ -142,12 +142,59 @@ window.PlanningModule = (() => {
   let planChart = null;
 
   function render() {
-    const eqs = DB.equipment.list();
-    const allTasks = DB.tasks.getAll();
-    const totalTasks = allTasks.length;
-    const doneTasks = allTasks.filter(t=>t.status==='Concluída').length;
-    const realizado = totalTasks ? Math.round(doneTasks/totalTasks*100) : 0;
-    const planejado = 78;
+    const eqs = DB.equipment.list().filter(e => e.status !== 'Cancelado' && e.status !== 'Excluído');
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    
+    // Equipamentos planejados para liberação neste mês
+    const plannedEqs = eqs.filter(e => {
+       const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+       return dtPlan && dtPlan.startsWith(`${currentYear}-${(currentMonth+1).toString().padStart(2,'0')}`);
+    });
+    const totalPlanned = plannedEqs.length > 0 ? plannedEqs.length : 1;
+    
+    const labels = [];
+    const plData = [];
+    const rlData = [];
+    
+    let cumPlan = 0;
+    let cumReal = 0;
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dayStr = i.toString().padStart(2, '0');
+      const dateStr = `${currentYear}-${(currentMonth+1).toString().padStart(2,'0')}-${dayStr}`;
+      
+      labels.push(`${i}/${currentMonth+1}`);
+      
+      const dayPlanCount = plannedEqs.filter(e => {
+          const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+          return dtPlan === dateStr;
+      }).length;
+      
+      const dayRealCount = eqs.filter(e => {
+          if (e.status !== 'Liberado') return false;
+          const dtReal = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual;
+          return dtReal && dtReal.startsWith(dateStr);
+      }).length;
+      
+      cumPlan += dayPlanCount;
+      cumReal += dayRealCount;
+      
+      plData.push(Math.round((cumPlan / totalPlanned) * 100));
+      
+      if (i <= now.getDate()) {
+          rlData.push(Math.round((cumReal / totalPlanned) * 100));
+      } else {
+          rlData.push(null);
+      }
+    }
+    
+    // Resumo atualizado até o dia de hoje
+    const todayIndex = Math.min(now.getDate() - 1, daysInMonth - 1);
+    const planejado = plData[todayIndex] || 0;
+    const realizado = rlData[todayIndex] || 0;
     const desvio = realizado - planejado;
     const devCls = desvio >= 0 ? 'success' : desvio >= -10 ? 'warning' : 'danger';
 
@@ -164,16 +211,7 @@ window.PlanningModule = (() => {
       gradReal.addColorStop(0, desvio >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)');
       gradReal.addColorStop(1, desvio >= 0 ? 'rgba(16,185,129,0.0)' : 'rgba(239,68,68,0.0)');
 
-      const labels = [];
-      const plData = [];
-      const rlData = [];
-      for (let i = 20; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        labels.push(`${d.getDate()}/${d.getMonth()+1}`);
-        plData.push(Math.min(100, Math.round((20-i)/20*planejado + Math.random()*3)));
-        rlData.push(Math.min(100, Math.round((20-i)/20*realizado + Math.random()*2)));
-      }
+      // Data generated dynamically above
       planChart = new Chart(canvas, {
         type:'line', data: {
           labels,
@@ -187,6 +225,7 @@ window.PlanningModule = (() => {
           maintainAspectRatio:false, 
           interaction: { mode: 'index', intersect: false },
           plugins:{
+            datalabels: { display: false },
             tooltip: { backgroundColor: 'rgba(15,23,42,0.9)', titleFont: { family: 'Inter', size: 13 }, bodyFont: { family: 'Inter', size: 13 }, padding: 12, cornerRadius: 8 },
             legend:{labels:{color:'var(--text-secondary)',font:{family:'Inter',size:12, weight:'600'}, usePointStyle: true, boxWidth: 8}}
           }, 
@@ -279,11 +318,11 @@ window.PlanningModule = (() => {
               </tr>
             </thead>
             <tbody>
-              ${eqs.map((e, idx) => {
+              ${[...eqs].sort((a, b) => (b.replanning?.length || 0) - (a.replanning?.length || 0)).map((e, idx, arr) => {
                 const repls = e.replanning || [];
                 const totalDays = repls.reduce((s,r) => s + daysBetween(r.dataAnterior, r.novaData), 0);
-                const isLast = idx === eqs.length - 1;
-                return `<tr style="${!isLast ? 'border-bottom: 1px solid var(--border-default, #e2e8f0);' : ''} transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover, #f1f5f9)'" onmouseout="this.style.background='transparent'">
+                const isLast = idx === arr.length - 1;
+                return `<tr style="cursor: pointer; ${!isLast ? 'border-bottom: 1px solid var(--border-default, #e2e8f0);' : ''} transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover, #f1f5f9)'" onmouseout="this.style.background='transparent'" onclick="window.PlanningModule.showHistory('${e.id}')">
                   <td style="padding: 16px 24px;"><strong>${e.codigo}</strong></td>
                   <td style="padding: 16px 24px; color: var(--text-secondary); font-weight: 500;">${e.cliente || '—'}</td>
                   <td style="padding: 16px 24px; font-family: var(--font-mono); font-size: 0.85rem; display: flex; align-items: center; gap: 6px; font-weight: 600;">
@@ -302,8 +341,73 @@ window.PlanningModule = (() => {
     </div>`;
   }
 
+  function showHistory(eqId) {
+    const eq = DB.equipment.get(eqId);
+    if (!eq) return;
+    
+    let modal = document.getElementById('modal-replan-history');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.id = 'modal-replan-history';
+      document.body.appendChild(modal);
+    }
+    
+    const repls = eq.replanning || [];
+    
+    let rowsHtml = '';
+    if (repls.length === 0) {
+      rowsHtml = `<tr><td colspan="4" style="text-align:center; padding: 32px 20px; color: var(--text-muted);">Nenhum replanejamento registrado para este equipamento.</td></tr>`;
+    } else {
+      rowsHtml = repls.map((r, i) => {
+        const dias = daysBetween(r.dataAnterior, r.novaData);
+        return `
+          <tr style="border-bottom: 1px solid var(--border-default);">
+            <td style="padding: 16px 24px; font-weight: 800; color: var(--text-primary);">${i+1}º Replan.</td>
+            <td style="padding: 16px 24px;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">De</div>
+              <div style="font-family: var(--font-mono); font-weight: 500;">${formatDate(r.dataAnterior)}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px;">Para</div>
+              <div style="font-family: var(--font-mono); font-weight: 800; color: var(--brand-primary);">${formatDate(r.novaData)}</div>
+            </td>
+            <td style="padding: 16px 24px; color: var(--color-danger); font-weight: 800;">+${dias} dias</td>
+            <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">${r.motivo || '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+    
+    modal.innerHTML = `
+      <div class="modal modal-md" style="max-width: 700px; padding: 0; overflow: hidden;">
+        <div class="modal-header" style="padding: 24px; border-bottom: 1px solid var(--border-default);">
+          <div class="modal-title" style="font-size: 1.25rem; font-weight: 800;">Histórico: ${eq.codigo}</div>
+          <button class="modal-close" onclick="closeModal('modal-replan-history')" style="background: var(--bg-alt); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: var(--text-secondary);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:20px;height:20px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="modal-body" style="padding: 0; max-height: 60vh; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: var(--bg-alt); position: sticky; top: 0;">
+              <tr>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Vez</th>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Datas</th>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Impacto</th>
+                <th style="padding: 12px 24px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    openModal('modal-replan-history');
+  }
+
   function destroy() { if (planChart) { try { planChart.destroy(); } catch(e){} planChart = null; } }
-  return { render, destroy };
+  return { render, destroy, showHistory };
 })();
 
 
@@ -1357,8 +1461,8 @@ window.MeetingMode = (() => {
         </div>
       </div>
 
-      <!-- 4-panel grid -->
-      <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:16px;overflow:hidden;">
+      <!-- 3-panel grid -->
+      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px;overflow:hidden;">
         
         <!-- Column 1: Em Manutenção -->
         <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
@@ -1416,29 +1520,6 @@ window.MeetingMode = (() => {
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
-          </div>
-        </div>
-
-        <!-- Column 3: Top Executantes -->
-        <div style="background:#0A1929;border:1px solid rgba(156,39,176,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:10px;background:rgba(156,39,176,.1);border-bottom:1px solid rgba(156,39,176,.2);">
-            <h2 style="margin:0;color:#BA68C8;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              🚀 Top Executantes
-            </h2>
-          </div>
-          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-            ${topPerformers.length > 0 ? topPerformers.map((t, idx) => {
-              const emojis = ['🏆 1º', '🥈 2º', '🥉 3º', '🏅 4º', '🏅 5º'];
-              return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #AB47BC;padding:10px;border-radius:6px;display:flex;align-items:center;gap:12px;">
-                  <div style="font-size:1.5rem;">${emojis[idx] || '🏅'}</div>
-                  <div style="flex:1;">
-                    <div style="font-weight:800;color:white;font-size:1rem;margin-bottom:2px;">${t.nome}</div>
-                    <div style="color:#CE93D8;font-weight:700;font-size:0.85rem;"><span style="color:white;font-weight:900;">${t.count}</span> tarefas executadas</div>
-                  </div>
-                </div>
-              `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum dado de execução</div>'}
           </div>
         </div>
 
@@ -2292,6 +2373,7 @@ window.AuditModule = (() => {
 window.UsersModule = (() => {
   function render() {
     if (!Auth.hasPermission('users')) return '<div class="page-container"><div class="empty-state"><p>Sem permissão para acessar este módulo</p></div></div>';
+    const session = window.Auth ? window.Auth.getSession() : null;
     let users = window.Auth ? window.Auth.listUsers() : [];
     users.sort((a, b) => {
       const pA = a.perfil || '';
@@ -2358,9 +2440,9 @@ window.UsersModule = (() => {
         <div class="section-title">
           <div class="section-title-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg></div>
           <div>Gestão de Usuários</div>
-        </div>
-        <div class="section-actions">
+        </div>        <div class="section-actions">
           <button class="btn btn-primary" onclick="openModal('modal-user-form')">+ Novo Usuário</button>
+          ${session && ['Gerente','Dev'].includes(session.perfil) ? '<button class="btn btn-sm" style="background:var(--color-danger);color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:6px;" onclick="window.FullWipeAll &amp;&amp; window.FullWipeAll()">🗑️ Zerar Sistema</button>' : ''}
         </div>
       </div>
       <div class="table-wrap"><table>
