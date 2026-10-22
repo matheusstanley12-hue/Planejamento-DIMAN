@@ -970,35 +970,7 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
             <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${(canEditPlan && !(eq && eq.replanning && eq.replanning.length > 0)) ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} title="${(eq && eq.replanning && eq.replanning.length > 0) ? 'Esta é a data base original. Para mudar a data atual, clique em Replanejar.' : ''}" />
-            ${eq ? `<button type="button" class="btn btn-secondary" onclick="
-    // Sincronizar Mão de Obra alocada no equipamento
-    try {
-      const eqTargetId = id || (DB.equipment.list().find(e => e.codigo === data.codigo)?.id);
-      if (eqTargetId && data.workforceMap) {
-        const allWf = DB.workforce.list() || [];
-        let wfChanged = false;
-        const assigned = new Set(Object.values(data.workforceMap).filter(Boolean));
-        allWf.forEach(w => {
-          if (assigned.has(w.nome)) {
-            if (w.equipmentId !== eqTargetId) {
-              w.equipmentId = eqTargetId;
-              wfChanged = true;
-            }
-          } else if (w.equipmentId === eqTargetId) {
-            w.equipmentId = '';
-            wfChanged = true;
-          }
-        });
-        if (wfChanged) {
-          localStorage.setItem('diman_workforce', JSON.stringify(allWf));
-          if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_workforce', allWf);
-        }
-      }
-    } catch(wfSyncErr) {
-      console.warn('Erro ao atualizar vinculo de workforce:', wfSyncErr);
-    }
-
-    closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
+            ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
           ${eq && eq.replanning && eq.replanning.length > 0 ? `
           <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
@@ -1190,6 +1162,33 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
         data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value;
       }
       DB.equipment.update(id, data); 
+    // Sincronizar Mao de Obra alocada no equipamento
+    try {
+      const eqTargetId = id || (DB.equipment.list().find(e => e.codigo === data.codigo)?.id);
+      if (eqTargetId && data.workforceMap) {
+        const allWf = DB.workforce.list() || [];
+        let wfChanged = false;
+        const assigned = new Set(Object.values(data.workforceMap).filter(v => v && v.trim() && v !== 'Não atribuído'));
+        allWf.forEach(w => {
+          if (assigned.has(w.nome)) {
+            if (w.equipmentId !== eqTargetId) {
+              w.equipmentId = eqTargetId;
+              wfChanged = true;
+            }
+          } else if (w.equipmentId === eqTargetId) {
+            w.equipmentId = '';
+            wfChanged = true;
+          }
+        });
+        if (wfChanged) {
+          localStorage.setItem('diman_workforce', JSON.stringify(allWf));
+          if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_workforce', allWf);
+        }
+      }
+    } catch(wfSyncErr) {
+      console.warn('Erro ao atualizar vinculo de workforce:', wfSyncErr);
+    }
+
       Toast.success('Equipamento atualizado!', data.codigo); 
     }
     else { 

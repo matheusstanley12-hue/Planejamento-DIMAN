@@ -1439,16 +1439,39 @@ window.MeetingMode = (() => {
       .sort((a,b) => b.count - a.count);
 
     
-    const getWfDisplay = (e) => {
+    const getExecutante = (e) => {
+      const names = [];
       if (e.workforceMap) {
-        const names = Object.values(e.workforceMap).filter(n => n && n.trim() && n !== 'Não atribuído');
-        if (names.length > 0) return names.join(', ');
+        Object.entries(e.workforceMap).forEach(([disc, name]) => {
+          if (name && name.trim() && name !== 'Não atribuído' && !names.includes(name.trim())) {
+            names.push(name.trim());
+          }
+        });
       }
-      const wfList = window.DB && window.DB.workforce ? window.DB.workforce.list() : [];
-      const allocated = wfList.filter(w => w.equipmentId === e.id).map(w => w.nome);
-      if (allocated.length > 0) return allocated.join(', ');
-      return e.responsavel || 'Não Definida';
+      if (names.length === 0) {
+        const wfList = window.DB && window.DB.workforce ? window.DB.workforce.list() : [];
+        wfList.filter(w => w.equipmentId === e.id).forEach(w => {
+          if (w.nome && !names.includes(w.nome)) names.push(w.nome);
+        });
+      }
+      if (names.length === 0 && window.DB && window.DB.tasks) {
+        const tasks = window.DB.tasks.list().filter(t => t.equipmentId === e.id);
+        tasks.forEach(t => {
+          if (t.responsavel && !names.includes(t.responsavel)) names.push(t.responsavel);
+          if (Array.isArray(t.workers)) {
+            t.workers.forEach(w => { if (w && !names.includes(w)) names.push(w); });
+          }
+        });
+      }
+      if (names.length === 0 && e.executante && e.executante.trim()) {
+        names.push(e.executante.trim());
+      }
+      if (names.length === 0 && e.responsavel && e.responsavel.trim()) {
+        names.push(e.responsavel.trim());
+      }
+      return names.length > 0 ? names.join(', ') : 'Não Definido';
     };
+    const getWfDisplay = getExecutante;
 
     overlay.innerHTML = `
       <!-- Header bar -->
@@ -1504,11 +1527,10 @@ window.MeetingMode = (() => {
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
                     <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px;">
-                     <span>Mão de Obra:</span>
-                     <strong style="color:#BBDEFB;font-size:0.9rem;">${getWfDisplay(e)}</strong>
+                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                     <span>Executante:</span>
+                     <strong style="color:#BBDEFB;font-size:0.9rem;">${getExecutante(e)}</strong>
                    </div>
-                   <div style="color:#64748b;font-size:0.75rem;">Cliente: ${e.cliente || 'Não Informado'}</div>
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento em manutenção</div>'}
@@ -1532,11 +1554,10 @@ window.MeetingMode = (() => {
                     <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
                     <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;">
-                     <span>Mão de Obra:</span>
-                     <strong style="color:white;font-size:0.8rem;">${getWfDisplay(e)}</strong>
+                  <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                     <span>Executante:</span>
+                     <strong style="color:white;font-size:0.8rem;">${getExecutante(e)}</strong>
                    </div>
-                   <div style="color:#64748b;font-size:0.7rem;">Cliente: ${e.cliente || 'Não Informado'}</div>
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
@@ -1571,11 +1592,10 @@ window.MeetingMode = (() => {
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
                     <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px;">
-                     <span>Mão de Obra:</span>
-                     <strong style="color:#FFE0B2;font-size:0.9rem;">${getWfDisplay(e)}</strong>
+                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                     <span>Executante:</span>
+                     <strong style="color:#FFE0B2;font-size:0.9rem;">${getExecutante(e)}</strong>
                    </div>
-                   <div style="color:#64748b;font-size:0.75rem;">Cliente: ${e.cliente || 'Não Informado'}</div>
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
