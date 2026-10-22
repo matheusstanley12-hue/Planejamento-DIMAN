@@ -1541,34 +1541,7 @@ window.MeetingMode = (() => {
           </div>
         </div>
 
-        <!-- Column 2: Liberados -->
-        <div style="background:#0A1929;border:1px solid rgba(76,175,80,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:10px;background:rgba(76,175,80,.1);border-bottom:1px solid rgba(76,175,80,.2);">
-            <h2 style="margin:0;color:#81C784;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              ✅ Liberados no Mês
-            </h2>
-          </div>
-          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
-            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => ((b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
-              const d = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
-              const dataStr = d ? formatDate(d) : '—';
-              return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
-                    <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
-                  </div>
-                  <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                     <span>Executante:</span>
-                     <strong style="color:white;font-size:0.8rem;">${getExecutante(e)}</strong>
-                   </div>
-                </div>
-              `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
-          </div>
-        </div>
-
-        <!-- Column 4: Aguardando Manutenção -->
+        <!-- Column 2: Aguardando Manutenção -->
         <div style="background:#0A1929;border:1px solid rgba(255,152,0,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
           <div style="padding:14px;background:rgba(255,152,0,.1);border-bottom:1px solid rgba(255,152,0,.2);">
             <h2 style="margin:0;color:#FFB74D;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
@@ -1603,6 +1576,33 @@ window.MeetingMode = (() => {
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
+          </div>
+        </div>
+
+        <!-- Column 3: Liberados no Mês -->
+        <div style="background:#0A1929;border:1px solid rgba(76,175,80,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
+          <div style="padding:10px;background:rgba(76,175,80,.1);border-bottom:1px solid rgba(76,175,80,.2);">
+            <h2 style="margin:0;color:#81C784;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              ✅ Liberados no Mês
+            </h2>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
+            ${eqReleased.length > 0 ? eqReleased.sort((a,b) => ((b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
+              const d = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+              const dataStr = d ? formatDate(d) : '—';
+              return `
+                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                    <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
+                  </div>
+                  <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                     <span>Executante:</span>
+                     <strong style="color:white;font-size:0.8rem;">${getExecutante(e)}</strong>
+                   </div>
+                </div>
+              `;
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
           </div>
         </div>
       </div>
