@@ -889,10 +889,8 @@ window.EquipmentModule = (() => {
         <input 
           type="text" 
           class="eq-wf-input form-control" 
-          list="wf-all-datalist" 
           value="${val ? String(val).replace(/"/g, '&quot;') : ''}" 
-          placeholder="🔍 Digite para pesquisar o nome do executante..." 
-          autocomplete="off" 
+          placeholder="Nome da mão de obra / executante..." 
           style="width:100%;height:38px;padding:0 var(--space-3);background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);font-size:13px;" 
         />
       </div>
@@ -901,7 +899,7 @@ window.EquipmentModule = (() => {
         class="btn btn-secondary" 
         onclick="EquipmentModule.removeWfRow(this)" 
         style="height:38px;padding:0 12px;border:1px solid var(--border-card);color:#EF4444;background:rgba(239,68,68,0.08);display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;" 
-        title="Remover executante"
+        title="Remover"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
         Remover
@@ -927,16 +925,7 @@ window.EquipmentModule = (() => {
     const wf = (window.DB && window.DB.workforce ? window.DB.workforce.list() : []) || [];
     const sortedWf = [...wf].sort((a,b) => (a.nome || '').localeCompare(b.nome || ''));
 
-    // Datalist global com todos os colaboradores cadastrados para pesquisa rápida
-    const wfDatalistHTML = `
-      <datalist id="wf-all-datalist">
-        ${sortedWf.map(w => {
-          const disc = w.disciplina ? ` — ${w.disciplina}` : (w.funcao ? ` — ${w.funcao}` : '');
-          const alloc = (w.equipmentId && w.equipmentId !== eq?.id) ? ' (Alocado)' : '';
-          return `<option value="${w.nome}">${w.nome}${disc}${alloc}</option>`;
-        }).join('')}
-      </datalist>
-    `;
+    
 
     // Carregar executantes existentes do equipamento
     let currentExecutantes = [];
@@ -1037,7 +1026,7 @@ window.EquipmentModule = (() => {
               <span style="font-size:11px;color:#0284C7;background:rgba(2,132,199,0.1);padding:2px 8px;border-radius:12px;font-weight:700;">Apresentação da TV</span>
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-              Digite para selecionar os executantes. Adicione ou remova quantos desejar.
+              Adicione manualmente a mão de obra. Você pode adicionar ou remover quantas quiser.
             </div>
           </div>
           <button 
@@ -1050,8 +1039,6 @@ window.EquipmentModule = (() => {
             Adicionar Mão de Obra
           </button>
         </div>
-        ${wfDatalistHTML}
-        
         <div id="eq-workforce-container">
           ${currentExecutantes.map(name => `
             <div class="eq-wf-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
@@ -1059,9 +1046,9 @@ window.EquipmentModule = (() => {
                 <input 
                   type="text" 
                   class="eq-wf-input form-control" 
-                  list="wf-all-datalist" 
+                   
                   value="${name ? String(name).replace(/"/g, '&quot;') : ''}" 
-                  placeholder="🔍 Digite para pesquisar o nome do executante..." 
+                  placeholder="Nome da mão de obra / executante..." 
                   autocomplete="off" 
                   style="width:100%;height:38px;padding:0 var(--space-3);background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);font-size:13px;" 
                 />
