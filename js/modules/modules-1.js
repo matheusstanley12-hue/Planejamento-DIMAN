@@ -879,31 +879,61 @@ window.EquipmentModule = (() => {
   }
 
   function equipmentForm(eq) {
-    const wf = DB.workforce.list();
+    const wf = (window.DB && window.DB.workforce ? window.DB.workforce.list() : []) || [];
     const map = eq?.workforceMap || {};
-    const getOptions = (disc) => {
-      const workers = wf.filter(w => w.disciplina === disc);
-      const list = workers.length ? workers : wf;
-      const allEqs = DB.equipment.list();
-      
-      return `<option value="">—</option>` + list.map(w => {
-        const allocatedEq = w.equipmentId ? allEqs.find(e => e.id === w.equipmentId) : null;
-        const isAllocatedToOther = w.equipmentId && w.equipmentId !== eq?.id && allocatedEq && allocatedEq.status !== 'Liberado';
-        
-        if (isAllocatedToOther) {
-          return `<option value="${w.nome}" style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq?.codigo || 'Outro'}">🔒 ${w.nome} (Alocado em ${allocatedEq?.codigo || 'Outro'})</option>`;
-        } else {
-          return `<option value="${w.nome}" ${map[disc] === w.nome ? 'selected' : ''}>${w.nome}</option>`;
-        }
-      }).join('');
+    const allEqs = (window.DB && window.DB.equipment ? window.DB.equipment.list() : []) || [];
+
+    // Ordenar todos os colaboradores por nome
+    const sortedWf = [...wf].sort((a,b) => (a.nome || '').localeCompare(b.nome || ''));
+
+    // Datalist global com todos os colaboradores cadastrados para pesquisa rápida
+    const wfDatalistHTML = `
+      <datalist id="wf-all-datalist">
+        ${sortedWf.map(w => {
+          const disc = w.disciplina ? ` — ${w.disciplina}` : (w.funcao ? ` — ${w.funcao}` : '');
+          const alloc = (w.equipmentId && w.equipmentId !== eq?.id) ? ' (Alocado)' : '';
+          return `<option value="${w.nome}">${w.nome}${disc}${alloc}</option>`;
+        }).join('')}
+      </datalist>
+    `;
+
+    // Função para renderizar cada campo com pesquisa em tempo real e todos os cadastrados
+    const renderWfField = (disc, idInput) => {
+      const currentVal = map[disc] || '';
+      return `
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">
+            <span>${disc}</span>
+            <span style="font-size:10px;color:var(--text-muted);font-weight:normal;">Busca em todos</span>
+          </label>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <input 
+              type="text" 
+              id="${idInput}" 
+              list="wf-all-datalist" 
+              class="form-control" 
+              value="${currentVal}" 
+              placeholder="🔍 Digite o nome para pesquisar..." 
+              autocomplete="off"
+              style="flex:1;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);height:38px;padding:0 var(--space-3);font-size:13px;" 
+            />
+            <button 
+              type="button" 
+              class="btn btn-secondary btn-sm" 
+              onclick="const el=document.getElementById('${idInput}'); el.value=''; el.focus();" 
+              title="Limpar seleção" 
+              style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;color:var(--text-muted);"
+            >✕</button>
+          </div>
+        </div>
+      `;
     };
 
     const session = window.Auth ? window.Auth.getSession() : null;
     const canEditPlan = !eq || (session && ['Desenvolvedor', 'Planejador'].includes(session.perfil));
     const assetsList = window.DB && window.DB.assets ? window.DB.assets.list() : [];
     const datalistHTML = `<datalist id="assets-datalist">${assetsList.map(a => `<option value="${a.codigo}">`).join('')}</datalist>`;
-
-    return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
+return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       ${datalistHTML}
       <div class="form-row cols-3">
         <div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
@@ -940,7 +970,35 @@ window.EquipmentModule = (() => {
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
             <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${(canEditPlan && !(eq && eq.replanning && eq.replanning.length > 0)) ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} title="${(eq && eq.replanning && eq.replanning.length > 0) ? 'Esta é a data base original. Para mudar a data atual, clique em Replanejar.' : ''}" />
-            ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
+            ${eq ? `<button type="button" class="btn btn-secondary" onclick="
+    // Sincronizar Mão de Obra alocada no equipamento
+    try {
+      const eqTargetId = id || (DB.equipment.list().find(e => e.codigo === data.codigo)?.id);
+      if (eqTargetId && data.workforceMap) {
+        const allWf = DB.workforce.list() || [];
+        let wfChanged = false;
+        const assigned = new Set(Object.values(data.workforceMap).filter(Boolean));
+        allWf.forEach(w => {
+          if (assigned.has(w.nome)) {
+            if (w.equipmentId !== eqTargetId) {
+              w.equipmentId = eqTargetId;
+              wfChanged = true;
+            }
+          } else if (w.equipmentId === eqTargetId) {
+            w.equipmentId = '';
+            wfChanged = true;
+          }
+        });
+        if (wfChanged) {
+          localStorage.setItem('diman_workforce', JSON.stringify(allWf));
+          if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_workforce', allWf);
+        }
+      }
+    } catch(wfSyncErr) {
+      console.warn('Erro ao atualizar vinculo de workforce:', wfSyncErr);
+    }
+
+    closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
           ${eq && eq.replanning && eq.replanning.length > 0 ? `
           <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
@@ -972,50 +1030,27 @@ window.EquipmentModule = (() => {
       </div>
       
       <div style="border-top:1px solid var(--border-card);padding-top:var(--space-4);margin-top:var(--space-2);">
-        <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-3);">Mão de Obra por Disciplina (Auto-preenchimento)</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Mecânica</label>
-            <select id="eq-wf-mecanica">${getOptions('Mecânica')}</select>
-          </div>
-          <div class="form-group">
-            
-          </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3);">
+          <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-secondary);">Mão de Obra por Disciplina (Auto-preenchimento)</div>
+          <span style="font-size:11px;color:#38BDF8;font-weight:600;">⚡ Filtra todos os ${sortedWf.length} profissionais cadastrados</span>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Elétrica</label>
-            <select id="eq-wf-eletrica">${getOptions('Elétrica')}</select>
-          </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Caldeiraria</label>
-            <select id="eq-wf-caldeiraria">${getOptions('Caldeiraria')}</select>
-          </div>
-          <div class="form-group">
-            <label>Usinagem</label>
-            <select id="eq-wf-usinagem">${getOptions('Usinagem')}</select>
-          </div>
+        ${wfDatalistHTML}
+        
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Mecânica', 'eq-wf-mecanica')}
+          ${renderWfField('Elétrica', 'eq-wf-eletrica')}
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Pintor</label>
-            <select id="eq-wf-pintor">${getOptions('Pintor')}</select>
-          </div>
-          <div class="form-group">
-            <label>Lavador</label>
-            <select id="eq-wf-lavador">${getOptions('Lavador')}</select>
-          </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Caldeiraria', 'eq-wf-caldeiraria')}
+          ${renderWfField('Usinagem', 'eq-wf-usinagem')}
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Montagem</label>
-            <select id="eq-wf-montagem">${getOptions('Montagem')}</select>
-          </div>
-          <div class="form-group">
-            <label>Subconjunto</label>
-            <select id="eq-wf-subconjunto">${getOptions('Subconjunto')}</select>
-          </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Pintor', 'eq-wf-pintor')}
+          ${renderWfField('Lavador', 'eq-wf-lavador')}
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Montagem', 'eq-wf-montagem')}
+          ${renderWfField('Subconjunto', 'eq-wf-subconjunto')}
         </div>
       </div>
 

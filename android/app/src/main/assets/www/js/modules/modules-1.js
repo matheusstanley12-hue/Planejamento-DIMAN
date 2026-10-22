@@ -116,8 +116,20 @@ window.Dashboard = (() => {
           const mStr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
           const mP = Array(12).fill(0), mR = Array(12).fill(0);
           eqs.forEach(e => {
-            if(e.dataLiberacaoPlanejada) { const m = parseInt(e.dataLiberacaoPlanejada.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
-            if(e.status==='Liberado' && (e.dataLiberacaoAtual || e.dataFim)) { const m = parseInt((e.dataLiberacaoAtual||e.dataFim).split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+            if (e.status === 'Cancelado' || e.status === 'Excluído') return;
+            
+            let dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+            const dtReal = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+            
+            if (e.status === 'Liberado' && dtReal) {
+                dtPlan = dtReal;
+            }
+            
+            if(dtPlan) { const m = parseInt(dtPlan.split('-')[1],10); if(m>=1&&m<=12) mP[m-1]++; }
+            if(e.status==='Liberado') {
+              const dt = e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || (e._statusUpdatedAt ? e._statusUpdatedAt.slice(0,10) : e.dataLiberacaoAtual);
+              if(dt) { const m = parseInt(dt.split('-')[1],10); if(m>=1&&m<=12) mR[m-1]++; }
+            }
           });
           const aderenciaArr = mStr.map((_, i) => mP[i] ? Math.round((mR[i]/mP[i])*100) : null);
 
@@ -194,7 +206,8 @@ window.Dashboard = (() => {
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
              else if (t === 'Compressores') t = 'Compressor';
-             return t === c && e.dataLiberacaoPlanejada && e.dataLiberacaoPlanejada.startsWith(currentMonthPrefix);
+             const dtPlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
+             return t === c && dtPlan && dtPlan.startsWith(currentMonthPrefix);
           }).length);
           const cR = catsFull.map(c => eqs.filter(e => {
              let t = e.tipo || '';
@@ -204,7 +217,7 @@ window.Dashboard = (() => {
              else if (t === 'Subconjuntos') t = 'Subconjunto';
              else if (t === 'Programação de almoxarifado') t = 'Serviço de almoxarifado';
              else if (t === 'Compressores') t = 'Compressor';
-             return t === c && e.status === 'Liberado' && (e.dataLiberacaoAtual||'').startsWith(currentMonthPrefix);
+             return t === c && e.status === 'Liberado' && (e.dataLiberacaoReal || e.dataRealLiberacao || e.dataFim || e.dataLiberacaoAtual || '').startsWith(currentMonthPrefix);
           }).length);
           charts.cat = new Chart(ctxCat, {
             type: 'bar',
@@ -349,7 +362,7 @@ window.WorkshopModule = (() => {
     const eqs = window.DB.equipment.list();
     const workshopData = eqs.map(eq => {
       let status = eq.status || '';
-      let isCurrent = (status === 'Em Manutenção' || status === 'Aguardando Manutenção' || status === 'Backlog');
+      let isCurrent = eq.status !== 'Liberado' && eq.status !== 'Operando';
       let days = 0;
       if (eq.dataEntrada) {
         if (isCurrent || !eq.dataLiberacaoAtual) {
@@ -358,10 +371,13 @@ window.WorkshopModule = (() => {
           days = getDaysDiff(eq.dataEntrada, eq.dataLiberacaoAtual);
         }
       }
-      return { ...eq, daysInWorkshop: days, isCurrent };
-    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada);
+      let etapa = eq.etapaAtual || 'Nenhuma';
+      let refDate = eq._etapaUpdatedAt || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
+      let daysInStage = getDaysDiff(refDate, new Date().toISOString());
+      return { ...eq, daysInWorkshop: days, isCurrent, daysInStage, etapa };
+    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada && eq.etapa !== 'Liberada');
 
-    const currentInWorkshop = workshopData.filter(e => e.isCurrent).sort((a, b) => b.daysInWorkshop - a.daysInWorkshop).slice(0, 10);
+    const currentInWorkshop = workshopData.filter(e => e.isCurrent).sort((a, b) => b.daysInWorkshop - a.daysInWorkshop);
     const categories = {};
     workshopData.forEach(e => {
       const cat = e.tipo || 'Outros';
@@ -374,6 +390,9 @@ window.WorkshopModule = (() => {
 
     const ctxTop = document.getElementById('chart-top-10');
     if (ctxTop && currentInWorkshop.length > 0) {
+      const calcHeightTop = Math.max(300, currentInWorkshop.length * 35);
+      ctxTop.parentElement.style.height = calcHeightTop + 'px';
+      ctxTop.parentElement.parentElement.style.height = 'auto';
       charts.push(new Chart(ctxTop, {
         type: 'bar',
         data: {
@@ -415,7 +434,7 @@ window.WorkshopModule = (() => {
     const eqs = window.DB.equipment.list();
     const workshopData = eqs.map(eq => {
       let status = eq.status || '';
-      let isCurrent = (status === 'Em Manutenção' || status === 'Aguardando Manutenção' || status === 'Backlog');
+      let isCurrent = eq.status !== 'Liberado' && eq.status !== 'Operando';
       let days = 0;
       if (eq.dataEntrada) {
         if (isCurrent || !eq.dataLiberacaoAtual) {
@@ -424,14 +443,17 @@ window.WorkshopModule = (() => {
           days = getDaysDiff(eq.dataEntrada, eq.dataLiberacaoAtual);
         }
       }
-      return { ...eq, daysInWorkshop: days, isCurrent };
-    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada);
+      let etapa = eq.etapaAtual || 'Nenhuma';
+      let refDate = eq._etapaUpdatedAt || eq.updatedAt || eq.dataEntrada || new Date().toISOString();
+      let daysInStage = getDaysDiff(refDate, new Date().toISOString());
+      return { ...eq, daysInWorkshop: days, isCurrent, daysInStage, etapa };
+    }).filter(eq => eq.daysInWorkshop >= 0 && eq.dataEntrada && eq.etapa !== 'Liberada');
 
     let tabContent = `
       <div class="charts-grid">
-        <div class="chart-card">
-          <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Top 10 Maior Tempo (Atuais na Oficina)</h3>
-          <div style="position:relative;height:300px;width:100%;"><canvas id="chart-top-10"></canvas></div>
+        <div class="chart-card" style="height: auto; min-height: 350px;">
+          <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Maior Tempo (Todos)</h3>
+          <div style="position:relative;height:300px;width:100%;overflow-y:hidden;"><canvas id="chart-top-10"></canvas></div>
         </div>
         <div class="chart-card">
           <h3 style="margin-bottom:var(--space-3);font-size:var(--text-lg);font-weight:700;">Tempo Médio por Categoria (Dias)</h3>
@@ -449,23 +471,23 @@ window.WorkshopModule = (() => {
               <tr style="border-bottom:1px solid var(--border-card);">
                 <th style="padding:12px;">Equipamento</th>
                 <th style="padding:12px;">Modelo/Tipo</th>
-                <th style="padding:12px;">Status Atual</th>
+                <th style="padding:12px;">Status / Etapa Atual</th>
                 <th style="padding:12px;">Data Entrada</th>
-                <th style="padding:12px;">Tempo na Oficina</th>
+                <th style="padding:12px;">Tempo na Etapa</th>
               </tr>
             </thead>
             <tbody>
-              ${workshopData.sort((a,b) => b.daysInWorkshop - a.daysInWorkshop).map(eq => `
+              ${workshopData.sort((a,b) => b.daysInStage - a.daysInStage).map(eq => `
                 <tr style="border-bottom:1px solid var(--border-hover);">
                   <td style="padding:12px;"><strong>${eq.codigo || eq.nome}</strong></td>
                   <td style="padding:12px;">${eq.tipo || '-'}</td>
                   <td style="padding:12px;">
                     <span class="badge ${eq.isCurrent ? 'badge-warning' : 'badge-success'}" style="${eq.isCurrent ? 'background:rgba(239,68,68,0.1);color:var(--color-danger);border-color:rgba(239,68,68,0.2);' : 'background:rgba(34,197,94,0.1);color:var(--color-success);border-color:rgba(34,197,94,0.2);'}">
-                      ${eq.status || '-'}
+                      ${eq.etapa !== 'Nenhuma' ? eq.etapa : (eq.status || '-')}
                     </span>
                   </td>
                   <td style="padding:12px;">${eq.dataEntrada ? new Date(eq.dataEntrada).toLocaleDateString('pt-BR') : '-'}</td>
-                  <td style="padding:12px;"><strong>${eq.daysInWorkshop} dias</strong></td>
+                  <td style="padding:12px;"><strong>${eq.daysInStage} dias</strong> em ${eq.etapa}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -577,10 +599,7 @@ window.EquipmentModule = (() => {
                 groups[prefix].sort((a,b) => (a.codigo||'').localeCompare(b.codigo||'')).forEach(e => {
                   const pct = e.pctAvanco || 0;
                   const refDate = (e.status === 'Liberado' && e.dataLiberacaoAtual) ? e.dataLiberacaoAtual : today;
-                  let ePlan = e.dataLiberacaoPlanejada;
-                  if (e.replanning && e.replanning.length > 0) {
-                    ePlan = e.replanning[e.replanning.length - 1].novaData;
-                  }
+                  let ePlan = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
                   const days = ePlan ? daysBetween(refDate, ePlan) : null;
                   const isLiberated = e.status === 'Liberado';
                   const daysClass = isLiberated ? 'success' : (days === null ? 'ghost' : days < 0 ? 'danger' : days <= 3 ? 'warning' : 'success');
@@ -780,6 +799,7 @@ window.EquipmentModule = (() => {
             <div><label>Status</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${statusBadge(eq.status)}</div></div>
             <div><label>Avanço</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:800;font-size:var(--text-xl);color:var(--brand-primary-light)">${eq.pctAvanco||0}%</div></div>
             <div><label>Cliente</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.cliente||'—'}</div></div>
+            <div><label>Bem Vinculado</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.bem||'—'}</div></div>
             <div><label>Entrada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${formatDate(eq.dataEntrada)}</div></div>
             <div><label>Data Planejada</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md);font-weight:700;">${formatDate(eq.dataLiberacaoPlanejada)}</div></div>
             <div style="grid-column:1/-1;"><label>Observações</label><div style="padding:var(--space-3);background:var(--bg-base);border-radius:var(--radius-md)">${eq.observacoes||'—'}</div></div>
@@ -859,31 +879,65 @@ window.EquipmentModule = (() => {
   }
 
   function equipmentForm(eq) {
-    const wf = DB.workforce.list();
+    const wf = (window.DB && window.DB.workforce ? window.DB.workforce.list() : []) || [];
     const map = eq?.workforceMap || {};
-    const getOptions = (disc) => {
-      const workers = wf.filter(w => w.disciplina === disc);
-      const list = workers.length ? workers : wf;
-      const allEqs = DB.equipment.list();
-      
-      return `<option value="">—</option>` + list.map(w => {
-        const allocatedEq = w.equipmentId ? allEqs.find(e => e.id === w.equipmentId) : null;
-        const isAllocatedToOther = w.equipmentId && w.equipmentId !== eq?.id && allocatedEq && allocatedEq.status !== 'Liberado';
-        
-        if (isAllocatedToOther) {
-          return `<option value="${w.nome}" style="color:var(--color-danger);" title="Alocado no equipamento ${allocatedEq?.codigo || 'Outro'}">🔒 ${w.nome} (Alocado em ${allocatedEq?.codigo || 'Outro'})</option>`;
-        } else {
-          return `<option value="${w.nome}" ${map[disc] === w.nome ? 'selected' : ''}>${w.nome}</option>`;
-        }
-      }).join('');
+    const allEqs = (window.DB && window.DB.equipment ? window.DB.equipment.list() : []) || [];
+
+    // Ordenar todos os colaboradores por nome
+    const sortedWf = [...wf].sort((a,b) => (a.nome || '').localeCompare(b.nome || ''));
+
+    // Datalist global com todos os colaboradores cadastrados para pesquisa rápida
+    const wfDatalistHTML = `
+      <datalist id="wf-all-datalist">
+        ${sortedWf.map(w => {
+          const disc = w.disciplina ? ` — ${w.disciplina}` : (w.funcao ? ` — ${w.funcao}` : '');
+          const alloc = (w.equipmentId && w.equipmentId !== eq?.id) ? ' (Alocado)' : '';
+          return `<option value="${w.nome}">${w.nome}${disc}${alloc}</option>`;
+        }).join('')}
+      </datalist>
+    `;
+
+    // Função para renderizar cada campo com pesquisa em tempo real e todos os cadastrados
+    const renderWfField = (disc, idInput) => {
+      const currentVal = map[disc] || '';
+      return `
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">
+            <span>${disc}</span>
+            <span style="font-size:10px;color:var(--text-muted);font-weight:normal;">Busca em todos</span>
+          </label>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <input 
+              type="text" 
+              id="${idInput}" 
+              list="wf-all-datalist" 
+              class="form-control" 
+              value="${currentVal}" 
+              placeholder="🔍 Digite o nome para pesquisar..." 
+              autocomplete="off"
+              style="flex:1;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);height:38px;padding:0 var(--space-3);font-size:13px;" 
+            />
+            <button 
+              type="button" 
+              class="btn btn-secondary btn-sm" 
+              onclick="const el=document.getElementById('${idInput}'); el.value=''; el.focus();" 
+              title="Limpar seleção" 
+              style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;color:var(--text-muted);"
+            >✕</button>
+          </div>
+        </div>
+      `;
     };
 
     const session = window.Auth ? window.Auth.getSession() : null;
     const canEditPlan = !eq || (session && ['Desenvolvedor', 'Planejador'].includes(session.perfil));
-
-    return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
-      <div class="form-row">
+    const assetsList = window.DB && window.DB.assets ? window.DB.assets.list() : [];
+    const datalistHTML = `<datalist id="assets-datalist">${assetsList.map(a => `<option value="${a.codigo}">`).join('')}</datalist>`;
+return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
+      ${datalistHTML}
+      <div class="form-row cols-3">
         <div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
+        <div class="form-group"><label>Bem Vinculado</label><input id="eq-bem" value="${eq?.bem||''}" placeholder="Ex: BEM-01" list="assets-datalist" autocomplete="off" /></div>
         <div class="form-group"><label>O.S. *</label><input id="eq-os" value="${eq?.os||''}" placeholder="Ordem de Serviço" required /></div>
       </div>
       <div class="form-row">
@@ -911,12 +965,40 @@ window.EquipmentModule = (() => {
           </select>
         </div>
       </div>
-      <div class="form-row" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
+      <div class="form-row" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
         <div class="form-group">
           <label>Data Planejada</label>
           <div style="display:flex;gap:5px;">
-            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${canEditPlan ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} />
-            ${eq ? `<button type="button" class="btn btn-secondary" onclick="closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
+            <input type="date" id="eq-data-plan" value="${toDateInput(eq?.dataLiberacaoPlanejada)}" onclick="if(!this.readOnly && this.showPicker) this.showPicker();" ${(canEditPlan && !(eq && eq.replanning && eq.replanning.length > 0)) ? 'style="flex:1; cursor:pointer;"' : 'readonly style="flex:1; background:var(--bg-elevated); cursor:not-allowed;"'} title="${(eq && eq.replanning && eq.replanning.length > 0) ? 'Esta é a data base original. Para mudar a data atual, clique em Replanejar.' : ''}" />
+            ${eq ? `<button type="button" class="btn btn-secondary" onclick="
+    // Sincronizar Mão de Obra alocada no equipamento
+    try {
+      const eqTargetId = id || (DB.equipment.list().find(e => e.codigo === data.codigo)?.id);
+      if (eqTargetId && data.workforceMap) {
+        const allWf = DB.workforce.list() || [];
+        let wfChanged = false;
+        const assigned = new Set(Object.values(data.workforceMap).filter(Boolean));
+        allWf.forEach(w => {
+          if (assigned.has(w.nome)) {
+            if (w.equipmentId !== eqTargetId) {
+              w.equipmentId = eqTargetId;
+              wfChanged = true;
+            }
+          } else if (w.equipmentId === eqTargetId) {
+            w.equipmentId = '';
+            wfChanged = true;
+          }
+        });
+        if (wfChanged) {
+          localStorage.setItem('diman_workforce', JSON.stringify(allWf));
+          if (window.DB && window.DB.syncToSupabase) window.DB.syncToSupabase('diman_workforce', allWf);
+        }
+      }
+    } catch(wfSyncErr) {
+      console.warn('Erro ao atualizar vinculo de workforce:', wfSyncErr);
+    }
+
+    closeModal('modal-equipment'); EquipmentModule.addReplanning('${eq.id}')" style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;font-weight:bold;color:var(--text-primary);" title="Replanejar Data">Replanejar</button>` : ''}
           </div>
           ${eq && eq.replanning && eq.replanning.length > 0 ? `
           <div style="margin-top:8px; font-size:11px; color:var(--text-secondary);">
@@ -927,12 +1009,7 @@ window.EquipmentModule = (() => {
           </div>` : ''}
         </div>
         <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoReal)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="eq-status" class="form-control">
-            ${['Nenhuma', 'Aguardando Manutenção', 'Em Manutenção', 'Liberado', 'Paralisado', 'Falta de Peças', 'Backlog', 'Falta de Mão de Obra'].map(s=>`<option ${eq?.status===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </div>
+        <!-- Campo Status removido; agora é derivado da Etapa Atual -->
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
@@ -953,50 +1030,27 @@ window.EquipmentModule = (() => {
       </div>
       
       <div style="border-top:1px solid var(--border-card);padding-top:var(--space-4);margin-top:var(--space-2);">
-        <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-secondary);margin-bottom:var(--space-3);">Mão de Obra por Disciplina (Auto-preenchimento)</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Mecânica</label>
-            <select id="eq-wf-mecanica">${getOptions('Mecânica')}</select>
-          </div>
-          <div class="form-group">
-            
-          </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3);">
+          <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-secondary);">Mão de Obra por Disciplina (Auto-preenchimento)</div>
+          <span style="font-size:11px;color:#38BDF8;font-weight:600;">⚡ Filtra todos os ${sortedWf.length} profissionais cadastrados</span>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Elétrica</label>
-            <select id="eq-wf-eletrica">${getOptions('Elétrica')}</select>
-          </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Caldeiraria</label>
-            <select id="eq-wf-caldeiraria">${getOptions('Caldeiraria')}</select>
-          </div>
-          <div class="form-group">
-            <label>Usinagem</label>
-            <select id="eq-wf-usinagem">${getOptions('Usinagem')}</select>
-          </div>
+        ${wfDatalistHTML}
+        
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Mecânica', 'eq-wf-mecanica')}
+          ${renderWfField('Elétrica', 'eq-wf-eletrica')}
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Pintor</label>
-            <select id="eq-wf-pintor">${getOptions('Pintor')}</select>
-          </div>
-          <div class="form-group">
-            <label>Lavador</label>
-            <select id="eq-wf-lavador">${getOptions('Lavador')}</select>
-          </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Caldeiraria', 'eq-wf-caldeiraria')}
+          ${renderWfField('Usinagem', 'eq-wf-usinagem')}
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Montagem</label>
-            <select id="eq-wf-montagem">${getOptions('Montagem')}</select>
-          </div>
-          <div class="form-group">
-            <label>Subconjunto</label>
-            <select id="eq-wf-subconjunto">${getOptions('Subconjunto')}</select>
-          </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Pintor', 'eq-wf-pintor')}
+          ${renderWfField('Lavador', 'eq-wf-lavador')}
+        </div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
+          ${renderWfField('Montagem', 'eq-wf-montagem')}
+          ${renderWfField('Subconjunto', 'eq-wf-subconjunto')}
         </div>
       </div>
 
@@ -1022,6 +1076,7 @@ window.EquipmentModule = (() => {
     const data = {
       dataLiberacaoAtual: computedLiberacaoAtual,
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
+      bem: document.getElementById('eq-bem') ? document.getElementById('eq-bem').value.trim().toUpperCase() : '',
       nome: document.getElementById('eq-codigo').value.trim().toUpperCase(),
       os: document.getElementById('eq-os').value.trim(),
       cliente: document.getElementById('eq-cliente').value.trim(),
@@ -1034,7 +1089,20 @@ window.EquipmentModule = (() => {
       responsavel: '',
       dataEntrada: document.getElementById('eq-entrada').value,
       dataLiberacaoReal: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
-      status: document.getElementById('eq-status').value,
+      status: (() => {
+        let e = document.getElementById('eq-etapa-atual').value;
+        if (e === 'Nenhuma') {
+          // If no specific stage is selected, fallback to checking if we have an existing valid status or default to Em Manutenção
+          return (id && window.DB && window.DB.equipment.get(id)?.status !== 'Nenhuma') ? window.DB.equipment.get(id).status : 'Em Manutenção';
+        }
+        if (e === 'Aguardando manutenção') return 'Aguardando Manutenção';
+        if (e === 'Falta de mão de obra') return 'Falta de Mão de Obra';
+        if (e === 'Falta de peças') return 'Falta de Peças';
+        if (e === 'Paralisada') return 'Paralisado';
+        if (e === 'Backlog') return 'Backlog';
+        if (e === 'Liberada') return 'Liberado';
+        return 'Em Manutenção';
+      })(),
       etapaAtual: document.getElementById('eq-etapa-atual').value,
       pctAvanco: id ? (DB.equipment.get(id)?.pctAvanco || 0) : 0,
       prioridade: document.getElementById('eq-prioridade').value,
@@ -1131,16 +1199,12 @@ window.EquipmentModule = (() => {
     }
     closeModal('modal-equipment');
     const currentRoute = Router.getCurrent();
-    if (currentRoute === 'home') {
-      Router.navigate('home', { force: true });
-    } else {
-      Router.navigate('equipment', { force: true });
-    }
+    Router.navigate(currentRoute || 'equipment', { force: true });
   }
 
   function addReplanning(eqId) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (!session || (!session.isPro && !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil))) {
       Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
       return;
     }
@@ -1166,7 +1230,7 @@ window.EquipmentModule = (() => {
 
   function saveReplanning(eqId, btn) {
     const session = window.Auth ? window.Auth.getSession() : null;
-    if (!session || !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil)) {
+    if (!session || (!session.isPro && !['Desenvolvedor', 'Gerente', 'Planejador'].includes(session.perfil))) {
       Toast && Toast.error('Acesso Negado', 'Apenas planejadores e gerentes podem alterar datas ou replanejar.');
       return;
     }
@@ -1197,7 +1261,7 @@ window.EquipmentModule = (() => {
     }
     confirmDialog('Excluir Equipamento', `Tem certeza que deseja excluir "${nome}"? Esta ação apagará permanentemente o equipamento e todas as tarefas e históricos associados.`, () => {
       try {
-        const eqTasks = DB.tasks.list(id);
+        const eqTasks = DB.tasks.getByEquipment(id);
         const ts = DB.timesheets.list().filter(t => t.equipmentId === id);
         const re = DB.replannings ? DB.replannings.list().filter(r => r.equipmentId === id) : [];
         const rest = DB.restrictions ? DB.restrictions.list(id) : [];
@@ -1741,7 +1805,7 @@ window.TasksModule = (() => {
             ${t?.codigo ? t.codigo : 'Nova Tarefa'}
             ${t?.critico ? '<span class="badge" style="background:rgba(244,67,54,0.1);color:#f44336;margin-left:8px;">Crítica</span>' : ''}
           </h3>
-          <p style="margin:4px 0 0; font-size:0.9rem; color:var(--text-secondary);">Equipamento: <strong>${selectedEq.codigo}</strong> - ${selectedEq.nome}</p>
+          <p style="margin:4px 0 0; font-size:0.9rem; color:var(--text-secondary);">Detalhes Gerais</p>
         </div>
         <div style="text-align:right;">
           <select id="tk-status" style="font-weight:700; border:2px solid var(--border-default); border-radius:var(--radius-md); padding:4px 8px;">
@@ -1757,7 +1821,12 @@ window.TasksModule = (() => {
         <div style="background:var(--bg-card); padding:var(--space-3); border-radius:var(--radius-md); border:1px solid var(--border-default);">
           <h4 style="margin:0 0 12px; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Detalhes da Execução</h4>
           
-          <div class="form-group" style="display:none;"><label>Equipamento (ID Oculto)</label><select id="tk-eq" onchange="TasksModule.onFormChange()">${eqs.map(e=>`<option value="${e.id}" ${t?.equipmentId===e.id?'selected':''}>${e.codigo}</option>`).join('')}</select></div>
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.85rem; color:var(--text-secondary);">Equipamento *</label>
+            <select id="tk-eq" onchange="TasksModule.onFormChange()" style="font-weight:700;">
+              ${eqs.map(e=>`<option value="${e.id}" ${currentEqId===e.id?'selected':''}>${e.codigo} - ${e.nome}</option>`).join('')}
+            </select>
+          </div>
           <div class="form-group" style="display:none;"><label>Código</label><input id="tk-cod" value="${t?.codigo||''}" /></div>
           
           <div class="form-group">

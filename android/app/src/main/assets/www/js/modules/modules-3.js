@@ -1438,6 +1438,18 @@ window.MeetingMode = (() => {
       .map(([nome, taskSet]) => ({nome, count: taskSet.size}))
       .sort((a,b) => b.count - a.count);
 
+    
+    const getWfDisplay = (e) => {
+      if (e.workforceMap) {
+        const names = Object.values(e.workforceMap).filter(n => n && n.trim() && n !== 'Não atribuído');
+        if (names.length > 0) return names.join(', ');
+      }
+      const wfList = window.DB && window.DB.workforce ? window.DB.workforce.list() : [];
+      const allocated = wfList.filter(w => w.equipmentId === e.id).map(w => w.nome);
+      if (allocated.length > 0) return allocated.join(', ');
+      return e.responsavel || 'Não Definida';
+    };
+
     overlay.innerHTML = `
       <!-- Header bar -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
@@ -1492,7 +1504,11 @@ window.MeetingMode = (() => {
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
                     <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#BBDEFB">${e.cliente || 'Não Informado'}</strong></div>
+                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px;">
+                     <span>Mão de Obra:</span>
+                     <strong style="color:#BBDEFB;font-size:0.9rem;">${getWfDisplay(e)}</strong>
+                   </div>
+                   <div style="color:#64748b;font-size:0.75rem;">Cliente: ${e.cliente || 'Não Informado'}</div>
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento em manutenção</div>'}
@@ -1516,7 +1532,11 @@ window.MeetingMode = (() => {
                     <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
                     <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.75rem;">Cliente: <strong style="color:white">${e.cliente || 'Não Informado'}</strong></div>
+                  <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px;">
+                     <span>Mão de Obra:</span>
+                     <strong style="color:white;font-size:0.8rem;">${getWfDisplay(e)}</strong>
+                   </div>
+                   <div style="color:#64748b;font-size:0.7rem;">Cliente: ${e.cliente || 'Não Informado'}</div>
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
@@ -1551,7 +1571,11 @@ window.MeetingMode = (() => {
                     <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
                     <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.85rem;">Cliente: <strong style="color:#FFE0B2">${e.cliente || 'Não Informado'}</strong></div>
+                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px;">
+                     <span>Mão de Obra:</span>
+                     <strong style="color:#FFE0B2;font-size:0.9rem;">${getWfDisplay(e)}</strong>
+                   </div>
+                   <div style="color:#64748b;font-size:0.75rem;">Cliente: ${e.cliente || 'Não Informado'}</div>
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
