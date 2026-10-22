@@ -1386,11 +1386,8 @@ window.MeetingMode = (() => {
     const eqMaintenance = eqs.filter(e => {
       if (['Liberado', 'Aguardando Manutenção', 'Backlog'].includes(e.status)) return false;
       if (e.tipo === 'Subconjuntos') return false;
-      let dataPrazo = e.dataLiberacaoPlanejada || '';
-      if (e.replanning && e.replanning.length > 0) {
-        dataPrazo = e.replanning[e.replanning.length - 1].novaData;
-      }
-      return matchesMonth(dataPrazo, currentMonth);
+      // Todos os equipamentos em manutencao da oficina devem aparecer (inclusive sem prazo ou prazo futuro)
+      return true;
     });
 
     const eqReleased = eqs.filter(e => {
@@ -1521,6 +1518,9 @@ window.MeetingMode = (() => {
             ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => {
               const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
               const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
+              if (!dPrazoA && dPrazoB) return 1;
+              if (dPrazoA && !dPrazoB) return -1;
+              if (!dPrazoA && !dPrazoB) return (a.codigo||'').localeCompare(b.codigo||'');
               return dPrazoA.localeCompare(dPrazoB);
             }).map(e => {
               const isReplanned = e.replanning && e.replanning.length > 0;
