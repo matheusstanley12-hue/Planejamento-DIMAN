@@ -878,12 +878,53 @@ window.EquipmentModule = (() => {
     openModal('modal-eq-detail');
   }
 
+  function addWfRow(val = '') {
+    const container = document.getElementById('eq-workforce-container');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = 'eq-wf-row';
+    div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+    div.innerHTML = `
+      <div style="flex:1;position:relative;">
+        <input 
+          type="text" 
+          class="eq-wf-input form-control" 
+          list="wf-all-datalist" 
+          value="${val ? String(val).replace(/"/g, '&quot;') : ''}" 
+          placeholder="🔍 Digite para pesquisar o nome do executante..." 
+          autocomplete="off" 
+          style="width:100%;height:38px;padding:0 var(--space-3);background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);font-size:13px;" 
+        />
+      </div>
+      <button 
+        type="button" 
+        class="btn btn-secondary" 
+        onclick="EquipmentModule.removeWfRow(this)" 
+        style="height:38px;padding:0 12px;border:1px solid var(--border-card);color:#EF4444;background:rgba(239,68,68,0.08);display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;" 
+        title="Remover executante"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        Remover
+      </button>
+    `;
+    container.appendChild(div);
+    const inp = div.querySelector('input');
+    if (inp) inp.focus();
+  }
+
+  function removeWfRow(btn) {
+    const row = btn.closest('.eq-wf-row');
+    if (row) {
+      const container = document.getElementById('eq-workforce-container');
+      row.remove();
+      if (container && container.querySelectorAll('.eq-wf-row').length === 0) {
+        addWfRow('');
+      }
+    }
+  }
+
   function equipmentForm(eq) {
     const wf = (window.DB && window.DB.workforce ? window.DB.workforce.list() : []) || [];
-    const map = eq?.workforceMap || {};
-    const allEqs = (window.DB && window.DB.equipment ? window.DB.equipment.list() : []) || [];
-
-    // Ordenar todos os colaboradores por nome
     const sortedWf = [...wf].sort((a,b) => (a.nome || '').localeCompare(b.nome || ''));
 
     // Datalist global com todos os colaboradores cadastrados para pesquisa rápida
@@ -897,43 +938,31 @@ window.EquipmentModule = (() => {
       </datalist>
     `;
 
-    // Função para renderizar cada campo com pesquisa em tempo real e todos os cadastrados
-    const renderWfField = (disc, idInput) => {
-      const currentVal = map[disc] || '';
-      return `
-        <div class="form-group" style="margin-bottom:0;">
-          <label style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;">
-            <span>${disc}</span>
-            <span style="font-size:10px;color:var(--text-muted);font-weight:normal;">Busca em todos</span>
-          </label>
-          <div style="display:flex;gap:4px;align-items:center;">
-            <input 
-              type="text" 
-              id="${idInput}" 
-              list="wf-all-datalist" 
-              class="form-control" 
-              value="${currentVal}" 
-              placeholder="🔍 Digite o nome para pesquisar..." 
-              autocomplete="off"
-              style="flex:1;background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);height:38px;padding:0 var(--space-3);font-size:13px;" 
-            />
-            <button 
-              type="button" 
-              class="btn btn-secondary btn-sm" 
-              onclick="const el=document.getElementById('${idInput}'); el.value=''; el.focus();" 
-              title="Limpar seleção" 
-              style="padding:0 10px;height:38px;border:1px solid var(--border-card);font-size:12px;color:var(--text-muted);"
-            >✕</button>
-          </div>
-        </div>
-      `;
-    };
+    // Carregar executantes existentes do equipamento
+    let currentExecutantes = [];
+    if (Array.isArray(eq?.executantes) && eq.executantes.length > 0) {
+      currentExecutantes = eq.executantes.filter(n => n && n.trim());
+    } else if (eq?.workforceMap) {
+      currentExecutantes = Object.values(eq.workforceMap).filter(n => n && n.trim() && n !== 'Não atribuído');
+    }
+    if (currentExecutantes.length === 0 && eq?.responsavel) {
+      currentExecutantes = eq.responsavel.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    if (currentExecutantes.length === 0 && eq?.id) {
+      const allocated = wf.filter(w => w.equipmentId === eq.id).map(w => w.nome);
+      if (allocated.length > 0) currentExecutantes = allocated;
+    }
+    currentExecutantes = [...new Set(currentExecutantes)];
+    if (currentExecutantes.length === 0) {
+      currentExecutantes = [''];
+    }
 
     const session = window.Auth ? window.Auth.getSession() : null;
     const canEditPlan = !eq || (session && ['Desenvolvedor', 'Planejador'].includes(session.perfil));
     const assetsList = window.DB && window.DB.assets ? window.DB.assets.list() : [];
     const datalistHTML = `<datalist id="assets-datalist">${assetsList.map(a => `<option value="${a.codigo}">`).join('')}</datalist>`;
-return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
+
+    return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       ${datalistHTML}
       <div class="form-row cols-3">
         <div class="form-group"><label>Código *</label><input id="eq-codigo" value="${eq?.codigo||''}" placeholder="Ex: SSM-288" required /></div>
@@ -981,7 +1010,6 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
           </div>` : ''}
         </div>
         <div class="form-group"><label>Data Real de Liberação</label><input type="date" id="eq-data-real" value="${toDateInput(eq?.dataLiberacaoReal)}" onclick="if(this.showPicker) this.showPicker();" style="cursor:pointer;" /></div>
-        <!-- Campo Status removido; agora é derivado da Etapa Atual -->
         <div class="form-group">
           <label>Etapa Atual</label>
           <select id="eq-etapa-atual" class="form-control">
@@ -1002,27 +1030,54 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       </div>
       
       <div style="border-top:1px solid var(--border-card);padding-top:var(--space-4);margin-top:var(--space-2);">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3);">
-          <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-secondary);">Mão de Obra por Disciplina (Auto-preenchimento)</div>
-          <span style="font-size:11px;color:#38BDF8;font-weight:600;">⚡ Filtra todos os ${sortedWf.length} profissionais cadastrados</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3);flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-weight:700;font-size:var(--text-sm);color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+              <span>👷 Mão de Obra / Executantes</span>
+              <span style="font-size:11px;color:#0284C7;background:rgba(2,132,199,0.1);padding:2px 8px;border-radius:12px;font-weight:700;">Apresentação da TV</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+              Digite para selecionar os executantes. Adicione ou remova quantos desejar.
+            </div>
+          </div>
+          <button 
+            type="button" 
+            class="btn btn-secondary btn-sm" 
+            onclick="EquipmentModule.addWfRow()" 
+            style="display:inline-flex;align-items:center;gap:6px;font-weight:700;border:1px solid var(--border-card);color:var(--color-primary);cursor:pointer;"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Adicionar Mão de Obra
+          </button>
         </div>
         ${wfDatalistHTML}
         
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
-          ${renderWfField('Mecânica', 'eq-wf-mecanica')}
-          ${renderWfField('Elétrica', 'eq-wf-eletrica')}
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
-          ${renderWfField('Caldeiraria', 'eq-wf-caldeiraria')}
-          ${renderWfField('Usinagem', 'eq-wf-usinagem')}
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
-          ${renderWfField('Pintor', 'eq-wf-pintor')}
-          ${renderWfField('Lavador', 'eq-wf-lavador')}
-        </div>
-        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);margin-bottom:var(--space-3);">
-          ${renderWfField('Montagem', 'eq-wf-montagem')}
-          ${renderWfField('Subconjunto', 'eq-wf-subconjunto')}
+        <div id="eq-workforce-container">
+          ${currentExecutantes.map(name => `
+            <div class="eq-wf-row" style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+              <div style="flex:1;position:relative;">
+                <input 
+                  type="text" 
+                  class="eq-wf-input form-control" 
+                  list="wf-all-datalist" 
+                  value="${name ? String(name).replace(/"/g, '&quot;') : ''}" 
+                  placeholder="🔍 Digite para pesquisar o nome do executante..." 
+                  autocomplete="off" 
+                  style="width:100%;height:38px;padding:0 var(--space-3);background:var(--bg-base);color:var(--text-primary);border:1px solid var(--border-card);border-radius:var(--radius-md);font-size:13px;" 
+                />
+              </div>
+              <button 
+                type="button" 
+                class="btn btn-secondary" 
+                onclick="EquipmentModule.removeWfRow(this)" 
+                style="height:38px;padding:0 12px;border:1px solid var(--border-card);color:#EF4444;background:rgba(239,68,68,0.08);display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;" 
+                title="Remover executante"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Remover
+              </button>
+            </div>
+          `).join('')}
         </div>
       </div>
 
@@ -1045,6 +1100,21 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
     if (existingEq && existingEq.replanning && existingEq.replanning.length > 0) {
       computedLiberacaoAtual = existingEq.replanning[existingEq.replanning.length - 1].novaData;
     }
+
+    // Coletar executantes da lista dinamica
+    const wfInputs = Array.from(document.querySelectorAll('.eq-wf-input'));
+    const uniqueExecutantes = [...new Set(
+      wfInputs.map(inp => inp.value.trim()).filter(v => v && v !== 'Não atribuído')
+    )];
+
+    const allWfList = (window.DB && window.DB.workforce ? window.DB.workforce.list() : []) || [];
+    const newWfMap = {};
+    uniqueExecutantes.forEach((workerName, idx) => {
+      const found = allWfList.find(w => w.nome.toLowerCase() === workerName.toLowerCase());
+      const disc = (found && found.disciplina) ? found.disciplina : `Executante ${idx + 1}`;
+      newWfMap[disc] = workerName;
+    });
+
     const data = {
       dataLiberacaoAtual: computedLiberacaoAtual,
       codigo: document.getElementById('eq-codigo').value.trim().toUpperCase(),
@@ -1058,13 +1128,13 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       fabricante: '',
       modelo: document.getElementById('eq-modelo').value.trim(),
       numeroSerie: '',
-      responsavel: '',
+      responsavel: uniqueExecutantes.join(', '),
+      executantes: uniqueExecutantes,
       dataEntrada: document.getElementById('eq-entrada').value,
       dataLiberacaoReal: document.getElementById('eq-data-real') ? document.getElementById('eq-data-real').value : '',
       status: (() => {
         let e = document.getElementById('eq-etapa-atual').value;
         if (e === 'Nenhuma') {
-          // If no specific stage is selected, fallback to checking if we have an existing valid status or default to Em Manutenção
           return (id && window.DB && window.DB.equipment.get(id)?.status !== 'Nenhuma') ? window.DB.equipment.get(id).status : 'Em Manutenção';
         }
         if (e === 'Aguardando manutenção') return 'Aguardando Manutenção';
@@ -1080,42 +1150,34 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       prioridade: document.getElementById('eq-prioridade').value,
       urgencia: document.getElementById('eq-prioridade').value,
       observacoes: document.getElementById('eq-obs').value.trim(),
-      workforceMap: {
-        'Mecânica': document.getElementById('eq-wf-mecanica').value,
-        'Elétrica': document.getElementById('eq-wf-eletrica').value,
-        'Caldeiraria': document.getElementById('eq-wf-caldeiraria').value,
-        'Usinagem': document.getElementById('eq-wf-usinagem').value,
-        'Pintor': document.getElementById('eq-wf-pintor').value,
-        'Lavador': document.getElementById('eq-wf-lavador').value,
-        'Montagem': document.getElementById('eq-wf-montagem').value,
-        'Subconjunto': document.getElementById('eq-wf-subconjunto').value,
-      }
+      workforceMap: newWfMap
     };
     if (!data.codigo || !data.os) { Toast.error('Erro', 'Código e O.S. são obrigatórios.'); return; }
 
     // Workforce change check
     if (id) {
       const existingEq = DB.equipment.get(id);
-      let changedDisc = null;
-      let oldWorker = null;
-      let newWorker = null;
-
-      for (const disc of ['Mecânica',  'Elétrica', 'Caldeiraria', 'Usinagem', 'Pintor', 'Lavador', 'Montagem', 'Subconjunto']) {
-        const oldW = existingEq.workforceMap ? existingEq.workforceMap[disc] : '';
-        const newW = data.workforceMap[disc];
-        // If changed and the new worker is not empty/Não atribuído
-        if (oldW !== newW && newW && newW !== 'Não atribuído') {
-          changedDisc = disc;
-          oldWorker = oldW;
-          newWorker = newW;
-          break; // just check the first one that changed
-        }
+      let oldWorkers = [];
+      if (Array.isArray(existingEq?.executantes) && existingEq.executantes.length > 0) {
+        oldWorkers = existingEq.executantes;
+      } else if (existingEq?.workforceMap) {
+        oldWorkers = Object.values(existingEq.workforceMap).filter(v => v && v.trim() && v !== 'Não atribuído');
+      } else if (existingEq?.responsavel) {
+        oldWorkers = existingEq.responsavel.split(',').map(s => s.trim()).filter(Boolean);
       }
+      oldWorkers = [...new Set(oldWorkers)];
 
-      if (changedDisc) {
+      const added = uniqueExecutantes.filter(w => !oldWorkers.includes(w));
+      const removed = oldWorkers.filter(w => !uniqueExecutantes.includes(w));
+
+      if (added.length > 0 || removed.length > 0) {
+        const changesSummary = [];
+        if (added.length > 0) changesSummary.push(`Adicionados: ${added.join(', ')}`);
+        if (removed.length > 0) changesSummary.push(`Removidos: ${removed.join(', ')}`);
+
         const justification = await window.uiPromptAsync(
           'Justificativa',
-          `Justificativa para alteração de Mão de Obra em ${changedDisc} (de "${oldWorker || 'Ninguém'}" para "${newWorker || 'Ninguém'}"):`,
+          `Alteração na Mão de Obra do equipamento (${changesSummary.join(' | ')}):`,
           'Digite a justificativa...'
         );
         if (justification === null) return;
@@ -1123,23 +1185,22 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
           Toast.error('Erro', 'Justificativa é obrigatória para alterar a Mão de Obra do equipamento.');
           return;
         }
-        
-        // Log in timeline
+
         if (window.DB && window.DB.timeline) {
           window.DB.timeline.create({
             equipmentId: id || data.codigo,
             tipo: 'ATUALIZAÇÃO',
             titulo: 'Alteração de Mão de Obra',
-            descricao: `Mão de obra de ${changedDisc} alterada de "${oldWorker || 'Ninguém'}" para "${newWorker}". Justificativa: ${justification.trim()}`,
+            descricao: `Mão de obra alterada (${changesSummary.join(' | ')}). Justificativa: ${justification.trim()}`,
             timestamp: new Date().toISOString(),
             responsavel: window.Auth && window.Auth.getSession() ? window.Auth.getSession().nome : 'Sistema'
           });
         }
       }
     }
+
     // Check if status is Liberado
     if (data.status === 'Liberado') {
-      
       const existingEq = id ? DB.equipment.get(id) : null;
       if (!existingEq || existingEq.status !== 'Liberado') {
         data.dataLiberacaoAtual = data.dataLiberacaoAtual || new Date().toISOString().slice(0, 10);
@@ -1162,13 +1223,21 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
         data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value;
       }
       DB.equipment.update(id, data); 
+      Toast.success('Equipamento atualizado!', data.codigo); 
+    }
+    else { 
+      data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; 
+      DB.equipment.create(data); 
+      Toast.success('Equipamento criado!', data.codigo); 
+    }
+
     // Sincronizar Mao de Obra alocada no equipamento
     try {
       const eqTargetId = id || (DB.equipment.list().find(e => e.codigo === data.codigo)?.id);
-      if (eqTargetId && data.workforceMap) {
+      if (eqTargetId) {
         const allWf = DB.workforce.list() || [];
         let wfChanged = false;
-        const assigned = new Set(Object.values(data.workforceMap).filter(v => v && v.trim() && v !== 'Não atribuído'));
+        const assigned = new Set(uniqueExecutantes);
         allWf.forEach(w => {
           if (assigned.has(w.nome)) {
             if (w.equipmentId !== eqTargetId) {
@@ -1189,13 +1258,6 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
       console.warn('Erro ao atualizar vinculo de workforce:', wfSyncErr);
     }
 
-      Toast.success('Equipamento atualizado!', data.codigo); 
-    }
-    else { 
-      data.dataLiberacaoPlanejada = document.getElementById('eq-data-plan').value; 
-      DB.equipment.create(data); 
-      Toast.success('Equipamento criado!', data.codigo); 
-    }
     closeModal('modal-equipment');
     const currentRoute = Router.getCurrent();
     Router.navigate(currentRoute || 'equipment', { force: true });
@@ -1369,7 +1431,7 @@ return `<div style="display:flex;flex-direction:column;gap:var(--space-4);">
     });
   }
 
-  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, filterList };
+  return { render, openCreate, openEdit, openDetail, save, addReplanning, saveReplanning, confirmDelete, renderLaborComparison, toggleLiberados, filterList, addWfRow, removeWfRow };
 })();
 
 // ================================================================

@@ -1440,6 +1440,10 @@ window.MeetingMode = (() => {
 
     
     const getExecutante = (e) => {
+      if (Array.isArray(e.executantes) && e.executantes.length > 0) {
+        const valid = e.executantes.filter(n => n && n.trim() && n !== 'Não atribuído');
+        if (valid.length > 0) return valid.join(', ');
+      }
       const names = [];
       if (e.workforceMap) {
         Object.entries(e.workforceMap).forEach(([disc, name]) => {
