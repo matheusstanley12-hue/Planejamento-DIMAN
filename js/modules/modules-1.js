@@ -633,7 +633,7 @@ window.EquipmentModule = (() => {
                         ${e.dataLiberacaoPlanejada ? `
                           <div style="font-size:13px; font-weight:600; color:var(--color-${daysClass})">${formatDate(e.dataLiberacaoPlanejada)}</div>
                           <div style="font-size:11px; color:var(--text-muted);">${isLiberated ? '<span style="color:var(--color-success)">Concluído</span>' : (days!==null?`${days<0?Math.abs(days)+' atrasado':days===0?'Hoje':days+'d'}`:'')}</div>
-                        ` : '<span style="color:var(--text-muted); font-size:12px;">Não definida</span>'}
+                        ` : '<span style="color:var(--text-muted); font-size:12px;">Em definição</span>'}
                       </td>
                       <td style="padding:var(--space-3);">
                         <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">

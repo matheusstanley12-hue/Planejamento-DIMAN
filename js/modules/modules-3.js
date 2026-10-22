@@ -1526,11 +1526,11 @@ window.MeetingMode = (() => {
               const isReplanned = e.replanning && e.replanning.length > 0;
               let prazoStr = '';
               if (isReplanned) {
-                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—';
+                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : 'Em definição';
                 const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
                 prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
               } else {
-                prazoStr = `<span style="color:white">${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</span>`;
+                prazoStr = e.dataLiberacaoPlanejada ? `<span style="color:white">${formatDate(e.dataLiberacaoPlanejada)}</span>` : `<span style="color:#CBD5E1;font-style:italic;">Em definição</span>`;
               }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
@@ -1567,11 +1567,11 @@ window.MeetingMode = (() => {
               const isReplanned = e.replanning && e.replanning.length > 0;
               let prazoStr = '';
               if (isReplanned) {
-                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—';
+                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : 'Em definição';
                 const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
                 prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
               } else {
-                prazoStr = `<span style="color:white">${e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : '—'}</span>`;
+                prazoStr = e.dataLiberacaoPlanejada ? `<span style="color:white">${formatDate(e.dataLiberacaoPlanejada)}</span>` : `<span style="color:#CBD5E1;font-style:italic;">Em definição</span>`;
               }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
@@ -1602,7 +1602,7 @@ window.MeetingMode = (() => {
           <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
             ${eqReleased.length > 0 ? eqReleased.sort((a,b) => ((b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
               const d = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
-              const dataStr = d ? formatDate(d) : '—';
+              const dataStr = d ? formatDate(d) : 'Em definição';
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
