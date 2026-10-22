@@ -610,19 +610,7 @@ window.DB = (() => {
             try { localStorage.setItem(collection, JSON.stringify(finalArray)); } catch(e){}
           }
 
-          // Após sincronizar dados da nuvem, atualiza a UI se estiver visível
-          try {
-            if (window.Router && window.Router.getCurrent) {
-              const current = window.Router.getCurrent();
-              if (current) {
-                setTimeout(() => {
-                  if (window.Router && window.Router.navigate) {
-                    window.Router.navigate(current, { force: true });
-                  }
-                }, 200);
-              }
-            }
-          } catch(e) {}
+          // Auto re-render desativado para evitar picotamento na tela
       }
       
       if (!fetchError) {
@@ -1650,12 +1638,7 @@ window.DB = (() => {
     delete: (id) => { const a = get(KEYS.assets); set(KEYS.assets, a.filter(r => r && r.id !== id)); }
   };
 
-  // Auto-refresh engine (Polling)
-  setInterval(() => {
-     if (window.DB && window.DB.initSupabase && localStorage.getItem('diman_unsynced') !== 'true') {
-         window.DB.initSupabase(false);
-     }
-  }, 15000);
+  // Auto-refresh polling desativado a pedido do usuario
 
   return {
     equipment, tasks, parts, workforce, timesheets, replannings, restrictions, costs, lessons, notifications, settings, kpi, solicitacoes, manuals, manualFolders, meetingTasks, followupTasks, vacations, assets, uid, now,

@@ -1476,6 +1476,13 @@ window.MeetingMode = (() => {
       return names.length > 0 ? names.join(', ') : 'Não Definido';
     };
     const getWfDisplay = getExecutante;
+    const getOsDisplay = (e) => {
+      if (!e.os || !e.os.trim()) return '';
+      const osClean = e.os.trim();
+      const label = osClean.toLowerCase().startsWith('os') ? osClean : ('OS: ' + osClean);
+      return `<span style="font-size:0.85rem;color:#E2E8F0;font-weight:700;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);padding:2px 8px;border-radius:6px;margin-left:8px;letter-spacing:0.02em;">${label}</span>`;
+    };
+
 
     overlay.innerHTML = `
       <!-- Header bar -->
@@ -1527,8 +1534,11 @@ window.MeetingMode = (() => {
               }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;flex-wrap:wrap;">
+                      <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                      ${getOsDisplay(e)}
+                    </div>
                     <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -1565,8 +1575,11 @@ window.MeetingMode = (() => {
               }
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                    <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;flex-wrap:wrap;">
+                      <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
+                      ${getOsDisplay(e)}
+                    </div>
                     <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: ${prazoStr}</span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -1592,8 +1605,11 @@ window.MeetingMode = (() => {
               const dataStr = d ? formatDate(d) : '—';
               return `
                 <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
-                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-                    <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                    <div style="display:flex;align-items:center;flex-wrap:wrap;">
+                      <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
+                      ${getOsDisplay(e)}
+                    </div>
                     <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
                   </div>
                   <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
