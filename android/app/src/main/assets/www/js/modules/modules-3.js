@@ -1473,6 +1473,59 @@ window.MeetingMode = (() => {
       return names.length > 0 ? names.join(', ') : 'Não Definido';
     };
     const getWfDisplay = getExecutante;
+    
+    const getEquipmentProgress = (e) => {
+      if (e.status === 'Liberado') return 100;
+      const allTasks = window.DB && window.DB.tasks ? window.DB.tasks.list().filter(t => t.equipmentId === e.id) : [];
+      const tasks = allTasks.filter(t => !t.parentId);
+      const evalTasks = tasks.length > 0 ? tasks : allTasks;
+      if (evalTasks.length > 0) {
+        const sum = evalTasks.reduce((s, t) => {
+          if (t.status === 'Concluída') return s + 100;
+          if (typeof t.pctExecutado === 'number') return s + t.pctExecutado;
+          if (t.status === 'Em Andamento') return s + 50;
+          return s;
+        }, 0);
+        return Math.min(100, Math.max(0, Math.round(sum / evalTasks.length)));
+      }
+      if (typeof e.pctAvanco === 'number') {
+        return Math.min(100, Math.max(0, Math.round(e.pctAvanco)));
+      }
+      return 0;
+    };
+
+    const getProgressColor = (pct) => {
+      if (pct >= 85) return '#10B981'; // Verde
+      if (pct >= 60) return '#84CC16'; // Verde-limão
+      if (pct >= 40) return '#F59E0B'; // Amarelo/Âmbar
+      if (pct >= 20) return '#F97316'; // Laranja
+      return '#EF4444';                // Vermelho
+    };
+
+    const renderProgressBar = (e) => {
+      const pct = getEquipmentProgress(e);
+      const color = getProgressColor(pct);
+      const allTasks = window.DB && window.DB.tasks ? window.DB.tasks.list().filter(t => t.equipmentId === e.id) : [];
+      const completedCount = allTasks.filter(t => t.status === 'Concluída').length;
+      const totalCount = allTasks.length;
+      const taskInfo = totalCount > 0 ? `(${completedCount}/${totalCount} tarefas)` : '';
+
+      return `
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:0.75rem;">
+            <span style="color:#94A3B8;font-weight:600;display:flex;align-items:center;gap:4px;">
+              <span>Avanço de Liberação</span>
+              <span style="color:#64748B;font-size:0.7rem;">${taskInfo}</span>
+            </span>
+            <strong style="color:${color};font-weight:800;font-size:0.85rem;">${pct}%</strong>
+          </div>
+          <div style="width:100%;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,0.3);">
+            <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.4s ease;box-shadow:0 0 8px ${color}66;"></div>
+          </div>
+        </div>
+      `;
+    };
+
     const getOsDisplay = (e) => {
       if (!e.os || !e.os.trim()) return '';
       const osClean = e.os.trim();
@@ -1545,6 +1598,7 @@ window.MeetingMode = (() => {
                      <span>Executante:</span>
                      <strong style="color:#BBDEFB;font-size:0.9rem;">${getExecutante(e)}</strong>
                    </div>
+                   ${renderProgressBar(e)}
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento em manutenção</div>'}
@@ -1586,6 +1640,7 @@ window.MeetingMode = (() => {
                      <span>Executante:</span>
                      <strong style="color:#FFE0B2;font-size:0.9rem;">${getExecutante(e)}</strong>
                    </div>
+                   ${renderProgressBar(e)}
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
@@ -1616,6 +1671,7 @@ window.MeetingMode = (() => {
                      <span>Executante:</span>
                      <strong style="color:white;font-size:0.8rem;">${getExecutante(e)}</strong>
                    </div>
+                   ${renderProgressBar(e)}
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
