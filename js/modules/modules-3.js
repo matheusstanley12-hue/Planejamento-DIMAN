@@ -1,4 +1,4 @@
-﻿/* ================================================================
+/* ================================================================
    PLANEJAMENTO DIMAN-BHZ — Modules Batch 3
    Costs, Planning, KPI, Simulator, AI Assistant
    Meeting Mode, Timeline, Lessons, Reports, Audit, Users, Impacts
@@ -1045,6 +1045,11 @@ window.AIAssistant = (() => {
         .ai-dot:nth-child(1) { animation-delay: -0.32s; }
         .ai-dot:nth-child(2) { animation-delay: -0.16s; }
         .ai-dot:nth-child(3) { animation-delay: 0s; }
+      
+        @keyframes tvTickerScroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
       </style>
       <div style="font-size:1.3rem;">🤖</div>
       <div style="display:flex;align-items:center;margin-left:4px;height:24px;">
@@ -1557,6 +1562,10 @@ window.MeetingMode = (() => {
         .tv-bar-animated {
           animation: tvProgressFill 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards, tvProgressShimmer 3s linear infinite, tvProgressPulse 2s ease-in-out infinite;
         }
+        @keyframes tvTickerScroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
       </style>
 
       <!-- Header bar -->
@@ -1699,6 +1708,86 @@ window.MeetingMode = (() => {
                 </div>
               `;
             }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
+          </div>
+        </div>
+      </div>
+
+      
+      <!-- News / Safety Ticker Bar (Oficina) -->
+      <div style="background:#071322;border-top:2px solid #1E88E5;border-bottom:1px solid rgba(30,136,229,.3);height:38px;display:flex;align-items:center;overflow:hidden;position:relative;flex-shrink:0;">
+        <div style="background:#E53935;color:white;font-weight:900;font-size:0.75rem;padding:0 16px;height:100%;display:flex;align-items:center;gap:6px;z-index:10;letter-spacing:0.05em;text-transform:uppercase;box-shadow:4px 0 10px rgba(0,0,0,0.5);flex-shrink:0;">
+          <span>📢 INFORMATIVOS</span>
+        </div>
+        <div style="flex:1;overflow:hidden;position:relative;display:flex;align-items:center;height:100%;">
+          <div style="display:flex;width:max-content;animation:tvTickerScroll 45s linear infinite;">
+            <div style="display:flex;align-items:center;">
+              
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>🚨</span>
+                <span style="color:#EF4444;font-weight:900;letter-spacing:0.02em;">RAMAL DE EMERGÊNCIA:</span>
+                <span style="background:rgba(239,68,68,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.5);padding:2px 10px;border-radius:4px;font-weight:900;font-size:1rem;letter-spacing:0.05em;">254</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>☕</span>
+                <span style="color:#FBBF24;font-weight:900;letter-spacing:0.02em;">CAFÉ DA MANHÃ:</span>
+                <span style="color:white;font-weight:800;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);padding:2px 8px;border-radius:4px;">07:45 às 08:00</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>🍽️</span>
+                <span style="color:#F59E0B;font-weight:900;letter-spacing:0.02em;">HORÁRIO DE ALMOÇO:</span>
+                <span style="color:white;font-weight:800;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);padding:2px 8px;border-radius:4px;">12:00 às 13:00</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>☕</span>
+                <span style="color:#FB923C;font-weight:900;letter-spacing:0.02em;">CAFÉ DA TARDE:</span>
+                <span style="color:white;font-weight:800;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);padding:2px 8px;border-radius:4px;">15:30 às 15:40</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>🛡️</span>
+                <span style="color:#10B981;font-weight:900;letter-spacing:0.02em;">SEGURANÇA GEOSOL:</span>
+                <span style="color:#F8FAFC;font-style:italic;">"Sua família te espera: Nenhum trabalho é tão urgente que não possa ser feito com segurança!"</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>⚠️</span>
+                <span style="color:#38BDF8;font-weight:900;letter-spacing:0.02em;">ATENÇÃO NA OFICINA:</span>
+                <span style="color:#F8FAFC;">Use sempre todos os EPIs obrigatórios e mantenha a atenção constante!</span>
+              </div>
+
+            </div>
+            <div style="display:flex;align-items:center;">
+              
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>🚨</span>
+                <span style="color:#EF4444;font-weight:900;letter-spacing:0.02em;">RAMAL DE EMERGÊNCIA:</span>
+                <span style="background:rgba(239,68,68,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.5);padding:2px 10px;border-radius:4px;font-weight:900;font-size:1rem;letter-spacing:0.05em;">254</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>☕</span>
+                <span style="color:#FBBF24;font-weight:900;letter-spacing:0.02em;">CAFÉ DA MANHÃ:</span>
+                <span style="color:white;font-weight:800;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.3);padding:2px 8px;border-radius:4px;">07:45 às 08:00</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>🍽️</span>
+                <span style="color:#F59E0B;font-weight:900;letter-spacing:0.02em;">HORÁRIO DE ALMOÇO:</span>
+                <span style="color:white;font-weight:800;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);padding:2px 8px;border-radius:4px;">12:00 às 13:00</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>☕</span>
+                <span style="color:#FB923C;font-weight:900;letter-spacing:0.02em;">CAFÉ DA TARDE:</span>
+                <span style="color:white;font-weight:800;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);padding:2px 8px;border-radius:4px;">15:30 às 15:40</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>🛡️</span>
+                <span style="color:#10B981;font-weight:900;letter-spacing:0.02em;">SEGURANÇA GEOSOL:</span>
+                <span style="color:#F8FAFC;font-style:italic;">"Sua família te espera: Nenhum trabalho é tão urgente que não possa ser feito com segurança!"</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:50px;gap:8px;font-size:0.85rem;font-weight:700;">
+                <span>⚠️</span>
+                <span style="color:#38BDF8;font-weight:900;letter-spacing:0.02em;">ATENÇÃO NA OFICINA:</span>
+                <span style="color:#F8FAFC;">Use sempre todos os EPIs obrigatórios e mantenha a atenção constante!</span>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
