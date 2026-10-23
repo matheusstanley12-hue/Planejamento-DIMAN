@@ -1719,13 +1719,17 @@ window.MeetingMode = (() => {
           <span>📢 INFORMATIVOS</span>
         </div>
         <div style="flex:1;overflow:hidden;position:relative;display:flex;align-items:center;height:100%;white-space:nowrap;">
-          <div style="display:flex;width:max-content;animation:tvTickerScroll 42s linear infinite;white-space:nowrap;align-items:center;">
+          <div style="display:flex;width:max-content;animation:tvTickerScroll 95s linear infinite;white-space:nowrap;align-items:center;">
             <div style="display:flex;align-items:center;white-space:nowrap;flex-shrink:0;">
               
               <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
                 <span style="font-size:1.15rem;">🚨</span>
                 <span style="color:#EF4444;font-weight:900;letter-spacing:0.02em;">RAMAL DE EMERGÊNCIA:</span>
                 <span style="background:rgba(239,68,68,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.5);padding:3px 12px;border-radius:4px;font-weight:900;font-size:1.1rem;letter-spacing:0.05em;">241</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:40px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
+                <span style="font-size:1.15rem;">⏰</span>
+                <span style="color:#38BDF8;font-weight:900;letter-spacing:0.04em;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);padding:3px 10px;border-radius:4px;">HORÁRIOS DE PAUSAS:</span>
               </div>
               <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
                 <span style="font-size:1.15rem;">☕</span>
@@ -1760,6 +1764,10 @@ window.MeetingMode = (() => {
                 <span style="font-size:1.15rem;">🚨</span>
                 <span style="color:#EF4444;font-weight:900;letter-spacing:0.02em;">RAMAL DE EMERGÊNCIA:</span>
                 <span style="background:rgba(239,68,68,0.25);color:#FCA5A5;border:1px solid rgba(239,68,68,0.5);padding:3px 12px;border-radius:4px;font-weight:900;font-size:1.1rem;letter-spacing:0.05em;">241</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:40px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
+                <span style="font-size:1.15rem;">⏰</span>
+                <span style="color:#38BDF8;font-weight:900;letter-spacing:0.04em;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.4);padding:3px 10px;border-radius:4px;">HORÁRIOS DE PAUSAS:</span>
               </div>
               <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
                 <span style="font-size:1.15rem;">☕</span>
