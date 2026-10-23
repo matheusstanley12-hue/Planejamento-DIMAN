@@ -1519,8 +1519,15 @@ window.MeetingMode = (() => {
             </span>
             <strong style="color:${color};font-weight:800;font-size:0.85rem;">${pct}%</strong>
           </div>
-          <div style="width:100%;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,0.3);">
-            <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width 0.4s ease;box-shadow:0 0 8px ${color}66;"></div>
+          <div style="width:100%;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,0.4);position:relative;">
+            <div class="tv-bar-animated" style="
+              width: ${pct}%;
+              height: 100%;
+              border-radius: 4px;
+              background: linear-gradient(90deg, ${color}dd 0%, ${color} 40%, rgba(255,255,255,0.7) 50%, ${color} 60%, ${color}dd 100%);
+              background-size: 200% 100%;
+              box-shadow: 0 0 10px ${color}99;
+            "></div>
           </div>
         </div>
       `;
@@ -1535,6 +1542,23 @@ window.MeetingMode = (() => {
 
 
     overlay.innerHTML = `
+      <style>
+        @keyframes tvProgressFill {
+          from { width: 0%; }
+        }
+        @keyframes tvProgressShimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        @keyframes tvProgressPulse {
+          0%, 100% { opacity: 0.9; }
+          50% { opacity: 1; filter: brightness(1.2); }
+        }
+        .tv-bar-animated {
+          animation: tvProgressFill 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards, tvProgressShimmer 3s linear infinite, tvProgressPulse 2s ease-in-out infinite;
+        }
+      </style>
+
       <!-- Header bar -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#0A1929;border-bottom:1px solid rgba(30,136,229,.3);">
         <div style="display:flex;align-items:center;gap:16px;">
