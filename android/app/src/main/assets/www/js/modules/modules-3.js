@@ -1719,7 +1719,7 @@ window.MeetingMode = (() => {
           <span>📢 INFORMATIVOS</span>
         </div>
         <div style="flex:1;overflow:hidden;position:relative;display:flex;align-items:center;height:100%;white-space:nowrap;">
-          <div style="display:flex;width:max-content;animation:tvTickerScroll 95s linear infinite;white-space:nowrap;align-items:center;">
+          <div style="display:flex;width:max-content;animation:tvTickerScroll 100s linear infinite;white-space:nowrap;align-items:center;">
             <div style="display:flex;align-items:center;white-space:nowrap;flex-shrink:0;">
               
               <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
@@ -1745,6 +1745,11 @@ window.MeetingMode = (() => {
                 <span style="font-size:1.15rem;">☕</span>
                 <span style="color:#FB923C;font-weight:900;letter-spacing:0.02em;">CAFÉ DA TARDE:</span>
                 <span style="color:white;font-weight:800;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);padding:2px 8px;border-radius:4px;">15:30 às 15:40</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
+                <span style="font-size:1.15rem;">🏁</span>
+                <span style="color:#A78BFA;font-weight:900;letter-spacing:0.02em;">FIM DO EXPEDIENTE:</span>
+                <span style="color:white;font-weight:800;background:rgba(167,139,250,0.18);border:1px solid rgba(167,139,250,0.4);padding:2px 8px;border-radius:4px;">17:42</span>
               </div>
               <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
                 <span style="font-size:1.15rem;">🦺</span>
@@ -1783,6 +1788,11 @@ window.MeetingMode = (() => {
                 <span style="font-size:1.15rem;">☕</span>
                 <span style="color:#FB923C;font-weight:900;letter-spacing:0.02em;">CAFÉ DA TARDE:</span>
                 <span style="color:white;font-weight:800;background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);padding:2px 8px;border-radius:4px;">15:30 às 15:40</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
+                <span style="font-size:1.15rem;">🏁</span>
+                <span style="color:#A78BFA;font-weight:900;letter-spacing:0.02em;">FIM DO EXPEDIENTE:</span>
+                <span style="color:white;font-weight:800;background:rgba(167,139,250,0.18);border:1px solid rgba(167,139,250,0.4);padding:2px 8px;border-radius:4px;">17:42</span>
               </div>
               <div style="display:inline-flex;align-items:center;margin-right:60px;gap:8px;font-size:0.95rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
                 <span style="font-size:1.15rem;">🦺</span>
