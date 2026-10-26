@@ -1513,36 +1513,39 @@ window.MeetingMode = (() => {
       const allTasks = window.DB && window.DB.tasks ? window.DB.tasks.list().filter(t => t.equipmentId === e.id) : [];
       const completedCount = allTasks.filter(t => t.status === 'Concluída').length;
       const totalCount = allTasks.length;
-      const taskInfo = totalCount > 0 ? `(${completedCount}/${totalCount} tarefas)` : '';
+      const taskInfo = totalCount > 0 ? `(${completedCount}/${totalCount})` : '';
 
       return `
-        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:0.75rem;">
+        <div style="margin-top:6px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.06);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-size:0.72rem;">
             <span style="color:#94A3B8;font-weight:600;display:flex;align-items:center;gap:4px;">
-              <span>Avanço de Liberação</span>
-              <span style="color:#64748B;font-size:0.7rem;">${taskInfo}</span>
+              <span>Avanço</span>
+              <span style="color:#64748B;font-size:0.68rem;">${taskInfo}</span>
             </span>
-            <strong style="color:${color};font-weight:800;font-size:0.85rem;">${pct}%</strong>
+            <strong style="color:${color};font-weight:800;font-size:0.82rem;">${pct}%</strong>
           </div>
-          <div style="width:100%;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,0.4);position:relative;">
+          <div style="width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,0.4);position:relative;">
             <div class="tv-bar-animated" style="
               width: ${pct}%;
               height: 100%;
-              border-radius: 4px;
+              border-radius: 3px;
               background: linear-gradient(90deg, ${color}dd 0%, ${color} 40%, rgba(255,255,255,0.7) 50%, ${color} 60%, ${color}dd 100%);
               background-size: 200% 100%;
-              box-shadow: 0 0 10px ${color}99;
+              box-shadow: 0 0 8px ${color}99;
             "></div>
           </div>
         </div>
       `;
     };
 
-    const getOsDisplay = (e) => {
+    const getOsDisplay = (e, isCompact = false) => {
       if (!e.os || !e.os.trim()) return '';
       const osClean = e.os.trim();
       const label = osClean.toLowerCase().startsWith('os') ? osClean : ('OS: ' + osClean);
-      return `<span style="font-size:0.85rem;color:#E2E8F0;font-weight:700;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);padding:2px 8px;border-radius:6px;margin-left:8px;letter-spacing:0.02em;">${label}</span>`;
+      const fs = isCompact ? '0.72rem' : '0.8rem';
+      const pad = isCompact ? '1px 5px' : '2px 6px';
+      const ml = isCompact ? '4px' : '6px';
+      return `<span style="font-size:${fs};color:#E2E8F0;font-weight:700;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);padding:${pad};border-radius:4px;margin-left:${ml};letter-spacing:0.02em;white-space:nowrap;">${label}</span>`;
     };
 
 
@@ -1565,6 +1568,15 @@ window.MeetingMode = (() => {
         @keyframes tvTickerScroll {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        #tv-maint-grid::-webkit-scrollbar,
+        #tv-released-list::-webkit-scrollbar {
+          width: 6px;
+        }
+        #tv-maint-grid::-webkit-scrollbar-thumb,
+        #tv-released-list::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.18);
+          border-radius: 3px;
         }
       </style>
 
@@ -1590,17 +1602,19 @@ window.MeetingMode = (() => {
         </div>
       </div>
 
-      <!-- 3-panel grid -->
-      <div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px;overflow:hidden;">
+      <!-- Main layout: Em Manutenção (expandido multi-colunas) + Liberados no Mês (compacto) -->
+      <div style="flex:1;display:grid;grid-template-columns:minmax(0, 1fr) 260px;gap:14px;padding:12px 16px;overflow:hidden;min-height:0;">
         
-        <!-- Column 1: Em Manutenção -->
-        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:14px;background:rgba(30,136,229,.1);border-bottom:1px solid rgba(30,136,229,.2);">
-            <h2 style="margin:0;color:#64B5F6;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              ⚙️ Em Manutenção
+        <!-- Column 1: Em Manutenção (Expandida com grid interno de equipamentos) -->
+        <div style="background:#0A1929;border:1px solid rgba(30,136,229,.35);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-height:0;">
+          <div style="padding:10px 16px;background:rgba(30,136,229,.12);border-bottom:1px solid rgba(30,136,229,.25);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <h2 style="margin:0;color:#64B5F6;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:10px;">
+              <span>⚙️ Em Manutenção</span>
+              <span style="font-size:0.78rem;background:rgba(30,136,229,0.25);color:#90CAF9;border:1px solid rgba(30,136,229,0.45);padding:1px 8px;border-radius:10px;font-weight:700;">${eqMaintenance.length}</span>
             </h2>
+            <span style="font-size:0.7rem;color:#8EACC8;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;">Oficina DIMAN-BHZ</span>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
+          <div id="tv-maint-grid" style="flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill, minmax(310px, 1fr));gap:10px;align-content:start;">
             ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => {
               const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
               const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
@@ -1614,100 +1628,64 @@ window.MeetingMode = (() => {
               if (isReplanned) {
                 const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : 'Em definição';
                 const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
-                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
+                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.75rem;margin-right:2px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;font-weight:800;">${dataNova}</span>`;
               } else {
-                prazoStr = e.dataLiberacaoPlanejada ? `<span style="color:white">${formatDate(e.dataLiberacaoPlanejada)}</span>` : `<span style="color:#CBD5E1;font-style:italic;">Em definição</span>`;
+                prazoStr = e.dataLiberacaoPlanejada ? `<span style="color:#93C5FD;font-weight:600;">Prazo:</span> <span style="color:white;font-weight:800;">${formatDate(e.dataLiberacaoPlanejada)}</span>` : `<span style="color:#CBD5E1;font-style:italic;font-size:0.78rem;">Em definição</span>`;
               }
               return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #1E88E5;padding:12px;border-radius:8px;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <div style="display:flex;align-items:center;flex-wrap:wrap;">
-                      <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                      ${getOsDisplay(e)}
+                <div style="background:rgba(255,255,255,0.035);border:1px solid rgba(30,136,229,0.25);border-left:4px solid #1E88E5;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                    <div style="display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;">
+                      <span style="font-weight:900;color:white;font-size:1.05rem;letter-spacing:-0.01em;white-space:nowrap;">${e.codigo}</span>
+                      ${getOsDisplay(e, false)}
                     </div>
-                    <span style="font-weight:700;color:#64B5F6;font-size:0.95rem;">Prazo: ${prazoStr}</span>
+                    <div style="font-weight:700;color:#64B5F6;font-size:0.82rem;white-space:nowrap;flex-shrink:0;">
+                      ${prazoStr}
+                    </div>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                     <span>Executante:</span>
-                     <strong style="color:#BBDEFB;font-size:0.9rem;">${getExecutante(e)}</strong>
-                   </div>
-                   ${renderProgressBar(e)}
+                  <div style="color:#8EACC8;font-size:0.78rem;display:flex;align-items:center;gap:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px;">
+                     <span style="color:#64748B;font-weight:600;">Exec:</span>
+                     <strong style="color:#BBDEFB;font-size:0.82rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getExecutante(e)}</strong>
+                  </div>
+                  ${renderProgressBar(e)}
                 </div>
               `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento em manutenção</div>'}
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin:auto;font-size:1.1rem;grid-column:1/-1;padding:40px;">Nenhum equipamento em manutenção</div>'}
           </div>
         </div>
 
-        <!-- Column 2: Aguardando Manutenção -->
-        <div style="background:#0A1929;border:1px solid rgba(255,152,0,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:14px;background:rgba(255,152,0,.1);border-bottom:1px solid rgba(255,152,0,.2);">
-            <h2 style="margin:0;color:#FFB74D;font-size:1.1rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              ⏳ Aguardando Manutenção
+        <!-- Column 2: Liberados no Mês (Compacto) -->
+        <div style="background:#0A1929;border:1px solid rgba(76,175,80,.35);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;min-height:0;">
+          <div style="padding:10px 14px;background:rgba(76,175,80,.12);border-bottom:1px solid rgba(76,175,80,.25);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+            <h2 style="margin:0;color:#81C784;font-size:0.95rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
+              <span>✅ Liberados</span>
+              <span style="font-size:0.75rem;background:rgba(76,175,80,0.25);color:#A7F3D0;border:1px solid rgba(76,175,80,0.4);padding:1px 8px;border-radius:10px;font-weight:700;">${eqReleased.length}</span>
             </h2>
+            <span style="font-size:0.7rem;color:#86EFAC;font-weight:600;">no mês</span>
           </div>
-          <div style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;">
-            ${eqWaiting.length > 0 ? eqWaiting.sort((a,b) => {
-              const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
-              const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
-              return dPrazoA.localeCompare(dPrazoB);
-            }).map(e => {
-              const isReplanned = e.replanning && e.replanning.length > 0;
-              let prazoStr = '';
-              if (isReplanned) {
-                const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : 'Em definição';
-                const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
-                prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.85rem;margin-right:4px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;margin-left:4px;">${dataNova}</span>`;
-              } else {
-                prazoStr = e.dataLiberacaoPlanejada ? `<span style="color:white">${formatDate(e.dataLiberacaoPlanejada)}</span>` : `<span style="color:#CBD5E1;font-style:italic;">Em definição</span>`;
-              }
-              return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #FF9800;padding:12px;border-radius:8px;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <div style="display:flex;align-items:center;flex-wrap:wrap;">
-                      <span style="font-weight:800;color:white;font-size:1.1rem;">${e.codigo}</span>
-                      ${getOsDisplay(e)}
-                    </div>
-                    <span style="font-weight:700;color:#FFB74D;font-size:0.95rem;">Prazo: ${prazoStr}</span>
-                  </div>
-                  <div style="color:#8EACC8;font-size:0.85rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                     <span>Executante:</span>
-                     <strong style="color:#FFE0B2;font-size:0.9rem;">${getExecutante(e)}</strong>
-                   </div>
-                   ${renderProgressBar(e)}
-                </div>
-              `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:1rem;">Nenhum equipamento aguardando</div>'}
-          </div>
-        </div>
-
-        <!-- Column 3: Liberados no Mês -->
-        <div style="background:#0A1929;border:1px solid rgba(76,175,80,.3);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;">
-          <div style="padding:10px;background:rgba(76,175,80,.1);border-bottom:1px solid rgba(76,175,80,.2);">
-            <h2 style="margin:0;color:#81C784;font-size:0.9rem;font-weight:800;text-transform:uppercase;display:flex;align-items:center;gap:8px;">
-              ✅ Liberados no Mês
-            </h2>
-          </div>
-          <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
+          <div id="tv-released-list" style="flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px;">
             ${eqReleased.length > 0 ? eqReleased.sort((a,b) => ((b.dataLiberacaoAtual||b.dataLiberacaoPlanejada||'')).localeCompare(a.dataLiberacaoAtual||a.dataLiberacaoPlanejada||'')).map(e => {
               const d = e.dataLiberacaoAtual || e.dataLiberacaoPlanejada;
               const dataStr = d ? formatDate(d) : 'Em definição';
               return `
-                <div style="background:rgba(255,255,255,0.03);border-left:4px solid #4CAF50;padding:10px;border-radius:6px;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <div style="display:flex;align-items:center;flex-wrap:wrap;">
-                      <span style="font-weight:800;color:white;font-size:1rem;">${e.codigo}</span>
-                      ${getOsDisplay(e)}
+                <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(76,175,80,0.2);border-left:3px solid #10B981;padding:7px 9px;border-radius:6px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:4px;">
+                    <div style="display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden;">
+                      <span style="font-weight:800;color:white;font-size:0.92rem;white-space:nowrap;">${e.codigo}</span>
+                      ${getOsDisplay(e, true)}
                     </div>
-                    <span style="font-weight:700;color:#81C784;font-size:0.85rem;">Liberado: <span style="color:white">${dataStr}</span></span>
+                    <span style="font-weight:700;color:#86EFAC;font-size:0.72rem;white-space:nowrap;flex-shrink:0;">${dataStr}</span>
                   </div>
-                  <div style="color:#8EACC8;font-size:0.75rem;display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                     <span>Executante:</span>
-                     <strong style="color:white;font-size:0.8rem;">${getExecutante(e)}</strong>
-                   </div>
-                   ${renderProgressBar(e)}
+                  <div style="color:#94A3B8;font-size:0.72rem;display:flex;align-items:center;gap:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                     <span style="color:#64748B;">Exec:</span>
+                     <strong style="color:#CBD5E1;font-size:0.75rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${getExecutante(e)}</strong>
+                  </div>
+                  <div style="margin-top:4px;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;">
+                    <div style="width:100%;height:100%;background:#10B981;border-radius:2px;"></div>
+                  </div>
                 </div>
               `;
-            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.9rem;">Nenhum equipamento liberado</div>'}
+            }).join('') : '<div style="color:#8EACC8;text-align:center;margin-top:20px;font-size:0.85rem;">Nenhum equipamento liberado</div>'}
           </div>
         </div>
       </div>
