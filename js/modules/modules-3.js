@@ -1616,6 +1616,11 @@ window.MeetingMode = (() => {
           </div>
           <div id="tv-maint-grid" style="flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:repeat(auto-fill, minmax(310px, 1fr));gap:10px;align-content:start;">
             ${eqMaintenance.length > 0 ? eqMaintenance.sort((a,b) => {
+              const semVerbaA = (a.etapaAtual && a.etapaAtual.toLowerCase().includes('verba')) || (a.status && a.status.toLowerCase().includes('verba'));
+              const semVerbaB = (b.etapaAtual && b.etapaAtual.toLowerCase().includes('verba')) || (b.status && b.status.toLowerCase().includes('verba'));
+              if (semVerbaA && !semVerbaB) return 1;
+              if (!semVerbaA && semVerbaB) return -1;
+
               const dPrazoA = (a.replanning && a.replanning.length > 0) ? a.replanning[a.replanning.length - 1].novaData : (a.dataLiberacaoPlanejada||'');
               const dPrazoB = (b.replanning && b.replanning.length > 0) ? b.replanning[b.replanning.length - 1].novaData : (b.dataLiberacaoPlanejada||'');
               if (!dPrazoA && dPrazoB) return 1;
@@ -1623,17 +1628,27 @@ window.MeetingMode = (() => {
               if (!dPrazoA && !dPrazoB) return (a.codigo||'').localeCompare(b.codigo||'');
               return dPrazoA.localeCompare(dPrazoB);
             }).map(e => {
+              const isSemVerba = (e.etapaAtual && (e.etapaAtual.toLowerCase().includes('verba') || e.etapaAtual.toLowerCase().includes('sem verba'))) ||
+                                 (e.status && (e.status.toLowerCase().includes('verba') || e.status.toLowerCase().includes('sem verba')));
+              
               const isReplanned = e.replanning && e.replanning.length > 0;
               let prazoStr = '';
-              if (isReplanned) {
+              if (isSemVerba) {
+                prazoStr = `<span style="color:#EF4444;font-weight:900;background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.4);padding:2px 8px;border-radius:4px;font-size:0.8rem;letter-spacing:0.03em;text-transform:uppercase;">Sem verba</span>`;
+              } else if (isReplanned) {
                 const dataOriginal = e.dataLiberacaoPlanejada ? formatDate(e.dataLiberacaoPlanejada) : 'Em definição';
                 const dataNova = formatDate(e.replanning[e.replanning.length - 1].novaData);
                 prazoStr = `<span style="text-decoration:line-through;color:#8EACC8;font-size:0.75rem;margin-right:2px;">${dataOriginal}</span> <span style="color:#FFB74D">➔</span> <span style="color:white;font-weight:800;">${dataNova}</span>`;
               } else {
                 prazoStr = e.dataLiberacaoPlanejada ? `<span style="color:#93C5FD;font-weight:600;">Prazo:</span> <span style="color:white;font-weight:800;">${formatDate(e.dataLiberacaoPlanejada)}</span>` : `<span style="color:#CBD5E1;font-style:italic;font-size:0.78rem;">Em definição</span>`;
               }
+
+              const cardBorderLeft = isSemVerba ? '4px solid #EF4444' : '4px solid #1E88E5';
+              const cardBorder = isSemVerba ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(30,136,229,0.25)';
+              const cardBg = isSemVerba ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.035)';
+
               return `
-                <div style="background:rgba(255,255,255,0.035);border:1px solid rgba(30,136,229,0.25);border-left:4px solid #1E88E5;padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,0.2);">
+                <div style="background:${cardBg};border:${cardBorder};border-left:${cardBorderLeft};padding:8px 12px;border-radius:8px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,0.2);">
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                     <div style="display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;">
                       <span style="font-weight:900;color:white;font-size:1.05rem;letter-spacing:-0.01em;white-space:nowrap;">${e.codigo}</span>
@@ -2209,7 +2224,7 @@ window.ReportsModule = (() => {
       const total = filteredEqs.length;
       const emManutencao = filteredEqs.filter(e => e.status === 'Em Manutenção').length;
       const liberados = filteredEqs.filter(e => e.status === 'Liberado').length;
-      const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra').length;
+      const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra' || e.status === 'Falta de Verba').length;
       const avgProgress = total > 0 ? Math.round(filteredEqs.reduce((s, e) => s + (e.pctAvanco || 0), 0) / total) : 0;
 
       // Now filter out 'Liberado' so the TABLE only shows equipments currently in maintenance
