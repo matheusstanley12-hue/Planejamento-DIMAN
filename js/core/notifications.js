@@ -297,6 +297,7 @@ function statusBadge(status) {
     'Bloqueado':           'badge-danger',
     'Cancelado':           'badge-ghost',
     'Paralisado':          'badge-danger',
+    'Aguardando Verba':    'badge-danger',
     'Falta de Verba':      'badge-danger',
     'Falta de Peças':      'badge-warning',
     'Solicitada':          'badge-ghost',

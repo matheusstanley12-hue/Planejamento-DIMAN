@@ -2224,7 +2224,7 @@ window.ReportsModule = (() => {
       const total = filteredEqs.length;
       const emManutencao = filteredEqs.filter(e => e.status === 'Em Manutenção').length;
       const liberados = filteredEqs.filter(e => e.status === 'Liberado').length;
-      const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra' || e.status === 'Falta de Verba').length;
+      const bloqueados = filteredEqs.filter(e => e.status === 'Paralisado' || e.status === 'Falta de Peças' || e.status === 'Falta de Mão de Obra' || e.status === 'Falta de Verba' || e.status === 'Aguardando Verba').length;
       const avgProgress = total > 0 ? Math.round(filteredEqs.reduce((s, e) => s + (e.pctAvanco || 0), 0) / total) : 0;
 
       // Now filter out 'Liberado' so the TABLE only shows equipments currently in maintenance

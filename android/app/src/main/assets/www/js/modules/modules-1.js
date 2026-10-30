@@ -1010,9 +1010,9 @@ window.EquipmentModule = (() => {
               else if (eq?.status === 'Paralisado') displayEtapa = 'Paralisada';
               else if (eq?.status === 'Falta de Peças') displayEtapa = 'Falta de peças';
               else if (eq?.status === 'Falta de Mão de Obra') displayEtapa = 'Falta de mão de obra';
-              else if (eq?.status === 'Falta de Verba') displayEtapa = 'Falta de Verba';
+              else if (eq?.status === 'Aguardando Verba' || eq?.status === 'Falta de Verba') displayEtapa = 'Aguardando verba';
               
-              return ['Nenhuma', 'Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Falta de Verba', 'Paralisada', 'Backlog', 'Liberada']
+              return ['Nenhuma', 'Check-list de recebimento', 'Aguardando manutenção', 'Em manutenção', 'Teste', 'Lavador', 'Pintura', 'Check-list de liberação', 'Falta de mão de obra', 'Falta de peças', 'Aguardando verba', 'Paralisada', 'Backlog', 'Liberada']
                 .map(s => `<option ${displayEtapa === s ? 'selected' : ''}>${s}</option>`).join('');
             })()}
           </select>
@@ -1128,7 +1128,7 @@ window.EquipmentModule = (() => {
         if (e === 'Aguardando manutenção') return 'Aguardando Manutenção';
         if (e === 'Falta de mão de obra') return 'Falta de Mão de Obra';
         if (e === 'Falta de peças') return 'Falta de Peças';
-        if (e === 'Falta de Verba' || e === 'Falta de verba' || e === 'Sem Verba' || e === 'Sem verba') return 'Falta de Verba';
+        if (e === 'Aguardando verba' || e === 'Aguardando Verba' || e === 'Falta de Verba' || e === 'Falta de verba' || e === 'Sem Verba' || e === 'Sem verba') return 'Aguardando Verba';
         if (e === 'Paralisada') return 'Paralisado';
         if (e === 'Backlog') return 'Backlog';
         if (e === 'Liberada') return 'Liberado';
