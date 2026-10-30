@@ -125,13 +125,16 @@ window.HomeModule = (() => {
       let statusIcon = '⚪';
       let displayStatus = e.status;
 
-      if (e.status === 'Em Manutenção' && e.etapaAtual && e.etapaAtual !== 'Nenhuma') {
+      if (e.etapaAtual && e.etapaAtual !== 'Nenhuma') {
         displayStatus = e.etapaAtual;
       }
 
-      const lowerStatus = displayStatus.toLowerCase();
-      if (lowerStatus === 'em manutenção' || lowerStatus === 'em manutencao') { statusColor = '#047857'; statusBg = 'rgba(16, 185, 129, 0.1)'; statusIcon = '🟢'; }
-      else if (lowerStatus.includes('verba')) { statusColor = '#dc2626'; statusBg = 'rgba(239, 68, 68, 0.12)'; statusIcon = '🔴'; }
+      const lowerStatus = (displayStatus || '').toLowerCase();
+      const lowerEtapa = (e.etapaAtual || '').toLowerCase();
+      const isVerba = lowerStatus.includes('verba') || lowerEtapa.includes('verba');
+
+      if (isVerba) { statusColor = '#dc2626'; statusBg = 'rgba(239, 68, 68, 0.12)'; statusIcon = '🔴'; }
+      else if (lowerStatus === 'em manutenção' || lowerStatus === 'em manutencao') { statusColor = '#047857'; statusBg = 'rgba(16, 185, 129, 0.1)'; statusIcon = '🟢'; }
       else if (lowerStatus === 'falta de peças' || lowerStatus === 'falta de pecas') { statusColor = '#b45309'; statusBg = 'rgba(245, 158, 11, 0.1)'; statusIcon = '🟡'; }
       else if (lowerStatus.includes('atrasado') || lowerStatus.includes('paralisad') || lowerStatus.includes('falta de mão de obra') || lowerStatus.includes('falta de mao de obra')) { statusColor = '#be123c'; statusBg = 'rgba(225, 29, 72, 0.1)'; statusIcon = '🔴'; }
       else if (lowerStatus.includes('liberad')) { statusColor = '#1d4ed8'; statusBg = 'rgba(59, 130, 246, 0.1)'; statusIcon = '🔵'; }
